@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>Album</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+    }
+    .gallery {
+        max-width: 800px;
+        margin: 20px auto;
+        background: #fff;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .categories {
+        margin-bottom: 10px;
+    }
+    .categories button {
+        margin: 0 5px 5px 0;
+        padding: 5px 10px;
+        border: none;
+        background-color: #eee;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .categories button.active,
+    .categories button:hover {
+        background-color: #007BFF;
+        color: white;
+    }
+    .thumbnails {
+        display: flex;
+        overflow-x: auto;
+        margin-bottom: 10px;
+        padding: 5px;
+        gap: 5px;
+        border-bottom: 1px solid #ccc;
+    }
+    .thumbnails img {
+        height: 60px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: 0.3s;
+        border: 3px solid transparent; /* 添加透明边框以防止跳动 */
+    }
+    .thumbnails img:hover {
+        transform: scale(1.1);
+    }
+    .thumbnails img.selected {
+        border-color: #007BFF;
+        transform: scale(1.15);
+    }
+    .photo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        user-select: none;
+    }
+    .photo-container img {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 10px;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        cursor: zoom-in;
+    }
+    .photo-container img.show {
+        opacity: 1;
+    }
+    .nav-btn {
+        position: absolute;
+        top: 50%;
+        font-size: 30px;
+        background: rgba(0,0,0,0.4);
+        color: white;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 5px;
+        user-select: none;
+        transform: translateY(-50%);
+        transition: background 0.3s;
+        z-index: 1;
+    }
+    .nav-btn:hover {
+        background: rgba(0,0,0,0.7);
+    }
+    .prev-btn { left: 10px; }
+    .next-btn { right: 10px; }
+    .description {
+        margin-top: 10px;
+        font-size: 16px;
+        color: #333;
+    }
+    /* 全屏覆盖层 */
+    .fullscreen-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        cursor: zoom-out;
+    }
+    .fullscreen-overlay img {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 10px;
+    }
+</style>
+</head>
+<body>
+<a> "草稿阶段，整理中" </a><br>
+<a> "草稿阶段，整理中" </a><br>
+<a> "草稿阶段，整理中" </a>
+<div class="gallery">
+
+    <div class="categories" id="categoryButtons"></div>
+
+    <div class="thumbnails" id="thumbnails"></div>
+
+    <div class="photo-container">
+        <span class="nav-btn prev-btn" onclick="showPrev()">&#10094;</span>
+        <img id="mainPhoto" src="" alt="photo" />
+        <span class="nav-btn next-btn" onclick="showNext()">&#10095;</span>
+    </div>
+
+    <div class="description" id="description"></div>
+
+</div>
+
+<script>
+const photos = [
+    {
+        src: "./album/2023_EMNLP.jpg",
+        time: "2023-11-15",
+        desc: "参加 2023 年 EMNLP 会议",
+        tags: ["conference", "EMNLP", "2023"]
+    },
+    {
+        src: "./album/2022_NUS_XiaJie.jpg",
+        time: "2022-06-15",
+        desc: "2022 年在 NUS 与夏杰的合影",
+        tags: ["NUS", "XiaJie", "2022", "friend"]
+    },
+    {
+        src: "./album/2022_July_untitled.jpg",
+        time: "2022-07-15",
+        desc: "2022 年 7 月未命名照片",
+        tags: ["2022", "July", "untitled"]
+    },
+    {
+        src: "./album/2017_Sep_untitled.jpg",
+        time: "2017-09-15",
+        desc: "2017 年 9 月未命名照片",
+        tags: ["2017", "September", "untitled"]
+    },
+    {
+        src: "./album/2017_Mar_TeamBuilding.JPG",
+        time: "2017-03-15",
+        desc: "2017 年 3 月团队建设活动",
+        tags: ["2017", "March", "team", "building"]
+    },
+    {
+        src: "./album/2017_Jun_Bedok麻辣香锅.JPG",
+        time: "2017-06-15",
+        desc: "2017 年 6 月 Bedok 麻辣香锅聚餐",
+        tags: ["2017", "June", "Bedok", "麻辣香锅", "food"]
+    },
+    {
+        src: "./album/2017_July_密斯湘菜.JPG",
+        time: "2017-07-15",
+        desc: "2017 年 7 月密斯湘菜餐厅",
+        tags: ["2017", "July", "密斯湘菜", "food"]
+    },
+    {
+        src: "./album/2017_Jully_密斯湘菜2.JPG",
+        time: "2017-07-20",
+        desc: "2017 年 7 月密斯湘菜餐厅（第二次）",
+        tags: ["2017", "July", "密斯湘菜", "food", "second"]
+    },
+    {
+        src: "./album/2017_Dec_CaiDeng_GYM.jpg",
+        time: "2017-12-15",
+        desc: "2017 年 12 月蔡登健身",
+        tags: ["2017", "December", "CaiDeng", "gym", "sport"]
+    },
+    {
+        src: "./album/2017_cn_new_year.JPG",
+        time: "2017-01-28",
+        desc: "2017 年春节庆祝",
+        tags: ["2017", "ChineseNewYear", "festival"]
+    },
+    {
+        src: "./album/2017_Aug_SUTD_CaiDeng.jpg",
+        time: "2017-08-15",
+        desc: "2017 年 8 月 SUTD 与蔡登合影",
+        tags: ["2017", "August", "SUTD", "CaiDeng"]
+    },
+    {
+        src: "./album/2017_AUG_ChangiPoint.JPG",
+        time: "2017-08-20",
+        desc: "2017 年 8 月樟宜角",
+        tags: ["2017", "August", "ChangiPoint", "scenery"]
+    },
+    {
+        src: "./album/2017_AUG_ChangiPoint_CaiDeng.jpg",
+        time: "2017-08-21",
+        desc: "2017 年 8 月樟宜角与蔡登",
+        tags: ["2017", "August", "ChangiPoint", "CaiDeng", "scenery"]
+    },
+    {
+        src: "./album/2017_April_Zhongqin SUTD.JPG",
+        time: "2017-04-15",
+        desc: "2017 年 4 月与仲钦在 SUTD",
+        tags: ["2017", "April", "Zhongqin", "SUTD"]
+    },
+    {
+        src: "./album/2013_yuxin.JPG",
+        time: "2013-06-15",
+        desc: "2013 年与于欣的合影",
+        tags: ["2013", "yuxin", "friend"]
+    }
+];
+
+// --- 关键修改 1: 在所有操作开始前，先对数据进行排序 ---
+photos.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+let currentIndex = 0;
+let filteredPhotos = photos;  // 当前筛选的照片数组，初始化是全部
+
+// 根据photos里所有tags生成唯一分类列表
+function getAllCategories() {
+    const set = new Set();
+    photos.forEach(p => p.tags.forEach(tag => set.add(tag)));
+    return Array.from(set).sort();
+}
+
+// 渲染分类按钮
+function renderCategoryButtons() {
+    const container = document.getElementById("categoryButtons");
+    container.innerHTML = "";
+
+    // “全部”按钮
+    const allBtn = document.createElement("button");
+    allBtn.innerText = "全部";
+    allBtn.classList.add("active");
+    allBtn.onclick = () => filterByCategory(null, allBtn);
+    container.appendChild(allBtn);
+
+    getAllCategories().forEach(category => {
+        const btn = document.createElement("button");
+        btn.innerText = category;
+        btn.onclick = () => filterByCategory(category, btn);
+        container.appendChild(btn);
+    });
+}
+
+// 分类过滤
+function filterByCategory(category, clickedButton) {
+    // 按钮高亮
+    document.querySelectorAll("#categoryButtons button").forEach(btn => btn.classList.remove("active"));
+    clickedButton.classList.add("active");
+
+    if(!category) {
+        // 全部
+        filteredPhotos = photos;
+    } else {
+        filteredPhotos = photos.filter(p => p.tags.includes(category));
+    }
+
+    currentIndex = 0; // 切换分类后默认显示第一张
+    loadThumbnails();
+    if(filteredPhotos.length > 0) {
+      showPhoto(currentIndex);
+    } else {
+      // 处理没有照片的情况
+      document.getElementById("mainPhoto").src = "";
+      document.getElementById("mainPhoto").alt = "No photos in this category";
+      document.getElementById("description").innerText = "";
+    }
+}
+
+// --- 关键修改 2: 简化 loadThumbnails 函数 ---
+// 因为源数据 photos 已经排序，filteredPhotos 将保持这个顺序，不再需要内部排序
+function loadThumbnails() {
+    const container = document.getElementById("thumbnails");
+    container.innerHTML = "";
+    filteredPhotos.forEach((photo, index) => {
+        const img = document.createElement("img");
+        img.src = photo.src;
+        // 点击事件的索引现在是正确的
+        img.onclick = () => showPhoto(index);
+        container.appendChild(img);
+    });
+}
+
+// 显示主图
+function showPhoto(index) {
+    if (index < 0 || index >= filteredPhotos.length) return; // 避免索引越界
+    
+    currentIndex = index;
+    const mainPhoto = document.getElementById("mainPhoto");
+    const desc = document.getElementById("description");
+
+    // 更新缩略图的高亮状态
+    document.querySelectorAll(".thumbnails img").forEach((img, idx) => {
+        // img.classList.toggle('selected', false) 的第二个参数是布尔值
+        img.classList.toggle("selected", idx === index);
+    });
+
+    mainPhoto.classList.remove("show");
+    
+    // 延迟设置src和描述，确保淡出效果完成
+    setTimeout(() => {
+        mainPhoto.src = filteredPhotos[index].src;
+        desc.innerText = filteredPhotos[index].desc;
+        mainPhoto.onload = () => {
+            mainPhoto.classList.add("show");
+        }
+    }, 100); // 延迟时间可以根据需要调整
+}
+
+function showPrev() {
+    if (filteredPhotos.length === 0) return;
+    currentIndex = (currentIndex - 1 + filteredPhotos.length) % filteredPhotos.length;
+    showPhoto(currentIndex);
+}
+
+function showNext() {
+    if (filteredPhotos.length === 0) return;
+    currentIndex = (currentIndex + 1) % filteredPhotos.length;
+    showPhoto(currentIndex);
+}
+
+// 主图点击全屏
+document.getElementById("mainPhoto").addEventListener("click", () => {
+    if(filteredPhotos.length === 0) return;
+    const overlay = document.createElement("div");
+    overlay.classList.add("fullscreen-overlay");
+    const img = document.createElement("img");
+    img.src = filteredPhotos[currentIndex].src;
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+
+    overlay.onclick = () => {
+        document.body.removeChild(overlay);
+    };
+});
+
+// --- 初始化逻辑 ---
+// 在已排序的数组中找到 EMNLP 照片的索引
+currentIndex = photos.findIndex(p => p.src.includes("2023_EMNLP"));
+if (currentIndex === -1) { // 如果没找到，默认显示第一张
+    currentIndex = 0;
+}
+
+renderCategoryButtons();
+loadThumbnails();
+showPhoto(currentIndex);
+
+</script>
+
+</body>
+</html>
