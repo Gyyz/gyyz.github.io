@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Certifications</title>
+    <style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 2rem;
+    color: #1c1e21;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+#search, #sort {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+#certs-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.cert-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.cert-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(75, 67, 67, 0.15);
+}
+
+.cert-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background-color: #eee;
+}
+
+.cert-details {
+    padding: 15px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.cert-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin: 0 0 10px;
+}
+
+.cert-org, .cert-date {
+    font-size: 0.9rem;
+    color: #48925a;
+    margin: 0 0 5px;
+}
+
+.cert-description {
+    font-size: 0.9rem;
+    color: #5679a7;
+    flex-grow: 1;
+}
+
+#loading {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.2rem;
+    color: #606770;
+}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>My Certifications</h1>
+            <div class="controls">
+                <input type="text" id="search" placeholder="Search certificates...">
+                <select id="sort">
+                    <option value="issue_date">Sort by Date (Newest First)</option>
+                    <option value="organization">Sort by Organization</option>
+                </select>
+            </div>
+        </header>
+
+        <main id="certs-container">
+            </main>
+
+        <div id="loading">Loading certificates...</div>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const certsContainer = document.getElementById('certs-container');
+    const loadingIndicator = document.getElementById('loading');
+    const searchInput = document.getElementById('search');
+    const sortSelect = document.getElementById('sort');
+
+    // **YOUR PROVIDED CERTIFICATION DATA IS NOW INJECTED HERE**
+    const initialCertsData = [
+  {
+    "title": "2025 07 Oracle Cloud Infrastructure 2025 Certified Generative AI Professional",
+    "organization": "Oracle",
+    "issue_date": "2025-07-01", // Assuming a date for sorting purposes
+    "description": "Demonstrates professional-level expertise in Oracle Cloud Infrastructure's Generative AI services.",
+    "image_url": "certs/2025-07 Oracle Cloud Infrastructure 2025 Certified Generative AI Professional.png",
+    "pdf_url": "certifications/skillset/2025-07 Oracle Cloud Infrastructure 2025 Certified Generative AI Professional.pdf"
+  },
+  {
+    "title": "2025 10 Oracle AI Vector Search Certified Professional",
+    "organization": "Oracle",
+    "issue_date": "2025-10-01", // Assuming a date for sorting purposes
+    "description": "Proficiency in utilizing Oracle's AI Vector Search capabilities for enhanced data retrieval.",
+    "image_url": "certs/2025-10 Oracle AI Vector Search Certified Professional.png",
+    "pdf_url": "certifications/skillset/2025-10 Oracle AI Vector Search Certified Professional.pdf"
+  },
+  {
+    "title": "2025 07 Oracle Cloud Infrastructure 2025 Certified AI Foundations Associate",
+    "organization": "Oracle",
+    "issue_date": "2025-07-01", // Assuming a date for sorting purposes
+    "description": "Fundamental knowledge of AI concepts and their application within Oracle Cloud Infrastructure.",
+    "image_url": "certs/2025-07 Oracle Cloud Infrastructure 2025 Certified AI Foundations Associate.png",
+    "pdf_url": "certifications/skillset/2025-07 Oracle Cloud Infrastructure 2025 Certified AI Foundations Associate.pdf"
+  },
+  {
+    "title": "Career Essentials In Github Professional Certificate",
+    "organization": "GitHub",
+    "issue_date": "2025-11-01", 
+    "description": "Comprehensive professional certification covering core GitHub workflows and collaboration tools.",
+    "image_url": "certs/Career Essentials in GitHub Professional Certificate.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/Career Essentials in GitHub Professional Certificate.pdf"
+  },
+  {
+    "title": "Practical Github Copilot",
+    "organization": "GitHub",
+    "issue_date": "2025-11-02", 
+    "description": "Hands-on skills in leveraging GitHub Copilot for accelerated and intelligent code generation.",
+    "image_url": "certs/Practical GitHub Copilot.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/3. Practical GitHub Copilot/Practical GitHub Copilot.pdf"
+  },
+  {
+    "title": "Practical Github Actions",
+    "organization": "GitHub",
+    "issue_date": "2025-11-03", 
+    "description": "Practical knowledge of building, testing, and deploying with GitHub Actions CI/CD workflows.",
+    "image_url": "certs/Practical GitHub Actions.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/1. Practical GitHub Actions/Practical GitHub Actions.pdf"
+  },
+  {
+    "title": "Practical Github Project Management And Collaboration Pmi",
+    "organization": "GitHub",
+    "issue_date": "2025-11-04", 
+    "description": "Applying GitHub tools for effective project management and team collaboration, with PMI alignment.",
+    "image_url": "certs/Practical GitHub Project Management and Collaboration_PMI.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/2. Practical GitHub Project Management and Collaboration/Practical GitHub Project Management and Collaboration_PMI.pdf"
+  },
+  {
+    "title": "Practical Github Project Management And Collaboration Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-05", 
+    "description": "Skills in using GitHub for project tracking and team collaboration, as recognized by Microsoft/LinkedIn.",
+    "image_url": "certs/Practical GitHub Project Management and Collaboration_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/2. Practical GitHub Project Management and Collaboration/Practical GitHub Project Management and Collaboration_Linkin.pdf"
+  },
+  {
+    "title": "Practical Github Code Search",
+    "organization": "GitHub",
+    "issue_date": "2025-11-06", 
+    "description": "Mastery of advanced code search techniques within GitHub repositories.",
+    "image_url": "certs/Practical GitHub Code Search.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in GitHub Professional Certificate/4. Practical GitHub Code Search/Practical GitHub Code Search.pdf"
+  },
+  {
+    "title": "Docker Foundations Professional Certificate",
+    "organization": "Docker",
+    "issue_date": "2025-11-07", 
+    "description": "A foundational certification covering essential Docker concepts, commands, and containerization best practices.",
+    "image_url": "certs/Docker Foundations Professional Certificate.png",
+    "pdf_url": "certifications/skillset/2025-11 Docker Foundations Professional Certificate/Docker Foundations Professional Certificate.pdf"
+  },
+  {
+    "title": "Learning Docker Compose",
+    "organization": "Docker",
+    "issue_date": "2025-11-08", 
+    "description": "Skills in defining and running multi-container Docker applications using Docker Compose.",
+    "image_url": "certs/Learning Docker Compose.png",
+    "pdf_url": "certifications/skillset/2025-11 Docker Foundations Professional Certificate/3. Learning Docker Compose/Learning Docker Compose.pdf"
+  },
+  {
+    "title": "Learning Docker",
+    "organization": "Docker",
+    "issue_date": "2025-11-09", 
+    "description": "An introduction to the core principles and usage of the Docker containerization platform.",
+    "image_url": "certs/Learning Docker.png",
+    "pdf_url": "certifications/skillset/2025-11 Docker Foundations Professional Certificate/1. Learning Docker/Learning Docker.pdf"
+  },
+  {
+    "title": "Docker Your First Project",
+    "organization": "Docker",
+    "issue_date": "2025-11-10", 
+    "description": "Practical experience containerizing and deploying a first application with Docker.",
+    "image_url": "certs/Docker Your First Project.png",
+    "pdf_url": "certifications/skillset/2025-11 Docker Foundations Professional Certificate/2. Docker Your First Project/Docker Your First Project.pdf"
+  },
+  {
+    "title": "Copilot In Outlook Maximize Your Workday Efficiency",
+    "organization": "Microsoft",
+    "issue_date": "2025-10-15", // Adjusted to Oct
+    "description": "Techniques for using Microsoft Copilot within Outlook to streamline email and calendar management.",
+    "image_url": "certs/Copilot in Outlook Maximize Your Workday Efficiency.png",
+    "pdf_url": "certifications/skillset/2025-10 Copilot in Outlook Maximize Your Workday Efficiency/Copilot in Outlook Maximize Your Workday Efficiency.pdf"
+  },
+  {
+    "title": "Career Essentials In Generative AI By Microsoft And Linkedin Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-11", 
+    "description": "A core credential covering the essential concepts, tools, and ethical considerations of Generative AI.",
+    "image_url": "certs/Career Essentials in Generative AI by Microsoft and LinkedIn_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/Career Essentials in Generative AI by Microsoft and LinkedIn_Linkin.pdf"
+  },
+  {
+    "title": "Learning Microsoft 365 Copilot For Work 2024 Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-12", 
+    "description": "Training on integrating and using Microsoft 365 Copilot to enhance productivity in various office applications.",
+    "image_url": "certs/Learning Microsoft 365 Copilot for Work 2024_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/4. Learning Microsoft 365 Copilot for Work 2024_Linkin/Learning Microsoft 365 Copilot for Work 2024_Linkin.pdf"
+  },
+  {
+    "title": "Streamlining Your Work With Microsoft Copilot Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-13", 
+    "description": "Practical methods for using Microsoft Copilot to automate tasks and improve workflow efficiency.",
+    "image_url": "certs/Streamlining Your Work with Microsoft Copilot_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/3. Streamlining Your Work with Microsoft Copilot/Streamlining Your Work with Microsoft Copilot_Linkin.pdf"
+  },
+  {
+    "title": "Generative AI The Evolution Of Thoughtful Online Search Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-14", 
+    "description": "Understanding how Generative AI is transforming search engines and information discovery.",
+    "image_url": "certs/Generative AI The Evolution of Thoughtful Online Search_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/2. Generative AI The Evolution of Thoughtful Online Search/Generative AI The Evolution of Thoughtful Online Search_Linkin.pdf"
+  },
+  {
+    "title": "What Is Generative AI Qas Cpe",
+    "organization": "QAS",
+    "issue_date": "2025-11-15", 
+    "description": "A course defining the principles and fundamental technology behind Generative AI.",
+    "image_url": "certs/What Is Generative AI_QAS_CPE.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/1. What Is Generative AI/What Is Generative AI_QAS_CPE.pdf"
+  },
+  {
+    "title": "Ethics In The Age Of Generative AI Pmi",
+    "organization": "Project Management Institute",
+    "issue_date": "2025-11-16", 
+    "description": "Focus on the ethical responsibilities and governance issues arising from the use of Generative AI.",
+    "image_url": "certs/Ethics in the Age of Generative AI_PMI.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/5. Ethics in the Age of Generative AI/Ethics in the Age of Generative AI_PMI.pdf"
+  },
+  {
+    "title": "Ethics In The Age Of Generative AI Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-17", 
+    "description": "Examining the ethical frameworks for deploying and managing Generative AI solutions.",
+    "image_url": "certs/Ethics in the Age of Generative AI_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/5. Ethics in the Age of Generative AI/Ethics in the Age of Generative AI_Linkin.pdf"
+  },
+  {
+    "title": "Ethics In The Age Of Generative AI Qas Cpe",
+    "organization": "QAS",
+    "issue_date": "2025-11-18", 
+    "description": "CPE-accredited training on Generative AI ethics for professional development.",
+    "image_url": "certs/Ethics in the Age of Generative AI_QAS_CPE.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/5. Ethics in the Age of Generative AI/Ethics in the Age of Generative AI_QAS_CPE.pdf"
+  },
+  {
+    "title": "Introduction To Artificial Intelligence Linkin",
+    "organization": "Microsoft & LinkedIn",
+    "issue_date": "2025-11-19", 
+    "description": "An essential overview of Artificial Intelligence concepts, history, and modern applications.",
+    "image_url": "certs/Introduction to Artificial Intelligence_Linkin.png",
+    "pdf_url": "certifications/skillset/2025-11 Career Essentials in Generative AI by Microsoft and LinkedIn/6. Introduction to Artificial Intelligence/Introduction to Artificial Intelligence_Linkin.pdf"
+  }
+    ];
+
+    // Note: I've also taken the liberty of filling in descriptive text and approximate dates
+    // based on your file structure (e.g., 2025-11-01) for better presentation and sorting.
+
+    let allCerts = initialCertsData; 
+
+    const displayCerts = (certs) => {
+        certsContainer.innerHTML = '';
+        if (certs.length === 0) {
+            // Note: I added a little flair to the 'not found' message.
+            certsContainer.innerHTML = '<p style="text-align: center; font-style: italic;">No certificates match your search. Time to hit the books (or at least, check your spelling)!</p>';
+            return;
+        }
+
+        certs.forEach(cert => {
+            const card = document.createElement('div');
+            card.className = 'cert-card';
+
+            const img = document.createElement('img');
+            img.className = 'cert-image';
+            img.setAttribute('data-src', cert.image_url);
+            img.alt = cert.title;
+
+            const details = document.createElement('div');
+            details.className = 'cert-details';
+
+            const title = document.createElement('h2');
+            title.className = 'cert-title';
+            title.textContent = cert.title;
+
+            const org = document.createElement('p');
+            org.className = 'cert-org';
+            org.textContent = `Organization: ${cert.organization}`;
+
+            const date = document.createElement('p');
+            date.className = 'cert-date';
+            // Display 'Unknown' only if the date remains the original 'Unknown'
+            const displayDate = cert.issue_date === 'Unknown' ? 'Unknown' : cert.issue_date;
+            date.textContent = `Issued: ${displayDate}`;
+
+            const description = document.createElement('p');
+            description.className = 'cert-description';
+            description.textContent = cert.description || "No description provided.";
+
+            details.appendChild(title);
+            details.appendChild(org);
+            details.appendChild(date);
+            details.appendChild(description);
+
+            card.appendChild(img);
+            card.appendChild(details);
+
+            card.addEventListener('click', () => {
+                // IMPORTANT: This assumes your PDF links and image links are correct relative to where this HTML file is saved!
+                window.open(cert.pdf_url, '_blank');
+            });
+
+            certsContainer.appendChild(card);
+        });
+
+        lazyLoadImages();
+        loadingIndicator.style.display = 'none';
+    };
+
+    const lazyLoadImages = () => {
+        const images = document.querySelectorAll('img[data-src]');
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.getAttribute('data-src');
+                        img.removeAttribute('data-src');
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            images.forEach(image => {
+                observer.observe(image);
+            });
+        } else {
+            // Fallback for older browsers: load all images immediately
+            images.forEach(img => {
+                img.src = img.getAttribute('data-src');
+                img.removeAttribute('data-src');
+            });
+        }
+    };
+
+    const filterAndSortCerts = () => {
+        let filteredCerts = allCerts.filter(cert => 
+            cert.title.toLowerCase().includes(searchInput.value.toLowerCase()) ||
+            cert.organization.toLowerCase().includes(searchInput.value.toLowerCase()) ||
+            cert.description.toLowerCase().includes(searchInput.value.toLowerCase())
+        );
+
+        const sortBy = sortSelect.value;
+        if (sortBy === 'issue_date') {
+            // Sort by date: newest first (descending)
+            filteredCerts.sort((a, b) => new Date(b.issue_date) - new Date(a.issue_date));
+        } else if (sortBy === 'organization') {
+            // Sort by organization name: alphabetical
+            filteredCerts.sort((a, b) => a.organization.localeCompare(b.organization));
+        }
+
+        displayCerts(filteredCerts);
+    };
+
+    searchInput.addEventListener('input', filterAndSortCerts);
+    sortSelect.addEventListener('change', filterAndSortCerts);
+
+    // Initial load of the data
+    displayCerts(allCerts);
+});
+    </script>
+</body>
+</html>
