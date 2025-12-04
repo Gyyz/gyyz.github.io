@@ -66,6 +66,7 @@ img{max-width:100%;display:block}
 .value-icon{width:36px;height:36px;border-radius:4px;background:var(--primary);opacity:.85}
 @media (max-width:900px){.hero-inner{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.gallery{grid-template-columns:1fr 1fr}.about{grid-template-columns:1fr}.contact-grid{grid-template-columns:1fr}}
 @media (max-width:900px){.tiles{grid-template-columns:1fr 1fr}.tile-cover{height:180px}}
+@media (max-width:768px){.container{padding:0 16px}.header-inner{min-height:64px}.brand-logo{width:48px;height:48px}.brand-text strong{font-size:22px}.brand-text span{font-size:12px}.nav{gap:10px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:6px}.nav a{font-size:16px;padding:8px 10px}.hero-inner{grid-template-columns:1fr;padding:56px 0}.hero-content h1{font-size:34px}.hero-content p{font-size:16px}.cards{grid-template-columns:1fr}.gallery{grid-template-columns:1fr}.tiles{grid-template-columns:1fr}.tile-cover{height:160px}.section{padding:40px 0}.footer-inner{min-height:64px;font-size:16px}}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .tile{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:#000}
 .tile-cover{width:100%;height:220px;object-fit:cover;filter:saturate(1.05)}
