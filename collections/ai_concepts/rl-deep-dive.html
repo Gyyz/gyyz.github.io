@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>强化学习在 AI 中的应用全解 - AI 技术演进</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{--bg:#07080f;--bg2:#0d0f1a;--bg3:#131520;--bg4:#191c2a;--card:#1b1e2d;--line:rgba(255,255,255,0.06);--line2:rgba(255,255,255,0.11);--text:#dde0ef;--sub:#7a7d94;--dim:#4a4d62;--green:#34d399;--teal:#22d3ee;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--amber:#fbbf24;--coral:#f87171;--orange:#fb923c;--gd:rgba(52,211,153,0.08);--td:rgba(34,211,238,0.08);--bd:rgba(96,165,250,0.08);--pd:rgba(167,139,250,0.08);--ad:rgba(251,191,36,0.08);--cd:rgba(248,113,113,0.08)}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+
+.hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;margin-left:220px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(52,211,153,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(34,211,238,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+.hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+.hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px}
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px}
+
+.sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+.sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+.sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--green);background:rgba(52,211,153,0.05)}
+.sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+.sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--green);text-decoration:none;border-bottom:1px solid var(--line)}
+
+.main{margin-left:220px;max-width:900px}
+.section{padding:56px 48px;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:none}
+.section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+.section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+.section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+
+.prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}
+.prose strong{color:var(--text)}
+.prose em{color:var(--teal);font-style:normal}
+.prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}
+.prose ul,.prose ol{margin:8px 0 16px 20px}
+.prose li{margin-bottom:6px}
+
+.formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+.formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+
+.cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+.cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+.cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}
+.cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+
+.callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+.callout-green{background:rgba(52,211,153,0.06);border-left-color:var(--green);color:var(--sub)}
+.callout-teal{background:rgba(34,211,238,0.06);border-left-color:var(--teal);color:var(--sub)}
+.callout-amber{background:rgba(251,191,36,0.06);border-left-color:var(--amber);color:var(--sub)}
+.callout-coral{background:rgba(248,113,113,0.06);border-left-color:var(--coral);color:var(--sub)}
+.callout strong{color:var(--text)}
+
+.diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+.diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+
+.steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+.step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+.step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px}
+.step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+.step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+
+.code-block{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:16px;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--teal);overflow-x:auto;margin:16px 0;line-height:1.5}
+.code-block .comment{color:var(--dim)}
+
+.tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+@media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+.tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}
+.tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+
+.math-step{background:var(--bg3);border-left:3px solid var(--teal);padding:12px 16px;margin:12px 0;font-family:'IBM Plex Mono',monospace;font-size:0.87rem;line-height:1.7;color:var(--teal);border-radius:4px}
+.math-step .step-label{color:var(--dim);font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+
+.timeline{margin:24px 0}
+.timeline-item{display:flex;gap:16px;margin-bottom:16px;padding:14px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+.timeline-year{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--green);font-weight:600;min-width:60px;padding-top:2px}
+.timeline-body .tl-title{font-weight:600;font-size:0.9rem;margin-bottom:3px}
+.timeline-body .tl-desc{color:var(--sub);font-size:0.83rem;line-height:1.6}
+
+.site-footer{text-align:center;padding:40px 48px;color:var(--dim);font-size:0.85rem;margin-left:220px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<!-- SIDE NAVIGATION -->
+<nav class="sidenav">
+  <a href="index.html" class="back-link">← 返回首页</a>
+  <div class="sidenav-title">章节导航</div>
+  <a href="#sec00"><span class="nav-num">00</span>RL 基础与 MDP</a>
+  <a href="#sec01"><span class="nav-num">01</span>经典 RL 算法</a>
+  <a href="#sec02"><span class="nav-num">02</span>Policy Gradient 家族</a>
+  <a href="#sec03"><span class="nav-num">03</span>PPO 详解</a>
+  <a href="#sec04"><span class="nav-num">04</span>RLHF 完整流程</a>
+  <a href="#sec05"><span class="nav-num">05</span>DPO 与偏好优化</a>
+  <a href="#sec06"><span class="nav-num">06</span>GRPO 与 RLVR</a>
+  <a href="#sec07"><span class="nav-num">07</span>推理模型训练</a>
+  <a href="#sec08"><span class="nav-num">08</span>多智能体 RL</a>
+  <a href="#sec09"><span class="nav-num">09</span>前沿与未来</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Deep Dive · Reinforcement Learning</div>
+  <h1>强化学习在 <em>AI</em> 中的应用全解</h1>
+  <p class="hero-sub">从 MDP 基础到 RLHF、GRPO、推理模型训练 — 覆盖经典理论与 2025 最新技术</p>
+</div>
+
+<div class="main">
+
+<!-- ===== SECTION 00: RL 基础与 MDP ===== -->
+<div class="section" id="sec00">
+  <span class="section-badge" style="border-color:var(--green);color:var(--green)">基础理论</span>
+  <h2 class="section-title">Section 00: 强化学习基础与 MDP</h2>
+  <p class="section-sub">马尔可夫决策过程、状态-动作-奖励、折扣回报、探索与利用</p>
+
+  <p class="prose"><strong>强化学习（Reinforcement Learning, RL）</strong>是机器学习的三大范式之一（监督学习、无监督学习、强化学习）。核心思想是<em>智能体（Agent）</em>通过与<em>环境（Environment）</em>交互，根据获得的<em>奖励信号（Reward）</em>学习最优<em>策略（Policy）</em>。</p>
+
+  <p class="prose">与监督学习不同，RL 没有明确的"正确答案"标签——智能体必须通过试错（trial and error）自行发现什么行为能带来最大长期收益。这使得 RL 特别适合序列决策问题：下棋、对话生成、机器人控制、LLM 对齐等。</p>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">马尔可夫决策过程 (MDP)</h3>
+
+  <p class="prose">RL 的数学框架是<strong>马尔可夫决策过程</strong>，定义为五元组 (S, A, P, R, γ)：</p>
+
+  <div class="formula">
+    MDP = (S, A, P, R, γ)<br>
+    S: 状态空间（State Space）<br>
+    A: 动作空间（Action Space）<br>
+    P(s'|s,a): 状态转移概率<br>
+    R(s,a,s'): 奖励函数<br>
+    γ ∈ [0,1]: 折扣因子
+  </div>
+
+  <p class="prose"><strong>马尔可夫性质：</strong>下一个状态只依赖于当前状态和动作，与历史无关：<code>P(s_{t+1}|s_t, a_t) = P(s_{t+1}|s_0,...,s_t, a_0,...,a_t)</code>。在 LLM 场景中，"状态"是目前为止生成的所有 token，"动作"是下一个 token 的选择。</p>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">核心概念</h3>
+
+  <table class="cmp-table">
+    <tr><th>概念</th><th>定义</th><th>LLM 中的对应</th></tr>
+    <tr><td><strong>策略 π(a|s)</strong></td><td>在状态 s 下选择动作 a 的概率分布</td><td>LLM 的 next-token 概率分布</td></tr>
+    <tr><td><strong>状态价值 V^π(s)</strong></td><td>从状态 s 出发，遵循策略 π 的期望累计回报</td><td>从当前生成位置起的预期回答质量</td></tr>
+    <tr><td><strong>动作价值 Q^π(s,a)</strong></td><td>在 s 执行 a 后遵循 π 的期望累计回报</td><td>选择某个 token 后预期的回答质量</td></tr>
+    <tr><td><strong>优势函数 A^π(s,a)</strong></td><td>Q^π(s,a) - V^π(s)，衡量动作 a 比平均好多少</td><td>该 token 比平均选择好多少</td></tr>
+    <tr><td><strong>折扣回报 G_t</strong></td><td>Σ_{k=0}^∞ γ^k r_{t+k+1}</td><td>整个回答的加权质量评分</td></tr>
+  </table>
+
+  <div class="formula">
+    Bellman 方程（价值函数的递推关系）：<br>
+    V^π(s) = Σ_a π(a|s) Σ_{s'} P(s'|s,a) [R(s,a,s') + γ V^π(s')]<br>
+    <span class="comment">当前状态的价值 = 即时奖励 + 折扣后的下一状态价值</span>
+  </div>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">探索与利用（Exploration vs Exploitation）</h3>
+
+  <p class="prose">这是 RL 的核心困境：<strong>利用（Exploitation）</strong>选择当前已知最优动作以获得即时收益；<strong>探索（Exploration）</strong>尝试新动作以发现可能更好的策略。</p>
+
+  <p class="prose">在 LLM 训练中，这体现为：利用 = 生成高奖励的安全回答；探索 = 尝试新的表达方式，可能发现更好的回答策略。<strong>KL 散度约束</strong>（限制新策略偏离参考模型的程度）本质上就是在控制探索的幅度。</p>
+
+  <div class="callout callout-green">
+    <strong>为什么 LLM 对齐是 RL 问题？</strong> 因为"好的回答"没有唯一标准答案（不适合监督学习），但我们可以评估回答质量（奖励信号）。LLM 生成是序列决策：每个 token 都是一个"动作"，影响后续所有 token。RLHF 将人类偏好转化为奖励信号，引导 LLM 学习更好的生成策略。
+  </div>
+</div>
+
+<!-- ===== SECTION 01: 经典 RL 算法 ===== -->
+<div class="section" id="sec01">
+  <span class="section-badge" style="border-color:var(--blue);color:var(--blue)">经典算法</span>
+  <h2 class="section-title">Section 01: 经典 RL 算法演进</h2>
+  <p class="section-sub">从 Q-Learning 到 Actor-Critic — 理解现代 LLM RL 的算法基石</p>
+
+  <p class="prose">现代 LLM 中使用的 PPO、GRPO 等算法并非凭空出现，而是 RL 领域几十年发展的结晶。理解经典算法有助于深入理解当代技术的设计动机。</p>
+
+  <h3 style="color:var(--blue);font-size:1.1rem;margin:28px 0 12px">Value-Based 方法</h3>
+
+  <p class="prose"><strong>Q-Learning（1989）</strong>是最经典的无模型 RL 算法，直接学习 Q(s,a) 函数，通过贪婪策略选取最优动作：</p>
+
+  <div class="formula">
+    Q(s,a) ← Q(s,a) + α [r + γ max_{a'} Q(s',a') - Q(s,a)]<br>
+    <span class="comment">α: 学习率, γ: 折扣因子, max_{a'}: 选下一状态最优动作</span>
+  </div>
+
+  <p class="prose"><strong>Deep Q-Network (DQN, 2015)：</strong>DeepMind 用神经网络逼近 Q 函数，在 Atari 游戏上达到超人水平。关键创新：<em>Experience Replay</em>（经验回放池打破时序相关性）和 <em>Target Network</em>（目标网络稳定训练）。</p>
+
+  <div class="callout callout-teal">
+    <strong>为什么 LLM 不用 Q-Learning？</strong> LLM 的动作空间是整个词表（~128K tokens），状态空间是所有可能的 token 序列——这是一个astronomically 大的离散空间。Q-Learning 需要对每个 (s,a) 对估计价值，在 LLM 场景下完全不可行。这就是为什么 LLM RL 走向了 Policy Gradient 方法。
+  </div>
+
+  <h3 style="color:var(--blue);font-size:1.1rem;margin:28px 0 12px">Policy-Based 方法</h3>
+
+  <p class="prose"><strong>REINFORCE（1992）</strong>直接优化策略参数 θ，使期望回报最大化：</p>
+
+  <div class="formula">
+    ∇_θ J(θ) = E_τ~π_θ [Σ_t ∇_θ log π_θ(a_t|s_t) · G_t]<br>
+    <span class="comment">策略梯度定理：沿着高回报轨迹的方向更新策略</span>
+  </div>
+
+  <p class="prose">REINFORCE 的直觉：如果一个动作序列获得了高回报 G_t，就增加这些动作的概率；反之就降低。问题是<strong>高方差</strong>——同一策略生成的不同轨迹回报差异极大，导致梯度估计不稳定。</p>
+
+  <h3 style="color:var(--blue);font-size:1.1rem;margin:28px 0 12px">Actor-Critic 方法</h3>
+
+  <p class="prose">Actor-Critic 结合了 Value-Based 和 Policy-Based 的优势：</p>
+
+  <table class="cmp-table">
+    <tr><th>组件</th><th>角色</th><th>学习内容</th><th>在 LLM RL 中</th></tr>
+    <tr><td><strong>Actor（演员）</strong></td><td>决定做什么</td><td>策略 π_θ(a|s)</td><td>LLM 本身（生成 token）</td></tr>
+    <tr><td><strong>Critic（评论家）</strong></td><td>评估做得好不好</td><td>价值函数 V_φ(s)</td><td>价值网络（评估生成质量）</td></tr>
+  </table>
+
+  <div class="formula">
+    Actor 更新：∇_θ J(θ) = E [∇_θ log π_θ(a|s) · A(s,a)]<br>
+    Critic 更新：min_φ E [(V_φ(s) - G_t)²]<br>
+    <span class="comment">优势函数 A(s,a) = Q(s,a) - V(s) 由 Critic 估计，大幅降低方差</span>
+  </div>
+
+  <p class="prose"><strong>关键改进——GAE（Generalized Advantage Estimation）：</strong></p>
+
+  <div class="formula">
+    Â_t^GAE = Σ_{l=0}^∞ (γλ)^l δ_{t+l}<br>
+    其中 δ_t = r_t + γV(s_{t+1}) - V(s_t)（TD 残差）<br>
+    <span class="comment">λ 控制偏差-方差权衡：λ=0 低方差高偏差，λ=1 高方差低偏差</span>
+  </div>
+
+  <h3 style="color:var(--blue);font-size:1.1rem;margin:28px 0 12px">RL 算法演进时间线</h3>
+
+  <div class="timeline">
+    <div class="timeline-item"><div class="timeline-year">1989</div><div class="timeline-body"><div class="tl-title">Q-Learning</div><div class="tl-desc">Watkins 提出表格型 Q-Learning，奠定 Value-Based RL 基础</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">1992</div><div class="timeline-body"><div class="tl-title">REINFORCE</div><div class="tl-desc">Williams 提出策略梯度算法，开创 Policy-Based RL</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2000</div><div class="timeline-body"><div class="tl-title">Actor-Critic</div><div class="tl-desc">Konda & Tsitsiklis 统一 Value 和 Policy 方法</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2015</div><div class="timeline-body"><div class="tl-title">DQN / TRPO</div><div class="tl-desc">DeepMind 的 DQN 和 Schulman 的信赖域策略优化</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2017</div><div class="timeline-body"><div class="tl-title">PPO</div><div class="tl-desc">Schulman 提出 PPO，简化 TRPO 同时保持稳定性，成为最流行的 RL 算法</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2022</div><div class="timeline-body"><div class="tl-title">InstructGPT / RLHF</div><div class="tl-desc">OpenAI 用 PPO + 人类反馈训练 InstructGPT，开创 LLM 对齐新范式</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2023</div><div class="timeline-body"><div class="tl-title">DPO</div><div class="tl-desc">斯坦福提出直接偏好优化，绕过奖励模型和 RL 训练</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2024</div><div class="timeline-body"><div class="tl-title">GRPO / RLVR</div><div class="tl-desc">DeepSeek 提出 GRPO，配合可验证奖励训练推理模型</div></div></div>
+    <div class="timeline-item"><div class="timeline-year">2025</div><div class="timeline-body"><div class="tl-title">DAPO / Dr.GRPO</div><div class="tl-desc">GRPO 的改进变体：无 KL 约束、动态采样、token 级归一化</div></div></div>
+  </div>
+</div>
+
+<!-- ===== SECTION 02: Policy Gradient 家族 ===== -->
+<div class="section" id="sec02">
+  <span class="section-badge" style="border-color:var(--teal);color:var(--teal)">核心算法</span>
+  <h2 class="section-title">Section 02: Policy Gradient 家族</h2>
+  <p class="section-sub">REINFORCE → TRPO → PPO — 从不稳定到可控的策略优化之路</p>
+
+  <p class="prose">Policy Gradient（策略梯度）方法是现代 LLM RL 的基础。其核心思想简洁而优雅：<strong>直接参数化策略函数 π_θ，通过梯度上升最大化期望回报</strong>。</p>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">策略梯度定理</h3>
+
+  <div class="math-step">
+    <span class="step-label">目标函数</span>
+    J(θ) = E_{τ~π_θ} [R(τ)] = E_{τ~π_θ} [Σ_t r_t]
+  </div>
+  <div class="math-step">
+    <span class="step-label">策略梯度</span>
+    ∇_θ J(θ) = E_{τ~π_θ} [Σ_t ∇_θ log π_θ(a_t|s_t) · Â_t]
+  </div>
+  <div class="math-step">
+    <span class="step-label">直觉</span>
+    好的动作 (Â_t > 0) → 增加概率；差的动作 (Â_t < 0) → 降低概率
+  </div>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">TRPO（Trust Region Policy Optimization, 2015）</h3>
+
+  <p class="prose">REINFORCE 的问题是每步更新幅度不可控——太大导致策略崩溃，太小则收敛慢。TRPO 引入<strong>信赖域约束</strong>：</p>
+
+  <div class="formula">
+    max_θ E_{s,a~π_old} [π_θ(a|s) / π_old(a|s) · Â(s,a)]<br>
+    subject to: KL(π_old || π_θ) ≤ δ<br>
+    <span class="comment">限制新旧策略的 KL 散度不超过 δ，保证更新幅度可控</span>
+  </div>
+
+  <p class="prose">TRPO 的理论保证很好，但实现复杂——需要计算自然梯度和共轭梯度法求解约束优化问题。这促使了更简洁的 PPO 的诞生。</p>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">三种方法的对比</h3>
+
+  <table class="cmp-table">
+    <tr><th>方法</th><th>更新规则</th><th>稳定性</th><th>实现复杂度</th><th>样本效率</th></tr>
+    <tr><td><strong>REINFORCE</strong></td><td>原始策略梯度</td><td>低（高方差）</td><td>最简单</td><td>低（on-policy）</td></tr>
+    <tr><td><strong>TRPO</strong></td><td>KL 约束优化</td><td>高（理论保证）</td><td>复杂（自然梯度）</td><td>中等</td></tr>
+    <tr><td><strong>PPO</strong></td><td>Clip 近似约束</td><td>高（工程鲁棒）</td><td>简单</td><td>中等</td></tr>
+  </table>
+</div>
+
+<!-- ===== SECTION 03: PPO 详解 ===== -->
+<div class="section" id="sec03">
+  <span class="section-badge" style="border-color:var(--purple);color:var(--purple)">核心算法</span>
+  <h2 class="section-title">Section 03: PPO 完整详解</h2>
+  <p class="section-sub">Proximal Policy Optimization — RLHF 的核心引擎，完整数学推导与实现细节</p>
+
+  <p class="prose"><strong>PPO（Proximal Policy Optimization, 2017）</strong>由 John Schulman 提出，是当前最广泛使用的 RL 算法。InstructGPT、ChatGPT 的对齐训练都基于 PPO。其核心优势：<em>实现简单</em>、<em>训练稳定</em>、<em>超参数鲁棒</em>。</p>
+
+  <h3 style="color:var(--purple);font-size:1.1rem;margin:28px 0 12px">PPO-Clip 目标函数</h3>
+
+  <p class="prose">PPO 的关键创新是用 <strong>Clipping</strong> 替代 TRPO 的硬约束，以一种简洁的方式防止过大的策略更新：</p>
+
+  <div class="math-step">
+    <span class="step-label">概率比</span>
+    r_t(θ) = π_θ(a_t|s_t) / π_{θ_old}(a_t|s_t)
+  </div>
+  <div class="math-step">
+    <span class="step-label">PPO-Clip 目标</span>
+    L^CLIP(θ) = E_t [min(r_t(θ) · Â_t, clip(r_t(θ), 1-ε, 1+ε) · Â_t)]
+  </div>
+  <div class="math-step">
+    <span class="step-label">完整目标（含价值损失和熵正则）</span>
+    L(θ) = L^CLIP(θ) - c₁ · L^VF(θ) + c₂ · S[π_θ]
+  </div>
+
+  <p class="prose"><strong>Clip 的直觉：</strong></p>
+  <p class="prose">• 当 Â_t > 0（好动作）：r_t 被裁剪到最大 1+ε，防止概率增加过多<br>
+  • 当 Â_t < 0（差动作）：r_t 被裁剪到最小 1-ε，防止概率降低过多<br>
+  • ε 通常取 0.1-0.2。效果等价于 TRPO 的信赖域，但无需求解约束优化</p>
+
+  <h3 style="color:var(--purple);font-size:1.1rem;margin:28px 0 12px">PPO 在 LLM 中的四个模型</h3>
+
+  <p class="prose">在 RLHF 的 PPO 训练中，需要同时维护<strong>四个模型</strong>：</p>
+
+  <table class="cmp-table">
+    <tr><th>模型</th><th>角色</th><th>是否更新</th><th>显存占用</th></tr>
+    <tr><td><strong>Actor（策略模型）</strong></td><td>生成回答的 LLM</td><td>✅ 更新</td><td>完整模型大小</td></tr>
+    <tr><td><strong>Critic（价值模型）</strong></td><td>估计每个 token 位置的价值</td><td>✅ 更新</td><td>完整模型大小</td></tr>
+    <tr><td><strong>Reference Model</strong></td><td>KL 散度的参考基准</td><td>❌ 冻结</td><td>完整模型大小</td></tr>
+    <tr><td><strong>Reward Model</strong></td><td>评估回答质量</td><td>❌ 冻结</td><td>完整模型大小</td></tr>
+  </table>
+
+  <div class="callout callout-coral">
+    <strong>PPO 的显存瓶颈：</strong>4 个模型 × 70B 参数 = 280B 参数需同时在 GPU 上。这就是为什么 RLHF/PPO 训练极其昂贵，也是 DPO（不需要 Reward Model 和 Critic）和 GRPO（不需要 Critic）诞生的动机。
+  </div>
+
+  <h3 style="color:var(--purple);font-size:1.1rem;margin:28px 0 12px">PPO 训练循环（伪代码）</h3>
+
+  <div class="code-block">
+<span class="comment"># PPO for LLM alignment (simplified)</span>
+for epoch in range(num_epochs):
+    <span class="comment"># 1. 采样阶段：Actor 生成回答</span>
+    prompts = sample_batch(prompt_dataset)
+    responses = actor.generate(prompts)
+
+    <span class="comment"># 2. 评估阶段：计算奖励和价值</span>
+    rewards = reward_model(prompts, responses)
+    values = critic(prompts, responses)
+    ref_logprobs = reference_model.logprobs(responses)
+
+    <span class="comment"># 3. 计算 KL 惩罚后的奖励</span>
+    kl_penalty = β * (actor_logprobs - ref_logprobs)
+    adjusted_rewards = rewards - kl_penalty
+
+    <span class="comment"># 4. 计算 GAE 优势估计</span>
+    advantages = compute_gae(adjusted_rewards, values, γ, λ)
+
+    <span class="comment"># 5. PPO 更新（多个 mini-batch）</span>
+    for mini_batch in split(advantages, K):
+        ratio = actor.logprobs(responses) / old_logprobs
+        clipped = clip(ratio, 1-ε, 1+ε)
+        actor_loss = -min(ratio * advantages, clipped * advantages)
+        critic_loss = (critic(responses) - returns)²
+        loss = actor_loss + c1 * critic_loss - c2 * entropy
+        loss.backward()
+        optimizer.step()
+  </div>
+
+  <h3 style="color:var(--purple);font-size:1.1rem;margin:28px 0 12px">PPO 的关键超参数</h3>
+
+  <table class="cmp-table">
+    <tr><th>超参数</th><th>典型值</th><th>作用</th></tr>
+    <tr><td><strong>ε (clip range)</strong></td><td>0.2</td><td>控制策略更新幅度</td></tr>
+    <tr><td><strong>β (KL 系数)</strong></td><td>0.01-0.1</td><td>平衡奖励最大化和偏离控制</td></tr>
+    <tr><td><strong>γ (折扣因子)</strong></td><td>1.0</td><td>LLM 中通常不折扣（整个回答同等重要）</td></tr>
+    <tr><td><strong>λ (GAE)</strong></td><td>0.95</td><td>优势估计的偏差-方差权衡</td></tr>
+    <tr><td><strong>K (更新轮数)</strong></td><td>4</td><td>每批数据上的 PPO 更新次数</td></tr>
+    <tr><td><strong>lr (学习率)</strong></td><td>1e-6 ~ 5e-6</td><td>LLM PPO 需要极小学习率</td></tr>
+  </table>
+</div>
+
+<!-- ===== SECTION 04: RLHF 完整流程 ===== -->
+<div class="section" id="sec04">
+  <span class="section-badge" style="border-color:var(--amber);color:var(--amber)">LLM 对齐</span>
+  <h2 class="section-title">Section 04: RLHF 完整流程</h2>
+  <p class="section-sub">从 InstructGPT 到 ChatGPT — 三阶段训练管线与奖励模型设计</p>
+
+  <p class="prose"><strong>RLHF（Reinforcement Learning from Human Feedback）</strong>是将人类偏好转化为 RL 训练信号的方法论。2022 年 OpenAI 的 InstructGPT 论文将其推向主流——一个 1.3B 参数的 RLHF 模型被用户偏好超过了 175B 的 GPT-3。</p>
+
+  <h3 style="color:var(--amber);font-size:1.1rem;margin:28px 0 12px">三阶段训练管线</h3>
+
+  <div class="steps">
+    <div class="step"><div class="step-num" style="color:var(--amber)">01</div><div class="step-body"><div class="title">SFT（有监督微调）</div><div class="desc">在高质量 prompt-response 对上微调预训练模型。数据来源：人工编写的示例（10K-100K 条）。目标：让模型学会指令跟随的基本格式和风格。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--amber)">02</div><div class="step-body"><div class="title">Reward Model 训练</div><div class="desc">收集人类偏好数据（对同一 prompt 的多个 response 进行排序），训练 Bradley-Terry 奖励模型。RM 学习预测人类更喜欢哪个回答。通常使用 SFT 模型的最后一层替换为标量输出头。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--amber)">03</div><div class="step-body"><div class="title">PPO 强化学习</div><div class="desc">使用 PPO 算法优化 SFT 模型，以最大化 Reward Model 的评分，同时通过 KL 散度约束防止偏离太远。这一步最昂贵（4 个模型同时在线），也最容易出问题。</div></div></div>
+  </div>
+
+  <h3 style="color:var(--amber);font-size:1.1rem;margin:28px 0 12px">奖励模型（Reward Model）设计</h3>
+
+  <p class="prose">RM 基于 <strong>Bradley-Terry 模型</strong>——给定两个回答 y_w（更好）和 y_l（更差），模型学习预测偏好概率：</p>
+
+  <div class="formula">
+    P(y_w > y_l | x) = σ(r(x, y_w) - r(x, y_l))<br>
+    损失：L_RM = -E[log σ(r(x, y_w) - r(x, y_l))]<br>
+    <span class="comment">只有奖励差值有意义，绝对值无意义（可以加任意常数）</span>
+  </div>
+
+  <p class="prose"><strong>RM 的常见问题：</strong></p>
+  <p class="prose">• <strong>分布外泛化差：</strong>RM 在训练分布内准确，但 PPO 会把策略推到分布外<br>
+  • <strong>奖励黑化（Reward Hacking）：</strong>模型找到 RM 的漏洞（如更长回答得分更高）<br>
+  • <strong>标注者不一致：</strong>不同标注者对同一对比较给出不同偏好</p>
+
+  <h3 style="color:var(--amber);font-size:1.1rem;margin:28px 0 12px">Process RM vs Outcome RM</h3>
+
+  <table class="cmp-table">
+    <tr><th>类型</th><th>评估粒度</th><th>信号密度</th><th>适用场景</th></tr>
+    <tr><td><strong>Outcome RM</strong></td><td>最终答案正确性</td><td>稀疏（整体一个分数）</td><td>对话对齐、通用任务</td></tr>
+    <tr><td><strong>Process RM (PRM)</strong></td><td>每个推理步骤的正确性</td><td>密集（每步一个分数）</td><td>数学推理、代码生成</td></tr>
+  </table>
+
+  <p class="prose"><strong>PRM 的优势：</strong>OpenAI 的研究表明（"Let's Verify Step by Step", 2023），PRM 在数学推理中显著优于 ORM——因为它能识别<em>哪一步出错</em>，提供更精确的训练信号。但 PRM 的标注成本极高（需要逐步评估推理链）。</p>
+
+  <div class="callout callout-amber">
+    <strong>RLHF 的里程碑：</strong>InstructGPT (2022) 证明了 RLHF 的威力——1.3B 模型通过 RLHF 在用户评估中击败了 175B 的 GPT-3（100x 参数差距）。ChatGPT (2022.11) 的发布更是将 RLHF 推向了全球聚光灯。Anthropic 的 Claude 系列则在 RLHF 基础上发展了 Constitutional AI (RLAIF)。
+  </div>
+</div>
+
+<!-- ===== SECTION 05: DPO 与偏好优化 ===== -->
+<div class="section" id="sec05">
+  <span class="section-badge" style="border-color:var(--pink);color:var(--pink)">无 RL 对齐</span>
+  <h2 class="section-title">Section 05: DPO 与偏好优化</h2>
+  <p class="section-sub">Direct Preference Optimization — 将 RL 问题转化为分类问题</p>
+
+  <p class="prose"><strong>DPO（Direct Preference Optimization, 2023）</strong>是斯坦福提出的革命性方法。核心洞察：<em>最优奖励函数可以用最优策略的闭式解表示</em>，因此可以绕过奖励模型训练和 PPO，直接在偏好数据上优化策略。</p>
+
+  <h3 style="color:var(--pink);font-size:1.1rem;margin:28px 0 12px">数学推导</h3>
+
+  <div class="math-step">
+    <span class="step-label">Step 1: RLHF 的目标</span>
+    max_π E[r(x,y)] - β · KL(π || π_ref)
+  </div>
+  <div class="math-step">
+    <span class="step-label">Step 2: 最优策略的闭式解</span>
+    π*(y|x) = π_ref(y|x) · exp(r(x,y) / β) / Z(x)
+  </div>
+  <div class="math-step">
+    <span class="step-label">Step 3: 反解奖励函数</span>
+    r(x,y) = β · log(π*(y|x) / π_ref(y|x)) + β · log Z(x)
+  </div>
+  <div class="math-step">
+    <span class="step-label">Step 4: 代入 Bradley-Terry，Z(x) 被消去</span>
+    L_DPO = -E[log σ(β(log π_θ(y_w|x)/π_ref(y_w|x) - log π_θ(y_l|x)/π_ref(y_l|x)))]
+  </div>
+
+  <p class="prose">最终的 DPO 损失函数只需要：策略模型 π_θ、参考模型 π_ref、偏好数据 (x, y_w, y_l)。<strong>不需要单独的奖励模型和 PPO 训练</strong>。</p>
+
+  <h3 style="color:var(--pink);font-size:1.1rem;margin:28px 0 12px">DPO vs PPO/RLHF 对比</h3>
+
+  <table class="cmp-table">
+    <tr><th>维度</th><th>RLHF (PPO)</th><th>DPO</th></tr>
+    <tr><td><strong>需要的模型数</strong></td><td>4 个（Actor, Critic, Ref, RM）</td><td>2 个（Policy, Ref）</td></tr>
+    <tr><td><strong>训练稳定性</strong></td><td>不稳定（RL 固有问题）</td><td>稳定（等价于分类）</td></tr>
+    <tr><td><strong>超参数敏感度</strong></td><td>高（ε, β, lr, GAE λ...）</td><td>低（主要是 β）</td></tr>
+    <tr><td><strong>计算成本</strong></td><td>4x 模型 + 采样开销</td><td>2x 模型，无采样</td></tr>
+    <tr><td><strong>数据利用</strong></td><td>Online（实时采样新数据）</td><td>Offline（固定数据集）</td></tr>
+    <tr><td><strong>性能上限</strong></td><td>更高（在线探索）</td><td>受限于偏好数据质量</td></tr>
+  </table>
+
+  <h3 style="color:var(--pink);font-size:1.1rem;margin:28px 0 12px">DPO 的变体</h3>
+
+  <table class="cmp-table">
+    <tr><th>变体</th><th>改进点</th><th>适用场景</th></tr>
+    <tr><td><strong>IPO</strong></td><td>平方损失替代 log-sigmoid，防止无界优化</td><td>需稳定收敛</td></tr>
+    <tr><td><strong>KTO</strong></td><td>前景理论，支持非配对反馈（点赞/踩）</td><td>大量二元反馈数据</td></tr>
+    <tr><td><strong>ORPO</strong></td><td>消除参考模型，SFT+偏好合一</td><td>资源受限</td></tr>
+    <tr><td><strong>SimPO</strong></td><td>用 response 长度归一化的 log-prob 作为隐式奖励</td><td>长度敏感任务</td></tr>
+    <tr><td><strong>Online DPO</strong></td><td>在线采样新数据替代离线数据集</td><td>追求更高性能</td></tr>
+  </table>
+
+  <div class="callout callout-teal">
+    <strong>DPO 的局限与 Online RL 的回归：</strong>DPO 是 Offline 方法——它只能从固定的偏好数据中学习，不能探索新策略。这意味着 DPO 的性能上限受限于偏好数据的质量和多样性。2024-2025 年的趋势是回归 Online RL（如 GRPO），因为 Online 方法可以生成新数据、探索新策略，突破偏好数据的天花板。
+  </div>
+</div>
+
+<!-- ===== SECTION 06: GRPO 与 RLVR ===== -->
+<div class="section" id="sec06">
+  <span class="section-badge" style="border-color:var(--green);color:var(--green)">2024-2025 前沿</span>
+  <h2 class="section-title">Section 06: GRPO 与 RLVR</h2>
+  <p class="section-sub">Group Relative Policy Optimization + 可验证奖励 — 推理模型训练的核心技术</p>
+
+  <p class="prose"><strong>GRPO（Group Relative Policy Optimization）</strong>是 DeepSeek 于 2024 年提出的算法，是 2024-2025 年最重要的 RL 创新之一。GRPO + RLVR 的组合使 DeepSeek R1 成为首个通过纯 RL 获得强大推理能力的开源模型。</p>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">GRPO 核心思想</h3>
+
+  <p class="prose">GRPO 的关键创新：<strong>用组内相对奖励替代 Critic 模型</strong>。对同一个 prompt 采样 K 个响应，计算组内归一化优势：</p>
+
+  <div class="formula">
+    对 prompt x，采样 K 个响应: {y_1, y_2, ..., y_K} ~ π_θ(·|x)<br>
+    计算每个响应的奖励: {r_1, r_2, ..., r_K}<br>
+    组内归一化优势: Â_i = (r_i - mean(r)) / (std(r) + ε)<br>
+    <br>
+    GRPO 目标: L = E [min(ρ_i · Â_i, clip(ρ_i, 1-ε, 1+ε) · Â_i) - β · KL(π_θ || π_ref)]<br>
+    其中 ρ_i = π_θ(y_i|x) / π_{old}(y_i|x)
+  </div>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">GRPO vs PPO</h3>
+
+  <table class="cmp-table">
+    <tr><th>维度</th><th>PPO</th><th>GRPO</th></tr>
+    <tr><td><strong>Critic 模型</strong></td><td>需要（与 Actor 等大）</td><td>不需要</td></tr>
+    <tr><td><strong>显存占用</strong></td><td>4x 模型</td><td>~2x 模型 + K 个采样</td></tr>
+    <tr><td><strong>优势估计</strong></td><td>GAE（需 Critic V(s)）</td><td>组内归一化</td></tr>
+    <tr><td><strong>方差控制</strong></td><td>Critic 基线</td><td>组内 mean 基线</td></tr>
+    <tr><td><strong>适用场景</strong></td><td>通用 RL、对话对齐</td><td>推理任务（数学、代码）</td></tr>
+    <tr><td><strong>代表模型</strong></td><td>ChatGPT, Claude</td><td>DeepSeek R1</td></tr>
+  </table>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">RLVR（RL with Verifiable Rewards）</h3>
+
+  <p class="prose">RLVR 是 GRPO 的"灵魂伴侣"——提供<strong>可自动验证的奖励信号</strong>，完全绕过人类标注和学习型奖励模型：</p>
+
+  <table class="cmp-table">
+    <tr><th>奖励来源</th><th>原理</th><th>示例</th></tr>
+    <tr><td><strong>数学验证器</strong></td><td>检查最终答案是否等于标准答案</td><td>"42" == "42" → reward = 1</td></tr>
+    <tr><td><strong>代码执行器</strong></td><td>运行代码检查测试用例是否通过</td><td>pass@k 测试 → reward = pass_rate</td></tr>
+    <tr><td><strong>形式验证</strong></td><td>逻辑推理的自动证明检查</td><td>Lean4 / Coq 证明验证</td></tr>
+    <tr><td><strong>规则匹配</strong></td><td>检查输出格式是否正确</td><td>JSON 格式校验 → reward = valid</td></tr>
+  </table>
+
+  <div class="callout callout-green">
+    <strong>RLVR 的革命性意义：</strong>传统 RLHF 需要昂贵的人类标注（~$10-50 per comparison）。RLVR 的奖励是免费、无限且完全准确的。这使得大规模 RL 训练成为可能——DeepSeek R1 在数学和代码任务上训练了数百万轮 GRPO + RLVR，成本远低于同等规模的 RLHF。
+  </div>
+
+  <h3 style="color:var(--green);font-size:1.1rem;margin:28px 0 12px">GRPO 的改进变体（2025）</h3>
+
+  <table class="cmp-table">
+    <tr><th>变体</th><th>改进点</th><th>来源</th></tr>
+    <tr><td><strong>DAPO</strong></td><td>去除 KL 约束 + clip-higher 防止熵坍缩 + 动态采样 + token 级归一化</td><td>ByteDance, 2025</td></tr>
+    <tr><td><strong>Dr. GRPO</strong></td><td>移除方差归一化（仅用 mean 归一化），简化实现</td><td>2025</td></tr>
+    <tr><td><strong>GSPO</strong></td><td>Group Shuffled Policy Optimization，改进组内比较方式</td><td>2025</td></tr>
+  </table>
+</div>
+
+<!-- ===== SECTION 07: 推理模型训练 ===== -->
+<div class="section" id="sec07">
+  <span class="section-badge" style="border-color:var(--coral);color:var(--coral)">推理革命</span>
+  <h2 class="section-title">Section 07: 推理模型（Reasoning Model）训练</h2>
+  <p class="section-sub">OpenAI o1/o3、DeepSeek R1 — RL 如何教会模型"思考"</p>
+
+  <p class="prose">2024-2025 年，AI 领域最大的突破之一是<strong>推理模型</strong>的兴起。这些模型通过 RL 训练获得了"深度思考"的能力——在回答问题前生成长链推理过程（Chain of Thought），显著提升了数学、编程和逻辑推理的准确率。</p>
+
+  <h3 style="color:var(--coral);font-size:1.1rem;margin:28px 0 12px">两大代表模型</h3>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label" style="color:var(--blue)">OPENAI</div>
+      <div class="tc-val" style="color:var(--blue)">o1 / o3</div>
+      <div class="tc-desc">首个推理模型（2024.9）。通过大规模 RL 训练学会隐式搜索（implicit search via CoT）。o3 使用 10x 更多训练计算，引入 deliberative alignment。训练细节未公开，推测使用 Outcome-Based RL + 可能的 PRM。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label" style="color:var(--green)">DEEPSEEK</div>
+      <div class="tc-val" style="color:var(--green)">R1</div>
+      <div class="tc-desc">首个开源推理模型（2025.1）。使用 GRPO + RLVR 纯 RL 训练。R1-Zero 展示了无需 SFT 直接 RL 也能涌现推理能力。完全开源训练细节和权重。</div>
+    </div>
+  </div>
+
+  <h3 style="color:var(--coral);font-size:1.1rem;margin:28px 0 12px">DeepSeek R1 的训练流程</h3>
+
+  <div class="steps">
+    <div class="step"><div class="step-num" style="color:var(--coral)">01</div><div class="step-body"><div class="title">R1-Zero：纯 RL 实验</div><div class="desc">从 DeepSeek-V3-Base（未经 SFT）直接用 GRPO + RLVR 训练。惊人发现：模型自发涌现出 Chain-of-Thought、自我验证、反思等推理行为——无需人类示范。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--coral)">02</div><div class="step-body"><div class="title">冷启动数据收集</div><div class="desc">R1-Zero 的输出格式混乱，语言混杂。收集少量高质量 CoT 数据（~数千条）进行 SFT，建立良好的输出格式和语言习惯。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--coral)">03</div><div class="step-body"><div class="title">推理导向 RL</div><div class="desc">在冷启动 SFT 基础上进行大规模 GRPO + RLVR 训练。奖励来源：数学答案验证、代码测试用例、规则匹配。训练数据覆盖数学、编程、科学推理等。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--coral)">04</div><div class="step-body"><div class="title">拒绝采样 + SFT</div><div class="desc">从 RL 模型中采样大量推理轨迹，筛选高质量数据。混合推理数据和通用数据进行 SFT，恢复通用能力（写作、对话等）。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--coral)">05</div><div class="step-body"><div class="title">全场景 RL</div><div class="desc">最后一轮 RL 同时优化推理任务（RLVR）和通用任务（基于 RM 的 RLHF），实现推理与通用能力的统一。</div></div></div>
+  </div>
+
+  <h3 style="color:var(--coral);font-size:1.1rem;margin:28px 0 12px">关键发现：RL 的涌现能力</h3>
+
+  <p class="prose">DeepSeek R1-Zero 展示了几个令人惊讶的涌现现象：</p>
+  <p class="prose">• <strong>"Aha moment"：</strong>训练过程中模型突然学会自我反思（"Wait, let me reconsider..."），推理准确率急剧提升<br>
+  • <strong>推理长度自适应：</strong>模型学会对简单问题用短推理、对复杂问题用长推理<br>
+  • <strong>自我验证：</strong>模型自发学会在得出答案后检查自己的推理过程<br>
+  • <strong>语言混合：</strong>R1-Zero 自发切换中英文推理（因为无格式约束），反映了 RL 优化的"自由探索"</p>
+
+  <h3 style="color:var(--coral);font-size:1.1rem;margin:28px 0 12px">Test-Time Compute Scaling</h3>
+
+  <p class="prose">推理模型引入了一个新范式：<strong>推理时增加计算量可以提升性能</strong>。与传统的"大模型更好"不同，现在"想更久也更好"。</p>
+
+  <div class="formula">
+    Test-Time Scaling 策略：<br>
+    1. 更长的 CoT：让模型思考更多步（更多 token）<br>
+    2. Best-of-N：采样 N 个回答，用验证器选最优<br>
+    3. Beam Search over CoT：对推理链进行 beam search<br>
+    <span class="comment">o1/o3 的推理能力部分来自推理时的大量计算</span>
+  </div>
+</div>
+
+<!-- ===== SECTION 08: 多智能体 RL ===== -->
+<div class="section" id="sec08">
+  <span class="section-badge" style="border-color:var(--orange);color:var(--orange)">多智能体</span>
+  <h2 class="section-title">Section 08: 多智能体强化学习（MARL）</h2>
+  <p class="section-sub">Self-Play、协作与竞争、LLM Debate — 多个 Agent 如何通过 RL 交互学习</p>
+
+  <p class="prose"><strong>多智能体强化学习（MARL）</strong>研究多个智能体在共享环境中通过 RL 同时学习的问题。在 LLM 时代，MARL 有两个重要应用方向：<em>Self-Play 自我博弈</em>和<em>LLM Debate 辩论对齐</em>。</p>
+
+  <h3 style="color:var(--orange);font-size:1.1rem;margin:28px 0 12px">经典 MARL 里程碑</h3>
+
+  <table class="cmp-table">
+    <tr><th>系统</th><th>年份</th><th>环境</th><th>方法</th><th>成就</th></tr>
+    <tr><td><strong>AlphaGo</strong></td><td>2016</td><td>围棋</td><td>MCTS + Self-Play RL</td><td>击败世界冠军李世乭</td></tr>
+    <tr><td><strong>AlphaZero</strong></td><td>2017</td><td>围棋/象棋/将棋</td><td>纯 Self-Play（无人类数据）</td><td>从零学习超越所有先前 AI</td></tr>
+    <tr><td><strong>OpenAI Five</strong></td><td>2019</td><td>Dota 2</td><td>PPO + Self-Play</td><td>击败世界冠军队伍</td></tr>
+    <tr><td><strong>AlphaStar</strong></td><td>2019</td><td>StarCraft II</td><td>Population-Based Training</td><td>达到大师级水平</td></tr>
+    <tr><td><strong>Cicero</strong></td><td>2022</td><td>Diplomacy</td><td>RL + 自然语言策略</td><td>在需要协作/欺骗的游戏中达到人类水平</td></tr>
+  </table>
+
+  <h3 style="color:var(--orange);font-size:1.1rem;margin:28px 0 12px">Self-Play 在 LLM 中的应用</h3>
+
+  <p class="prose"><strong>Self-Play</strong>是让模型与自身的副本对弈，通过竞争或协作提升能力。在 LLM 领域的应用：</p>
+
+  <p class="prose">• <strong>SPIN（Self-Play Fine-Tuning）：</strong>模型生成回答，然后自己学习区分"自己生成的"和"人类写的"回答。迭代进行，每轮模型都变得更接近人类水平<br>
+  • <strong>LLM Debate：</strong>两个 LLM 就同一问题辩论，人类（或另一个 LLM）判断胜负。RL 训练让两个模型都学会更有说服力和更准确的论证<br>
+  • <strong>RLVR 中的 Self-Play：</strong>DeepSeek R1 的 GRPO 本质上是一种 Self-Play——同一模型的多个采样相互比较</p>
+
+  <h3 style="color:var(--orange);font-size:1.1rem;margin:28px 0 12px">MARL 用于 AI 安全</h3>
+
+  <p class="prose"><strong>AI Safety via Debate（Irving et al., 2018）：</strong>让两个 AI 围绕一个问题辩论，人类只需判断谁更有说服力（比直接评估 AI 回答容易得多）。如果辩论是零和博弈，理论上真实答案是纳什均衡——说谎者最终会被另一方揭穿。</p>
+
+  <p class="prose">这是一种<strong>可扩展监督（Scalable Oversight）</strong>方案：即使超级 AI 的回答人类无法直接评估，通过观看两个 AI 的辩论仍然可以识别哪个更正确。</p>
+</div>
+
+<!-- ===== SECTION 09: 前沿与未来 ===== -->
+<div class="section" id="sec09">
+  <span class="section-badge" style="border-color:var(--teal);color:var(--teal)">未来方向</span>
+  <h2 class="section-title">Section 09: 前沿趋势与未来方向</h2>
+  <p class="section-sub">2025 年 RL for AI 的最新发展和开放问题</p>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">2025 年 RL for LLM 的技术栈</h3>
+
+  <p class="prose">2025 年，业界已形成相对成熟的<strong>模块化后训练栈</strong>：</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-num" style="color:var(--teal)">01</div><div class="step-body"><div class="title">SFT（指令跟随）</div><div class="desc">高质量指令数据微调，建立基本格式和风格。LIMA 证明 1K 高质量数据可能就够。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--teal)">02</div><div class="step-body"><div class="title">偏好优化（对齐）</div><div class="desc">DPO / SimPO / KTO 用于通用对齐——有用性、安全性、格式遵循。Offline 方法，成本低。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--teal)">03</div><div class="step-body"><div class="title">RLVR（推理能力）</div><div class="desc">GRPO / DAPO + 可验证奖励，用于数学、代码、逻辑推理。Online 方法，可超越训练数据。</div></div></div>
+    <div class="step"><div class="step-num" style="color:var(--teal)">04</div><div class="step-body"><div class="title">安全 RL（红线对齐）</div><div class="desc">Constitutional AI / Rule-Based RL 用于安全边界。确保模型不产生有害内容。</div></div></div>
+  </div>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">前沿研究方向</h3>
+
+  <table class="cmp-table">
+    <tr><th>方向</th><th>核心问题</th><th>代表工作</th></tr>
+    <tr><td><strong>Generalized RLVR</strong></td><td>将可验证奖励从数学/代码扩展到更多领域</td><td>使用 LLM-as-Judge 作为弱验证器</td></tr>
+    <tr><td><strong>Process Supervision</strong></td><td>细粒度推理步骤奖励，而非只看最终答案</td><td>OpenAI PRM, Math-Shepherd</td></tr>
+    <tr><td><strong>RL for World Models</strong></td><td>让 LLM 通过 RL 学习世界模型和因果推理</td><td>模型内部推理的 RL 优化</td></tr>
+    <tr><td><strong>Efficient RL Training</strong></td><td>降低 RL 训练成本，支持更长推理</td><td>DAPO、异步采样、参数高效 RL</td></tr>
+    <tr><td><strong>Superalignment</strong></td><td>用弱模型监督强模型</td><td>Weak-to-Strong Generalization</td></tr>
+    <tr><td><strong>Multi-Objective RL</strong></td><td>同时优化有用性、安全性、推理能力</td><td>Pareto-DPO, 多奖励模型</td></tr>
+    <tr><td><strong>RL for Agents</strong></td><td>训练 LLM Agent 使用工具、完成任务</td><td>WebAgent, SWE-Agent RL training</td></tr>
+  </table>
+
+  <h3 style="color:var(--teal);font-size:1.1rem;margin:28px 0 12px">开放问题</h3>
+
+  <p class="prose"><strong>1. RL 是否真的教会了推理？</strong>最近的研究（"RLVR Makes Models Faster, Not Smarter"）提出争议：RLVR 可能只是在放大预训练中已有的推理能力，而非创造新能力。模型学会了更好地调用已有知识，但知识本身来自预训练。</p>
+
+  <p class="prose"><strong>2. 奖励信号的可扩展性：</strong>RLVR 在数学和代码上效果好，因为有精确验证器。但对于创意写作、策略建议等无法精确验证的任务，如何设计有效的奖励信号仍是开放问题。</p>
+
+  <p class="prose"><strong>3. RL 训练的安全性：</strong>强大的 RL 训练可能导致模型学会"钻空子"（reward hacking）。推理模型尤其危险——它们可能学会生成看似正确但实际错误的推理链来获得奖励。</p>
+
+  <p class="prose"><strong>4. 计算可持续性：</strong>推理模型的训练和推理成本都极高。o3 的推理费用是 o1 的数倍，每个问题可能消耗数千个 token 的"思考"过程。如何降低成本是实际部署的关键。</p>
+
+  <div class="callout callout-teal">
+    <strong>总结：</strong>RL 正在从 LLM 训练的"可选步骤"变为"核心引擎"。从 RLHF 的对齐对话质量，到 GRPO+RLVR 的推理能力训练，RL 已经成为让 LLM 超越"模式匹配"走向"真正推理"的关键技术。2025 年之后，RL 在 AI 中的地位只会更加重要。
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<footer class="site-footer">
+  <p>AI 技术演进 - 强化学习在 AI 中的应用全解</p>
+  <p>从 MDP 基础到 GRPO+RLVR 推理模型训练</p>
+</footer>
+
+</body>
+</html>

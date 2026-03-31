@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对齐技术数学推导全解 - AI 技术演进</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{--bg:#07080f;--bg2:#0d0f1a;--bg3:#131520;--bg4:#191c2a;--card:#1b1e2d;--line:rgba(255,255,255,0.06);--line2:rgba(255,255,255,0.11);--text:#dde0ef;--sub:#7a7d94;--dim:#4a4d62;--green:#34d399;--teal:#22d3ee;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--amber:#fbbf24;--coral:#f87171;--orange:#fb923c;--gd:rgba(52,211,153,0.08);--td:rgba(34,211,238,0.08);--bd:rgba(96,165,250,0.08);--pd:rgba(167,139,250,0.08);--ad:rgba(251,191,36,0.08);--cd:rgba(248,113,113,0.08)}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+
+.hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(167,139,250,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(244,114,182,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+
+.hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+
+.hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--purple);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+
+.hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px}
+
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px}
+
+.sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+
+.sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+
+.sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+
+.sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--purple);background:rgba(167,139,250,0.05)}
+
+.sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+
+.sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--purple);text-decoration:none;border-bottom:1px solid var(--line)}
+
+.main{margin-left:220px;max-width:900px}
+
+.section{padding:56px 48px;border-bottom:1px solid var(--line)}
+
+.section:last-child{border-bottom:none}
+
+.section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+
+.section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+
+.section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+
+.prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}
+
+.prose strong{color:var(--text)}
+
+.prose em{color:var(--teal);font-style:normal}
+
+.prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}
+
+.prose ul,.prose ol{margin:8px 0 16px 20px}
+
+.prose li{margin-bottom:6px}
+
+.callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+
+.diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+
+.diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+
+.diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+
+.formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+
+.formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+
+.cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+
+.cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+
+.cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}
+
+.cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+
+.steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+
+.step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+
+.step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px}
+
+.step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+
+.step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+
+.tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+
+@media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+
+.tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}
+
+.tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+
+.tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+
+.tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+
+.interview-box{background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:18px 20px;margin:24px 0}
+
+.interview-box .ib-tag{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+
+.interview-box p,.interview-box li{color:var(--sub);font-size:0.88rem;line-height:1.7}
+
+.interview-box strong{color:var(--text)}
+
+.math-step{background:var(--bg3);border-left:3px solid var(--teal);padding:12px 16px;margin:12px 0;font-family:'IBM Plex Mono',monospace;font-size:0.87rem;line-height:1.7;color:var(--teal);border-radius:4px}
+
+.math-step .step-label{color:var(--dim);font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+
+.alert-warning{background:rgba(251,191,36,0.06);border-left:3px solid var(--amber);padding:14px 16px;margin:16px 0;font-size:0.88rem;line-height:1.6;color:var(--text)}
+
+.alert-info{background:rgba(34,211,238,0.06);border-left:3px solid var(--teal);padding:14px 16px;margin:16px 0;font-size:0.88rem;line-height:1.6;color:var(--text)}
+
+.badge-green{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.3);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;display:inline-block;margin-right:4px}
+
+.badge-purple{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple);padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;display:inline-block;margin-right:4px}
+
+.badge-blue{background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.3);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;display:inline-block;margin-right:4px}
+
+.badge-amber{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;display:inline-block;margin-right:4px}
+</style>
+</head>
+<body>
+
+<!-- SIDE NAVIGATION -->
+<nav class="sidenav">
+  <a href="alignment.html" class="back-link">← 回到对齐主页</a>
+  <div class="sidenav-title">章节导航</div>
+  <a href="#section-00"><span class="nav-num">00</span>对齐训练总览</a>
+  <a href="#section-01"><span class="nav-num">01</span>奖励模型 (RM)</a>
+  <a href="#section-02"><span class="nav-num">02</span>PPO 完整推导</a>
+  <a href="#section-03"><span class="nav-num">03</span>DPO 推导</a>
+  <a href="#section-04"><span class="nav-num">04</span>GRPO (DeepSeek)</a>
+  <a href="#section-05"><span class="nav-num">05</span>ORPO / KTO / IPO</a>
+  <a href="#section-06"><span class="nav-num">06</span>Constitutional AI</a>
+  <a href="#section-07"><span class="nav-num">07</span>方法对比与选择</a>
+  <a href="#section-08"><span class="nav-num">08</span>面试题总览</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Deep Dive · 对齐技术</div>
+  <h1>从 PPO 到 <em>GRPO</em> — 每一步对齐算法的完整数学推导</h1>
+  <p class="hero-sub">面试必备：RLHF、DPO、GRPO 的推导过程和工程实现细节</p>
+</div>
+
+<!-- SECTION 00: 对齐训练总览 -->
+<section class="section" id="section-00">
+  <div class="section-badge" style="border-color:var(--purple);color:var(--purple)">
+    <span>00</span> · 基础概念
+  </div>
+  <h2 class="section-title">对齐训练总览</h2>
+  <p class="section-sub">三阶段管道：SFT → RM → RLHF</p>
+
+  <div class="prose">
+    <p>
+      现代 LLM 对齐的标准管道包含三个不同的阶段，每个阶段对应不同的目标和数据要求。这个流程首次在 OpenAI 的 InstructGPT 论文中系统化，后来成为业界标准。
+    </p>
+
+    <p>
+      <strong>为什么需要多个阶段？</strong>直接用 RL 优化很困难：
+    </p>
+    <ul>
+      <li>奖励信号稀疏，只在序列末尾获得</li>
+      <li>策略空间巨大（每个 token 选择）</li>
+      <li>样本低效，需要大量与环境交互</li>
+      <li>SFT 预热使策略不会漂移太远</li>
+    </ul>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">三阶段对齐管道</div>
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- Stage 1 -->
+      <rect x="20" y="60" width="140" height="80" fill="rgba(96,165,250,0.1)" stroke="#60a5fa" stroke-width="2" rx="6"/>
+      <text x="90" y="95" font-size="14" fill="#60a5fa" font-weight="bold" text-anchor="middle">Stage 1: SFT</text>
+      <text x="90" y="115" font-size="11" fill="#7a7d94" text-anchor="middle">预训练基座 → 监督微调</text>
+      <text x="90" y="130" font-size="11" fill="#7a7d94" text-anchor="middle">1 个模型</text>
+
+      <!-- Arrow -->
+      <line x1="160" y1="100" x2="200" y2="100" stroke="#7a7d94" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Stage 2 -->
+      <rect x="200" y="60" width="140" height="80" fill="rgba(167,139,250,0.1)" stroke="#a78bfa" stroke-width="2" rx="6"/>
+      <text x="270" y="95" font-size="14" fill="#a78bfa" font-weight="bold" text-anchor="middle">Stage 2: RM</text>
+      <text x="270" y="115" font-size="11" fill="#7a7d94" text-anchor="middle">微调奖励模型</text>
+      <text x="270" y="130" font-size="11" fill="#7a7d94" text-anchor="middle">2 个模型</text>
+
+      <!-- Arrow -->
+      <line x1="340" y1="100" x2="380" y2="100" stroke="#7a7d94" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Stage 3 -->
+      <rect x="380" y="60" width="140" height="80" fill="rgba(244,114,182,0.1)" stroke="#f472b6" stroke-width="2" rx="6"/>
+      <text x="450" y="95" font-size="14" fill="#f472b6" font-weight="bold" text-anchor="middle">Stage 3: RLHF</text>
+      <text x="450" y="115" font-size="11" fill="#7a7d94" text-anchor="middle">RL 策略优化</text>
+      <text x="450" y="130" font-size="11" fill="#7a7d94" text-anchor="middle">4 个模型</text>
+
+      <!-- Arrow marker definition -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="#7a7d94"/>
+        </marker>
+      </defs>
+
+      <!-- Memory note -->
+      <text x="90" y="160" font-size="11" fill="#fbbf24" text-anchor="middle">参数数 B</text>
+      <text x="270" y="160" font-size="11" fill="#fbbf24" text-anchor="middle">2B 内存</text>
+      <text x="450" y="160" font-size="11" fill="#f87171" text-anchor="middle">4B 内存 (关键瓶颈)</text>
+    </svg>
+  </div>
+
+  <div class="alert-warning">
+    <strong>内存峰值：</strong>RLHF 阶段需要同时加载 4 个模型副本：策略模型、参考模型、奖励模型、值函数模型。对于 70B 参数的模型，这意味着需要约 1.2TB GPU 内存，这是为什么 GRPO 等新方法重要的原因。
+  </div>
+
+  <div class="prose">
+    <strong>每个阶段的详细流程：</strong>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1️</div>
+      <div class="step-body">
+        <div class="title">SFT 阶段 (几小时到几天)</div>
+        <div class="desc">在 10k～100k 高质量 (prompt, response) 对上微调预训练模型。目标是让模型学会遵循指令的基本格式。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2️</div>
+      <div class="step-body">
+        <div class="title">RM 阶段 (1～2 周)</div>
+        <div class="desc">使用 (prompt, response_win, response_lose) 比较对微调 RM。数据收集：运行 SFT 模型生成多个响应，由人类或模型标注偏好。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3️</div>
+      <div class="step-body">
+        <div class="title">RLHF 阶段 (2～6 周)</div>
+        <div class="desc">用 PPO（或 DPO）迭代优化策略。每次迭代：生成样本、计算优势、更新策略。成本最高阶段。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 01: 奖励模型 -->
+<section class="section" id="section-01">
+  <div class="section-badge" style="border-color:var(--blue);color:var(--blue)">
+    <span>01</span> · 基础模块
+  </div>
+  <h2 class="section-title">奖励模型 (RM) 推导</h2>
+  <p class="section-sub">从 Bradley-Terry 到损失函数</p>
+
+  <div class="prose">
+    <p>
+      奖励模型的核心思想很简单：学习一个函数 r(x, y) 能预测人类对 (prompt, response) 对的偏好。给定两个候选响应，RM 应该给更好的响应更高的分数。
+    </p>
+  </div>
+
+  <div class="alert-info">
+    <strong>核心假设：Bradley-Terry 模型</strong>
+    <br/>给定两个响应 y_w（好）和 y_l（差），人类选择 y_w 的概率由其潜在分数差决定。
+  </div>
+
+  <div class="formula">
+    P(y_w ≻ y_l | x) = σ(r_θ(x, y_w) - r_θ(x, y_l))
+    <span class="comment">Bradley-Terry 模型</span>
+  </div>
+
+  <div class="prose">
+    其中 σ 是 sigmoid 函数，r_θ 是我们要训练的奖励模型。
+  </div>
+
+  <div class="prose">
+    <strong>目标函数推导：</strong>
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 1：似然函数</span>
+    给定数据集 D = {(x_i, y_w^i, y_l^i)} ，最大化：
+    <br/>
+    L = ∏_i P(y_w^i ≻ y_l^i | x_i) = ∏_i σ(r(x_i, y_w^i) - r(x_i, y_l^i))
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 2：对数似然</span>
+    取对数便于数值计算：
+    <br/>
+    log L = ∑_i log σ(r(x_i, y_w^i) - r(x_i, y_l^i))
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 3：转化为损失</span>
+    最大化对数似然 = 最小化交叉熵损失：
+    <br/>
+    L_RM = -E_{(x,y_w,y_l)~D}[log σ(r_θ(x,y_w) - r_θ(x,y_l))]
+    <br/>
+    = E[log(1 + exp(-(r_θ(x,y_w) - r_θ(x,y_l))))]
+  </div>
+
+  <div class="prose">
+    <strong>关键实现细节：</strong>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">初始化策略</div>
+      <div class="tc-val">从 SFT 模型开始</div>
+      <div class="tc-desc">复用 SFT 的骨干网络（通常 70～90% 权重）。分类头是新初始化的。这样避免从随机状态开始，加快收敛。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">数据收集</div>
+      <div class="tc-val">成对标注</div>
+      <div class="tc-desc">使用 SFT 模型采样多个候选（如 K=4～8 个），然后人类选择最佳。可以构造 C(K,2) 个比较对。</div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">损失形式</div>
+      <div class="tc-val">对称性</div>
+      <div class="tc-desc">标准实现没有对 (y_w, y_l) 交换的排序约束。一些实现会显式添加 y_l ≺ y_w 的反向项。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">训练时长</div>
+      <div class="tc-val">1～2 周</div>
+      <div class="tc-desc">对于 13B 模型，约 5k～10k 步。使用较小学习率（1e-5～5e-5），防止过拟合。</div>
+    </div>
+  </div>
+
+  <div class="alert-warning">
+    <strong>数据标注陷阱：</strong>不同标注者的偏好差异大（标注者间一致性 κ～0.4～0.6）。常见解决方案：多标注者投票或使用模型标注进行初步筛选。
+  </div>
+
+  <div class="prose">
+    <strong>RM 的质量直接决定下游 RLHF 的质量。</strong>常见的 RM 失败案例：
+  </div>
+
+  <ul class="prose">
+    <li><strong>过度拟合长度：</strong>RM 学会简单地偏好更长的响应（因为长响应往往评分更高）。对策：对响应长度进行 normalize 或在损失中加正则化。</li>
+    <li><strong>奖励黑客：</strong>策略学会生成看起来好但实际上毫无价值的文本（如重复"高分词"）。需要定期监控生成样本。</li>
+    <li><strong>分布偏移：</strong>RM 在 SFT 分布上训练，但 RLHF 策略会生成分布外的样本。解决方案：在 RLHF 中加入 KL 惩罚。</li>
+  </ul>
+</section>
+
+<!-- SECTION 02: PPO 完整推导 -->
+<section class="section" id="section-02">
+  <div class="section-badge" style="border-color:var(--pink);color:var(--pink)">
+    <span>02</span> · 核心算法
+  </div>
+  <h2 class="section-title">PPO 完整推导</h2>
+  <p class="section-sub">从 RL 目标到梯度更新</p>
+
+  <div class="prose">
+    <p>
+      PPO (Proximal Policy Optimization) 是现代 RLHF 的主力算法。它通过引入一个"信任区域"约束，使训练稳定且高效。
+    </p>
+  </div>
+
+  <div class="alert-info">
+    <strong>PPO 为什么重要？</strong>相比旧的 REINFORCE 或策略梯度，PPO 通过：
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>梯度裁剪防止参数更新过大</li>
+      <li>多纪元更新同一批样本（样本效率高）</li>
+      <li>自适应学习率和熵正则化（防止策略崩溃）</li>
+    </ul>
+  </strong>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第一步：RL 目标函数</h3>
+
+  <div class="prose">
+    从基本的强化学习目标开始：最大化期望奖励，同时保持接近参考策略（避免灾难遗忘）。
+  </div>
+
+  <div class="formula">
+    J(θ) = E_x [E_{y~π_θ(y|x)} [r(x,y)]] - β KL(π_θ(·|x) || π_ref(·|x))
+    <span class="comment">KL-constrained RL objective</span>
+  </div>
+
+  <div class="prose">
+    <strong>各项含义：</strong>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">奖励项</div>
+      <div class="tc-val">E[r(x,y)]</div>
+      <div class="tc-desc">我们要最大化的直接奖励。r 来自之前训练的 RM。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">KL 惩罚</div>
+      <div class="tc-val">β · KL</div>
+      <div class="tc-desc">β 是温度参数（0.01～0.3）。防止策略偏离 π_ref 太远，保持模型的基本能力。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第二步：重要性采样和比率</h3>
+
+  <div class="prose">
+    实际训练时，我们不能直接采样当前策略 π_θ。而是：
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">用旧策略采样</div>
+        <div class="desc">在旧策略 π_old 下生成轨迹 τ = (x, y_1, y_2, ..., y_T)</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">计算重要性比率</div>
+        <div class="desc">r_t = π_θ(y_t|x, y_{<t}) / π_old(y_t|x, y_{<t})</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">估计优势函数</div>
+        <div class="desc">A_t = r(x,y) - V_baseline(x) （使用值函数估计）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula">
+    π_θ(y|x) / π_old(y|x) = ∏_{t=1}^{|y|} (π_θ(y_t|...) / π_old(y_t|...))
+    <span class="comment">序列级的重要性比率（自回归计算）</span>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第三步：PPO 裁剪目标</h3>
+
+  <div class="prose">
+    PPO 的核心创新：限制重要性比率 r_t，防止过大的参数更新。
+  </div>
+
+  <div class="formula">
+    L_PPO(θ) = -E [min(r_t · A_t, clip(r_t, 1-ε, 1+ε) · A_t)]
+    <span class="comment">PPO 目标（梯度方向反向，所以取负）</span>
+  </div>
+
+  <div class="prose">
+    <strong>直观理解：</strong>
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">当 A_t > 0（好的动作）</span>
+    取 min(r_t, 1+ε) · A_t。如果 r_t > 1+ε，则裁剪到 1+ε。这样即使策略大幅改进该动作，也不会过度更新。
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">当 A_t < 0（差的动作）</span>
+    取 min(r_t, 1-ε) · A_t。如果 r_t < 1-ε，则裁剪到 1-ε。防止新策略完全避免已被 r_t 分配高概率的差动作。
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">超参数 ε</span>
+    通常设为 0.1～0.2。ε=0.2 表示允许概率变化 ±20%。
+  </div>
+
+  <div class="alert-warning">
+    <strong>常见错误：</strong>直接用 r_t · A_t 会导致梯度爆炸（当 r_t 很大时）。PPO 的裁剪正是为了防止这个问题。
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第四步：值函数和优势估计</h3>
+
+  <div class="prose">
+    A_t 的质量直接影响梯度信号。最常用的是 Generalized Advantage Estimation (GAE)：
+  </div>
+
+  <div class="formula">
+    A_t^GAE = ∑_{l=0}^{∞} (γλ)^l δ_{t+l}
+    <br/>
+    δ_t = r(x,y_t) + γ V(s_{t+1}) - V(s_t)
+    <span class="comment">GAE（λ 通常设为 0.95，γ=0.99）</span>
+  </div>
+
+  <div class="prose">
+    在 LLM 对齐中，由于 r 只在序列末尾定义，简化为：
+  </div>
+
+  <div class="formula">
+    A = R - V(x)
+    <br/>
+    其中 R 是来自 RM 的完整序列奖励
+    <span class="comment">LLM 对齐的简化形式</span>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">值函数损失</div>
+      <div class="tc-val">MSE</div>
+      <div class="tc-desc">L_V = E[(V_ϕ(x) - R)^2]。V 预测蒙特卡洛回报 R 的期望。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">共享骨干</div>
+      <div class="tc-val">通常相同</div>
+      <div class="tc-desc">策略和值函数共享大部分参数（只有最后几层不同），减少内存占用。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第五步：完整训练循环</h3>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">采样阶段</div>
+        <div class="desc">在旧策略 π_old 下生成 N 个完整轨迹（prompt → response）。每个样本 ~10k tokens。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">奖励计算</div>
+        <div class="desc">将响应输入 RM，得到 r(x,y)。应用 normalization 和 whiten：r' = (r - mean) / std。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">优势计算</div>
+        <div class="desc">用值函数 V(x) 估计优势：A = r' - V(x)。同样 normalize A'。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">策略更新</div>
+        <div class="desc">K 个 epochs，每个 epoch 遍历所有样本 (通常 batch_size=16～32)。梯度下降最小化 L_PPO。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">值函数更新</div>
+        <div class="desc">同时优化 L_V = MSE(V(x), r')。通常权重较小（0.1～0.5）。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="title">KL 监控</div>
+        <div class="desc">在每个 epoch 后计算 KL_div(π_θ || π_ref)。如果超过阈值（如 KL > 30），降低学习率或早停。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第六步：内存分析</h3>
+
+  <div class="diagram">
+    <div class="diagram-title">PPO 训练的四个模型副本</div>
+    <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg">
+      <!-- Model boxes -->
+      <g>
+        <!-- Policy -->
+        <rect x="30" y="30" width="140" height="100" fill="rgba(96,165,250,0.1)" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="100" y="55" font-size="13" font-weight="bold" fill="#60a5fa" text-anchor="middle">π_θ (Policy)</text>
+        <text x="100" y="75" font-size="11" fill="#7a7d94" text-anchor="middle">可训练</text>
+        <text x="100" y="90" font-size="11" fill="#7a7d94" text-anchor="middle">B 参数</text>
+        <text x="100" y="105" font-size="10" fill="#7a7d94" text-anchor="middle">梯度 + 优化器状态</text>
+        <text x="100" y="120" font-size="10" fill="#f87171" text-anchor="middle">~3B 内存</text>
+      </g>
+
+      <g>
+        <!-- Reference -->
+        <rect x="195" y="30" width="140" height="100" fill="rgba(34,211,238,0.1)" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="265" y="55" font-size="13" font-weight="bold" fill="#22d3ee" text-anchor="middle">π_ref</text>
+        <text x="265" y="75" font-size="11" fill="#7a7d94" text-anchor="middle">固定</text>
+        <text x="265" y="90" font-size="11" fill="#7a7d94" text-anchor="middle">B 参数</text>
+        <text x="265" y="105" font-size="10" fill="#7a7d94" text-anchor="middle">仅前向传播</text>
+        <text x="265" y="120" font-size="10" fill="#f87171" text-anchor="middle">~1B 内存</text>
+      </g>
+
+      <g>
+        <!-- Reward -->
+        <rect x="360" y="30" width="140" height="100" fill="rgba(167,139,250,0.1)" stroke="#a78bfa" stroke-width="2" rx="4"/>
+        <text x="430" y="55" font-size="13" font-weight="bold" fill="#a78bfa" text-anchor="middle">r_θ (Reward)</text>
+        <text x="430" y="75" font-size="11" fill="#7a7d94" text-anchor="middle">固定</text>
+        <text x="430" y="90" font-size="11" fill="#7a7d94" text-anchor="middle">B 参数</text>
+        <text x="430" y="105" font-size="10" fill="#7a7d94" text-anchor="middle">仅前向传播</text>
+        <text x="430" y="120" font-size="10" fill="#f87171" text-anchor="middle">~1B 内存</text>
+      </g>
+
+      <g>
+        <!-- Value -->
+        <rect x="525" y="30" width="140" height="100" fill="rgba(244,114,182,0.1)" stroke="#f472b6" stroke-width="2" rx="4"/>
+        <text x="595" y="55" font-size="13" font-weight="bold" fill="#f472b6" text-anchor="middle">V_ϕ (Value)</text>
+        <text x="595" y="75" font-size="11" fill="#7a7d94" text-anchor="middle">可训练</text>
+        <text x="595" y="90" font-size="11" fill="#7a7d94" text-anchor="middle">~0.1B 参数</text>
+        <text x="595" y="105" font-size="10" fill="#7a7d94" text-anchor="middle">共享骨干 + 头</text>
+        <text x="595" y="120" font-size="10" fill="#f87171" text-anchor="middle">~0.5B 内存</text>
+      </g>
+
+      <!-- Memory sum -->
+      <line x1="50" y1="160" x2="600" y2="160" stroke="var(--line2)" stroke-width="1" stroke-dasharray="5,5"/>
+      <text x="350" y="180" font-size="12" font-weight="bold" fill="var(--amber)" text-anchor="middle">总内存: ~5.5B 参数 = 22GB (FP32) / 11GB (FP16)</text>
+      <text x="350" y="200" font-size="11" fill="var(--sub)" text-anchor="middle">对于 70B 模型 = 154GB / 77GB GPU 内存</text>
+      <text x="350" y="220" font-size="11" fill="var(--coral)" text-anchor="middle">这就是为什么 GRPO 和 DPO 这样的方法很重要！</text>
+    </svg>
+  </div>
+
+  <div class="alert-warning">
+    <strong>内存优化技巧：</strong>
+    <ul style="margin-top:8px;margin-left:16px">
+      <li>值函数可以与策略共享骨干，减小额外开销</li>
+      <li>π_ref 可以定期加载（不总是在显存中）</li>
+      <li>梯度累积和激活重计算减少峰值内存</li>
+      <li>使用 LoRA 等参数高效微调方法</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SECTION 03: DPO 推导 -->
+<section class="section" id="section-03">
+  <div class="section-badge" style="border-color:var(--teal);color:var(--teal)">
+    <span>03</span> · 简化路径
+  </div>
+  <h2 class="section-title">DPO 推导</h2>
+  <p class="section-sub">从奖励模型到直接策略优化</p>
+
+  <div class="prose">
+    <p>
+      DPO (Direct Preference Optimization) 的关键洞察：我们可以跳过显式的奖励模型训练，直接从比较标注中学习最优策略。
+    </p>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第一步：最优策略的闭式解</h3>
+
+  <div class="prose">
+    从 KL-constrained RL 目标开始，求解最优策略：
+  </div>
+
+  <div class="formula">
+    max_π E_{y~π(y|x)} [r(x,y)] - β KL(π || π_ref)
+    <span class="comment">KL-constrained 目标</span>
+  </div>
+
+  <div class="prose">
+    使用变分法（Calculus of Variations），最优策略有闭式解：
+  </div>
+
+  <div class="formula">
+    π*(y|x) = π_ref(y|x) · exp(r*(x,y) / β) / Z(x)
+    <span class="comment">最优策略分布</span>
+  </div>
+
+  <div class="prose">
+    其中 Z(x) 是归一化常数（分配函数）：
+  </div>
+
+  <div class="formula">
+    Z(x) = ∑_y π_ref(y|x) · exp(r*(x,y) / β)
+    <span class="comment">分配函数</span>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第二步：反演奖励函数</h3>
+
+  <div class="prose">
+    从最优策略公式反推奖励：
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 1：重新整理</span>
+    π*(y|x) = π_ref(y|x) · exp(r*(x,y) / β) / Z(x)
+    <br/>
+    π*(y|x) / π_ref(y|x) = exp(r*(x,y) / β) / Z(x)
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 2：取对数</span>
+    log[π*(y|x) / π_ref(y|x)] = r*(x,y) / β - log Z(x)
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">Step 3：求解奖励</span>
+    r*(x,y) = β log[π*(y|x) / π_ref(y|x)] + β log Z(x)
+    <br/>
+    注意 log Z(x) 与 y 无关，所以在比较两个响应时抵消
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第三步：Bradley-Terry 与最优策略的连接</h3>
+
+  <div class="prose">
+    给定最优策略 π*，人类选择 y_w 相对 y_l 的概率由 Bradley-Terry 模型定义：
+  </div>
+
+  <div class="formula">
+    P(y_w ≻ y_l | x) = σ(r*(x,y_w) - r*(x,y_l))
+    <span class="comment">Bradley-Terry 模型</span>
+  </div>
+
+  <div class="prose">
+    代入上面推导的 r* 表达式：
+  </div>
+
+  <div class="formula">
+    r*(x,y_w) - r*(x,y_l)
+    <br/>
+    = β log[π*(y_w|x) / π_ref(y_w|x)] - β log[π*(y_l|x) / π_ref(y_l|x)]
+    <br/>
+    = β log[(π*(y_w|x) / π_ref(y_w|x)) / (π*(y_l|x) / π_ref(y_l|x))]
+    <span class="comment">log Z(x) 项抵消</span>
+  </div>
+
+  <div class="alert-info">
+    <strong>关键洞察：</strong>人类偏好完全由策略比率决定！我们可以用 β log[π(y_w)/π_ref(y_w)] - β log[π(y_l)/π_ref(y_l)] 代替奖励模型。
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第四步：DPO 损失函数</h3>
+
+  <div class="prose">
+    现在我们可以直接最大化比较数据上的对数似然，不需要显式的 RM：
+  </div>
+
+  <div class="formula">
+    L_DPO = -E_{(x,y_w,y_l)}
+    <br/>
+    [log σ(β log[π_θ(y_w|x) / π_ref(y_w|x)] - β log[π_θ(y_l|x) / π_ref(y_l|x)])]
+    <span class="comment">DPO 目标函数</span>
+  </div>
+
+  <div class="prose">
+    定义策略比率（policy ratio）：
+  </div>
+
+  <div class="formula">
+    y_w_logratios = β log[π_θ(y_w|x) / π_ref(y_w|x)]
+    <br/>
+    y_l_logratios = β log[π_θ(y_l|x) / π_ref(y_l|x)]
+    <span class="comment">策略对数比率</span>
+  </div>
+
+  <div class="formula">
+    L_DPO = -E[log σ(y_w_logratios - y_l_logratios)]
+    <span class="comment">简化后的 DPO 损失</span>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第五步：计算梯度和优势</h3>
+
+  <div class="prose">
+    对 θ 求导：
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">链式法则</span>
+    ∂L_DPO / ∂θ = -E[σ(-Δ_logratios) · (∂y_w_logratios/∂θ - ∂y_l_logratios/∂θ)]
+    <br/>
+    其中 Δ_logratios = y_w_logratios - y_l_logratios
+  </div>
+
+  <div class="math-step">
+    <span class="step-label">策略导数</span>
+    ∂ log π_θ(y|x) / ∂θ = ∇_θ log π_θ(y|x)
+    <br/>
+    这可以通过标准的反向传播计算
+  </div>
+
+  <div class="alert-warning">
+    <strong>计算注意：</strong>需要计算两个 log π 项，意味着需要跑两个前向传播（y_w 和 y_l）。这比 RM 训练多，但仍然比 PPO 便宜（没有价值函数）。
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第六步：DPO 优势</h3>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">模型数量</div>
+      <div class="tc-val">2 个</div>
+      <div class="tc-desc">π_θ 和 π_ref。不需要奖励模型或值函数。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">内存占用</div>
+      <div class="tc-val">~2B</div>
+      <div class="tc-desc">相比 PPO 的 ~5B，减少 60%。对于 70B 模型，从 77GB 降到 28GB。</div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">数据格式</div>
+      <div class="tc-val">成对</div>
+      <div class="tc-desc">需要 (x, y_w, y_l) 对。可以复用 RM 训练数据。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">训练时长</div>
+      <div class="tc-val">1～3 周</div>
+      <div class="tc-desc">比 PPO 快 2～3 倍（样本效率高，不需要多轮采样）。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第七步：DPO 的问题与改进</h3>
+
+  <div class="alert-warning">
+    <strong>DPO 在实践中的问题：</strong>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">⚠</div>
+      <div class="step-body">
+        <div class="title">过拟合偏好标签</div>
+        <div class="desc">DPO 会过度优化训练数据中的比较，忽视那些标注模棱两可的样本。特别是在数据量小或标注质量差时。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">⚠</div>
+      <div class="step-body">
+        <div class="title">与 SFT 的不兼容</div>
+        <div class="desc">DPO 需要 π_ref 固定。但如果继续在 SFT 数据上微调 π_θ（混合损失），会让 π_ref 失去参考意义。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">⚠</div>
+      <div class="step-body">
+        <div class="title">极端奖励黑客</div>
+        <div class="desc">因为没有显式的奖励上界，策略可能会找到奇特的方式最大化 log π_θ / log π_ref（如输出重复的高频词）。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose">
+    <strong>改进版本：</strong>
+  </div>
+
+  <ul class="prose">
+    <li><span class="badge-blue">IPO</span> - 添加正则化项避免过拟合</li>
+    <li><span class="badge-purple">ORPO</span> - 联合 SFT + DPO 损失，一个阶段完成</li>
+    <li><span class="badge-green">KTO</span> - 只需二分类标签（好/差），不需对</li>
+  </ul>
+</section>
+
+<!-- SECTION 04: GRPO -->
+<section class="section" id="section-04">
+  <div class="section-badge" style="border-color:var(--green);color:var(--green)">
+    <span>04</span> · 最新方向
+  </div>
+  <h2 class="section-title">GRPO (DeepSeek)</h2>
+  <p class="section-sub">无奖励模型、无值函数的 PPO</p>
+
+  <div class="prose">
+    <p>
+      GRPO (Group Relative Policy Optimization) 是 DeepSeek 提出的方法，结合了 PPO 的优点和 DPO 的简洁性。核心想法：用一个提示集合内的相对奖励，而不是绝对奖励。
+    </p>
+  </div>
+
+  <div class="alert-info">
+    <strong>为什么是 GRPO？</strong>DeepSeek R1 的训练方法。通过在组内相对比较计算优势，避免了值函数和奖励模型，极大降低内存。
+  </strong>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第一步：组内采样</h3>
+
+  <div class="prose">
+    对每个提示 x，采样 G 个响应（通常 G=4～16）：
+  </div>
+
+  <div class="formula">
+    {y_1, y_2, ..., y_G} ~ π_old(y|x)
+    <span class="comment">每个 prompt 采样 G 个候选</span>
+  </div>
+
+  <div class="prose">
+    对比 PPO 的全局采样，GRPO 在每个提示的"组"内计算优势，这样：
+  </div>
+
+  <ul class="prose">
+    <li>不需要值函数模型（V 函数）</li>
+    <li>不需要额外的奖励模型（直接用 RM 计算 r_i）</li>
+    <li>利用同组内的相对比较自然地估计优势</li>
+  </ul>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第二步：组内优势计算</h3>
+
+  <div class="prose">
+    给定组内的 G 个奖励 {r_1, r_2, ..., r_G}，计算标准化的相对优势：
+  </div>
+
+  <div class="formula">
+    A_i = (r_i - mean({r_1,...,r_G})) / std({r_1,...,r_G})
+    <span class="comment">组内优势（标准化）</span>
+  </div>
+
+  <div class="prose">
+    <strong>直观理解：</strong>
+  </div>
+
+  <ul class="prose">
+    <li><strong>A_i > 0：</strong>响应 i 比该提示的平均好</li>
+    <li><strong>A_i < 0：</strong>响应 i 比该提示的平均差</li>
+    <li><strong>Normalization：</strong>使优势量纲无关，稳定梯度</li>
+  </ul>
+
+  <div class="alert-warning">
+    <strong>与值函数的区别：</strong>V(x) 预测全局期望回报，而组内优势只用本组的统计。组内优势方差较小（更稳定），但可能有偏差（不是无偏估计量）。
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第三步：PPO 目标</h3>
+
+  <div class="prose">
+    用同样的 PPO 梯度裁剪，但使用组内优势而非值函数优势：
+  </div>
+
+  <div class="formula">
+    L_GRPO = -E_i[min(r_t^i · A_i, clip(r_t^i, 1-ε, 1+ε) · A_i)]
+    <span class="comment">GRPO 目标</span>
+  </div>
+
+  <div class="prose">
+    其中 r_t^i 是响应 i 的新旧策略比率。
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28次 0 12px;color:var(--text);font-weight:600">第四步：完整算法</h3>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">采样</div>
+        <div class="desc">对 N 个提示，各采样 G 个响应。总样本数 = N·G。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">奖励</div>
+        <div class="desc">用 RM 给每个响应评分。得到 N × G 个奖励。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">优势</div>
+        <div class="desc">对每个提示 x_i，计算其 G 个响应的组内优势 A_i1, ..., A_iG。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">梯度</div>
+        <div class="desc">对所有 N·G 个样本计算 PPO 损失和梯度。多个 epoch。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">更新</div>
+        <div class="desc">参数更新。Epoch 结束，采样下一批。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第五步：内存优势分析</h3>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">模型数量</div>
+      <div class="tc-val">3 个</div>
+      <div class="tc-desc">π_θ、π_ref、RM。相比 PPO 的 4 个，节省 25%。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">内存峰值</div>
+      <div class="tc-val">~3.5B</div>
+      <div class="tc-desc">仅 70B 模型的 ~51GB GPU 内存（vs PPO 的 77GB）。</div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">采样效率</div>
+      <div class="tc-val">高</div>
+      <div class="tc-desc">G 个响应/提示使得有更多 (x, y) 对用于梯度计算。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">训练时长</div>
+      <div class="tc-val">2～4 周</div>
+      <div class="tc-desc">类似 PPO，但内存更低，可用更大批次。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第六步：进阶：Process Reward Model</h3>
+
+  <div class="prose">
+    GRPO 的一个扩展是使用 Process Reward Model (PRM)，而不是 Outcome RM。
+  </div>
+
+  <ul class="prose">
+    <li><strong>Outcome RM：</strong>只在完整响应末尾给一个分数</li>
+    <li><strong>Process RM：</strong>在每个推理步骤给分（中间步骤奖励）</li>
+  </ul>
+
+  <div class="formula">
+    r_PRM(x, y) = ∑_{t=1}^{|y|} r_t(y_{≤t})
+    <span class="comment">累积步骤奖励</span>
+  </div>
+
+  <div class="prose">
+    PRM 的优点：
+  </div>
+
+  <ul class="prose">
+    <li>梯度信号更密集（每步一个奖励）</li>
+    <li>能捕捉推理链中的错误步骤</li>
+    <li>特别有用于数学、代码生成等有明确中间步骤的任务</li>
+  </ul>
+</section>
+
+<!-- SECTION 05: 其他方法 -->
+<section class="section" id="section-05">
+  <div class="section-badge" style="border-color:var(--coral);color:var(--coral)">
+    <span>05</span> · 替代方案
+  </div>
+  <h2 class="section-title">ORPO / KTO / IPO</h2>
+  <p class="section-sub">DPO 的变体和改进</p>
+
+  <div class="prose">
+    <p>
+      DPO 发布后，社区快速迭代了多个改进版本，针对不同的场景和问题。
+    </p>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">ORPO: Odds Ratio Preference Optimization</h3>
+
+  <div class="prose">
+    <strong>核心想法：</strong>联合 SFT 和偏好优化，一个阶段完成对齐。
+  </div>
+
+  <div class="formula">
+    L_ORPO = L_SFT + λ · L_preference
+    <br/>
+    L_preference = -E[log σ(β · logit_ratio)]
+    <span class="comment">ORPO 目标</span>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">优点</div>
+      <div class="tc-val">一阶段</div>
+      <div class="tc-desc">不需要单独的 SFT → RLHF/DPO，减少总训练时间。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">缺点</div>
+      <div class="tc-val">数据混合</div>
+      <div class="tc-desc">SFT 和偏好数据需要混合，两个损失的权衡关键。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">KTO: Kahneman-Tversky Optimization</h3>
+
+  <div class="prose">
+    <strong>核心创新：</strong>只需二分类标签（好/差），不需要成对数据。
+  </div>
+
+  <div class="prose">
+    <strong>为什么有用？</strong>标注成对比较很贵。如果能用"这个回答好"/"这个回答差"代替，数据收集更简单。
+  </div>
+
+  <div class="formula">
+    L_KTO = -E_[
+      I(y ∈ good) · log σ(β · log[π_θ(y) / π_ref(y)] - β · f(π_ref(y)))
+      + I(y ∈ bad) · log σ(-β · log[π_θ(y) / π_ref(y)] + β · f(π_ref(y)))
+    ]
+    <span class="comment">KTO 目标（简化版）</span>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">数据格式</div>
+      <div class="tc-val">二分类</div>
+      <div class="tc-desc">(prompt, response, label ∈ {good, bad})</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">标注成本</div>
+      <div class="tc-val">-60%</div>
+      <div class="tc-desc">相比配对数据，单次二分类标注更快。</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">IPO: Identity Preference Optimization</h3>
+
+  <div class="prose">
+    <strong>问题：</strong>DPO 在偏好数据上过拟合。
+  </div>
+
+  <div class="prose">
+    <strong>解决方案：</strong>添加一个正则化项，防止策略与参考策略偏离过大。
+  </div>
+
+  <div class="formula">
+    L_IPO = L_DPO + λ · E[KL(π_θ || π_ref)]
+    <span class="comment">IPO = DPO + KL 正则化</span>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">λ 值</div>
+      <div class="tc-val">0.1～1.0</div>
+      <div class="tc-desc">平衡偏好优化和保持接近 SFT。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">实验结果</div>
+      <div class="tc-val">+3～5%</div>
+      <div class="tc-desc">在多数基准上相比 DPO 有小幅改进。</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 06: Constitutional AI -->
+<section class="section" id="section-06">
+  <div class="section-badge" style="border-color:var(--purple);color:var(--purple)">
+    <span>06</span> · 替代范式
+  </div>
+  <h2 class="section-title">Constitutional AI (CAI)</h2>
+  <p class="section-sub">用 AI 反馈代替人类反馈</p>
+
+  <div class="prose">
+    <p>
+      Constitutional AI 是 Anthropic 提出的一个不同的对齐范式：用 AI 本身生成偏好标签，而不是依赖人类标注。
+    </p>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第一步：宪法 (Constitution)</h3>
+
+  <div class="prose">
+    定义一组"原则"，例如：
+  </div>
+
+  <ul class="prose">
+    <li>"避免非法活动的建议"</li>
+    <li>"提供事实准确的信息"</li>
+    <li>"尊重人权和个人隐私"</li>
+    <li>"支持包容和平等"</li>
+  </ul>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第二步：AI 批评 (AI Critique)</h3>
+
+  <div class="prose">
+    对于每个候选响应，用强大的 LLM（例如 Claude）批评它是否违反宪法：
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">生成批评</div>
+        <div class="desc">提示强大 LLM：给定原则和响应，指出该响应的问题。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">比较</div>
+        <div class="desc">如果 y_w 的批评更少/更轻，则 y_w ≻ y_l。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">第三步：修订 (Revision)</h3>
+
+  <div class="prose">
+    另一个创新环节：用强大 LLM 改进弱模型的响应，然后自己评判改进后的版本。
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">弱模型生成</div>
+        <div class="desc">SFT 模型生成初始响应 y。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">AI 批评</div>
+        <div class="desc">强 LLM 批评 y 的问题。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">AI 修订</div>
+        <div class="desc">强 LLM 基于批评改写 y → y'。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">偏好对</div>
+        <div class="desc">创建对 (x, y', y)，通常 y' ≻ y。</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">CAI 的优缺点</h3>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">优点</div>
+      <div class="tc-val">无人类标注</div>
+      <div class="tc-desc">标注成本为 0。可以轻松扩展到新的原则或语言。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">缺点</div>
+      <div class="tc-val">成本转移</div>
+      <div class="tc-desc">推理强模型的成本很高（每个样本调用一次强 LLM）。</div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">优点</div>
+      <div class="tc-val">可控</div>
+      <div class="tc-desc">通过修改宪法原则，直接控制模型行为。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">缺点</div>
+      <div class="tc-val">强模型偏见</div>
+      <div class="tc-desc">批评和修订由强模型生成，会继承其偏见。</div>
+    </div>
+  </div>
+
+  <div class="alert-warning">
+    <strong>实际应用：</strong>CAI 在 Anthropic 的模型（如 Claude）中大量使用，用于内部对齐。但由于强模型调用成本，通常不适合开源社区小规模使用。
+  </div>
+</section>
+
+<!-- SECTION 07: 方法对比与选择 -->
+<section class="section" id="section-07">
+  <div class="section-badge" style="border-color:var(--blue);color:var(--blue)">
+    <span>07</span> · 对比分析
+  </div>
+  <h2 class="section-title">方法对比与选择</h2>
+  <p class="section-sub">RLHF vs DPO vs GRPO vs ORPO vs KTO</p>
+
+  <div class="prose">
+    <p>
+      在五种主流方法之间做选择时，需要权衡内存、时间、数据格式和性能。
+    </p>
+  </div>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>RLHF (PPO)</th>
+        <th>DPO</th>
+        <th>GRPO</th>
+        <th>ORPO</th>
+        <th>KTO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>模型数</strong></td>
+        <td>4 (π, π_ref, r, V)</td>
+        <td>2 (π, π_ref)</td>
+        <td>3 (π, π_ref, r)</td>
+        <td>2 (π, π_ref)</td>
+        <td>2 (π, π_ref)</td>
+      </tr>
+      <tr>
+        <td><strong>GPU 内存</strong></td>
+        <td>77GB (70B)</td>
+        <td>28GB</td>
+        <td>51GB</td>
+        <td>28GB</td>
+        <td>28GB</td>
+      </tr>
+      <tr>
+        <td><strong>数据格式</strong></td>
+        <td>成对 (x,y_w,y_l)</td>
+        <td>成对</td>
+        <td>成对</td>
+        <td>混合 SFT + 成对</td>
+        <td>二分类 (x,y,label)</td>
+      </tr>
+      <tr>
+        <td><strong>标注成本</strong></td>
+        <td>高 (成对)</td>
+        <td>高</td>
+        <td>高</td>
+        <td>中等 (混合)</td>
+        <td>低 (-60%)</td>
+      </tr>
+      <tr>
+        <td><strong>训练时长</strong></td>
+        <td>4～6 周</td>
+        <td>1～3 周</td>
+        <td>2～4 周</td>
+        <td>1～2 周</td>
+        <td>1～3 周</td>
+      </tr>
+      <tr>
+        <td><strong>性能*</strong></td>
+        <td>SOTA</td>
+        <td>~95% PPO</td>
+        <td>~98% PPO</td>
+        <td>~93% PPO</td>
+        <td>~90% PPO</td>
+      </tr>
+      <tr>
+        <td><strong>稳定性</strong></td>
+        <td>高 (梯度裁剪)</td>
+        <td>中 (过拟合风险)</td>
+        <td>高</td>
+        <td>中</td>
+        <td>中</td>
+      </tr>
+      <tr>
+        <td><strong>工程复杂度</strong></td>
+        <td>高 (4 个模型)</td>
+        <td>低</td>
+        <td>中</td>
+        <td>中 (损失混合)</td>
+        <td>低</td>
+      </tr>
+      <tr>
+        <td><strong>最佳场景</strong></td>
+        <td>大资源、顶级性能需求</td>
+        <td>内存受限、快速迭代</td>
+        <td>平衡方案</td>
+        <td>时间紧张</td>
+        <td>标注预算有限</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-size:1.1rem;margin:28px 0 12px;color:var(--text);font-weight:600">决策树：选择哪个方法？</h3>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">❓</div>
+      <div class="step-body">
+        <div class="title">你有多少 GPU 内存？</div>
+        <div class="desc">
+          <strong>&lt;40GB：</strong>选 DPO、ORPO 或 KTO<br/>
+          <strong>40～100GB：</strong>GRPO 或 DPO<br/>
+          <strong>&gt;100GB：</strong>RLHF (PPO) 最优<br/>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">❓</div>
+      <div class="step-body">
+        <div class="title">标注数据是什么格式？</div>
+        <div class="desc">
+          <strong>成对 (y_w, y_l)：</strong>DPO、GRPO、RLHF<br/>
+          <strong>仅好/坏标签：</strong>KTO<br/>
+          <strong>混合：</strong>ORPO<br/>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">❓</div>
+      <div class="step-body">
+        <div class="title">你需要多快部署？</div>
+        <div class="desc">
+          <strong>1～2 周：</strong>ORPO、DPO、KTO<br/>
+          <strong>2～4 周：</strong>GRPO<br/>
+          <strong>&gt;4 周：</strong>RLHF (微调较少，但更稳定)<br/>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">❓</div>
+      <div class="step-body">
+        <div class="title">性能 vs 成本 的优先级？</div>
+        <div class="desc">
+          <strong>性能优先：</strong>RLHF &gt; GRPO &gt; DPO<br/>
+          <strong>成本优先：</strong>KTO &gt; ORPO &gt; DPO &gt; GRPO &gt; RLHF<br/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-info">
+    <strong>实战建议：</strong>
+    <ul style="margin-top:8px;margin-left:16px">
+      <li><strong>初创 / 资源有限：</strong>从 DPO 开始（简单、快速）。如果成本还是太高，改用 KTO。</li>
+      <li><strong>中型团队：</strong>GRPO 是最佳平衡，80% 的 PPO 性能，30% 的内存。</li>
+      <li><strong>大型实验室：</strong>投资 RLHF。虽然慢、复杂、贵，但性能最好。</li>
+      <li><strong>快速迭代：</strong>ORPO 一步到位，减少 SFT → RLHF 的次数。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SECTION 08: 面试题 -->
+<section class="section" id="section-08">
+  <div class="section-badge" style="border-color:var(--amber);color:var(--amber)">
+    <span>08</span> · 面试准备
+  </div>
+  <h2 class="section-title">对齐方法面试题</h2>
+  <p class="section-sub">10+ 常见题目和答题要点</p>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q1</div>
+    <p><strong>为什么需要对齐？直接用 SFT 预训练模型不行吗？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>SFT 学的是"模仿"，包括网络上的所有行为（虚假、有害、低效率）</li>
+      <li>对齐是"指导"，额外奖励有用、诚实、安全的行为</li>
+      <li>SFT 本身能力可能较弱，对齐能激发潜在能力（特别是推理、数学）</li>
+      <li>举例：Alpaca vs GPT-4，同样 7B 参数，但对齐后的 Alpaca 更实用</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q2</div>
+    <p><strong>奖励模型为什么要用 Bradley-Terry 模型而不是其他？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>Bradley-Terry 来自心理学，建模了人的偏好选择行为</li>
+      <li>P(y_w ≻ y_l) = σ(Δr) 形式简洁，对应分类交叉熵损失</li>
+      <li>任意两个响应的偏好可以由其潜在得分差决定，符合传递性</li>
+      <li>Sigmoidal 函数在高置信度时自然饱和，对噪声鲁棒</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q3</div>
+    <p><strong>PPO 为什么要裁剪（clip）梯度比率，而不是直接用重要性采样比率？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>直接用 r_t · A_t 导致梯度爆炸：如果新策略对某个好动作的概率增加 10 倍（r_t=10），梯度也会 10 倍放大</li>
+      <li>PPO clip min(r_t, 1±ε) · A_t 限制了参数更新的大小，建立"信任区域"</li>
+      <li>这样既能快速学习好动作，又能防止过度调整导致 KL 发散</li>
+      <li>相比 Trust Region Policy Optimization (TRPO) 更简洁，不需要复杂的二阶优化</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q4</div>
+    <p><strong>DPO 相比 PPO 有什么优缺点？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点 - 优点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>模型数少（2 vs 4），内存 60% 降低</li>
+      <li>不需要 RM 或 V 函数，直接从比较学习</li>
+      <li>样本效率高，一条数据可多个 epoch 重复使用</li>
+      <li>训练时间快 2～3 倍</li>
+    </ul>
+    <p style="margin-top:12px;">
+      <strong>核心答点 - 缺点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>容易过拟合训练数据中的成对偏好，泛化性弱</li>
+      <li>没有显式的奖励上界，策略可能学会"作弊"（奖励黑客）</li>
+      <li>不能很好地与 SFT 损失混合（π_ref 失效）</li>
+      <li>在强标注噪声下性能下降显著</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q5</div>
+    <p><strong>GRPO 中的"组内优势"与值函数优势有什么本质区别？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>值函数：V(x) 预测该提示的全局期望回报，无偏但需要额外训练</li>
+      <li>组内优势：用组内 G 个样本的相对排序和标准差估计，有偏但更稳定</li>
+      <li>组内优势自然解决了奖励尺度问题（通过 std 归一化）</li>
+      <li>组内优势方差小，但可能遗漏全局信息。权衡：不需要额外模型，但信号质量略差</li>
+      <li>GRPO 的 G 个响应提供了额外的对比信息，弥补了信号丢失</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q6</div>
+    <p><strong>KTO 只用二分类标签，为什么不如成对标注？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>信息量：配对标注直接给出偏好强度（y_w 相对 y_l 有多好），而二分类只有 0/1</li>
+      <li>样本利用：同样标注成本，成对数据能构造 C(G,2) 个对，而二分类是线性的</li>
+      <li>KTO 的优势：标注成本低 60%，这可能弥补信息损失（如果用更多数据）</li>
+      <li>Trade-off：更便宜的标注 vs 信息量略少，需要根据标注预算和质量选择</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q7</div>
+    <p><strong>Constitutional AI 为什么能用 AI 批评代替人类标注？这可靠吗？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>可行性：强 LLM（如 Claude/GPT-4）能准确判断响应是否违反宪法原则</li>
+      <li>扩展性：一旦定义了宪法，可以廉价生成海量标注，无人类瓶颈</li>
+      <li>可控性：修改宪法直接改变模型行为，比依赖人类标注的偏好更可预测</li>
+      <li>风险：AI 批评会继承强 LLM 的偏见和 blindspots。如果宪法定义不当，可能强化有害行为</li>
+      <li>成本：调用强模型的推理成本很高，通常只在大公司可行</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q8</div>
+    <p><strong>设计对齐训练的数据管道时，有哪些常见陷阱？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li><strong>分布偏移：</strong>RM 在 SFT 分布上训练，RLHF 会生成分布外样本。需要定期重新标注和重训 RM。</li>
+      <li><strong>标注不一致：</strong>不同标注者偏好差异大（κ~0.4～0.6）。解决：多标注者投票或模型初筛。</li>
+      <li><strong>奖励黑客：</strong>模型学会取巧（生成重复、虚假等）。监控：定期人工审查生成样本。</li>
+      <li><strong>长度偏差：</strong>RM 倾向给更长响应评高分。解决：长度归一化或显式约束。</li>
+      <li><strong>数据泄露：</strong>RM 训练数据和 RLHF 采样可能重叠。应该用分离的验证集评估。</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q9</div>
+    <p><strong>在有限资源下，你如何决定是用 RLHF、DPO 还是其他方法？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>首先评估约束：GPU 内存、标注预算、时间限制</li>
+      <li>内存 &lt;40GB？DPO 或 KTO。40-100GB？GRPO。&gt;100GB？RLHF。</li>
+      <li>标注有成对数据？DPO。只有好/差标签？KTO。时间急？ORPO。</li>
+      <li>原型阶段：快速尝试 DPO（最简单）。生产阶段：根据性能需求升级。</li>
+      <li>数据有噪声？RLHF 稳定性好（梯度裁剪）。数据干净？DPO 可能更好。</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q10</div>
+    <p><strong>RLHF 中的 KL 惩罚系数 β 如何选择？太大或太小会怎样？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>β 的作用：权衡对齐性能和保持原始能力。β · KL(π_θ || π_ref)</li>
+      <li><strong>β 太小（如 0.01）：</strong>模型与 π_ref 差异大，可能遗忘基础能力。优点是对齐效果强。</li>
+      <li><strong>β 太大（如 1.0）：</strong>π_θ 贴近 π_ref，对齐信号弱，模型学不到新行为。</li>
+      <li><strong>推荐范围：</strong>0.05～0.3。对于 13B 模型，0.1 是常用起点。</li>
+      <li>动态调整：监控 KL_div。如果 > 阈值（如 30），降低学习率。如果 < 目标，可增加 β。</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q11</div>
+    <p><strong>DPO 和 RLHF 都需要参考模型 π_ref。能否使用已部署的模型版本作为 π_ref？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>原则上可以，但有风险。π_ref 应该是"合理的初始值"，不应该是目标。</li>
+      <li>如果 π_ref 太弱（如早期版本），KL 惩罚可能太弱，无法有效约束。</li>
+      <li>如果 π_ref 太强（如已部署模型），新模型难以改进。</li>
+      <li>最佳实践：π_ref = SFT 模型，而不是已部署版本。这样 RLHF 有明确的改进空间。</li>
+      <li>版本管理：跟踪 π_ref 的代码和权重版本，确保可复现。</li>
+    </ul>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q12</div>
+    <p><strong>在工程实现中，如何高效计算 KL 散度 KL(π_θ || π_ref)？</strong></p>
+    <p style="margin-top:8px;">
+      <strong>核心答点：</strong>
+    </p>
+    <ul style="margin-top:6px;margin-left:16px">
+      <li>精确计算需要对所有词汇求和，太贵。通常用采样近似：</li>
+      <li>采样 y 来自 π_θ，估计：KL ≈ E[log π_θ(y) - log π_ref(y)]</li>
+      <li>或更简单：只在训练集上计算（使用已生成的样本），不需要额外采样。</li>
+      <li>实现细节：并行计算 π_θ(y) 和 π_ref(y) 的 log prob，减少开销。</li>
+      <li>监控：每 N 个 step 计算一次，作为 TensorBoard 指标追踪训练过程。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Footer -->
+<div style="padding:40px 48px;border-top:1px solid var(--line);text-align:center;color:var(--sub);font-size:0.85rem;">
+  <p>深度解析来自 OpenAI InstructGPT、DeepSeek R1、Anthropic 等一线实验的综合总结。</p>
+  <p style="margin-top:12px;color:var(--dim);">
+    更新时间：2026年3月 |
+    <a href="alignment.html" style="color:var(--purple);text-decoration:none;">返回对齐主页</a>
+  </p>
+</div>
+
+</div>
+
+</body>
+</html>

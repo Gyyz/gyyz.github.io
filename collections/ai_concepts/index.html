@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 技术演进 - 从 Transformer 到 Agent</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">AI 技术演进</a>
+            <div class="nav-links">
+                <a href="index.html" class="active">首页</a>
+                <a href="transformer.html">Transformer</a>
+                <a href="llm.html">大语言模型</a>
+                <a href="alignment.html">对齐与RLHF</a>
+                <a href="prompting.html">提示工程</a>
+                <a href="rag.html">RAG与工具</a>
+                <a href="agents.html">AI Agent</a>
+                <a href="rl-deep-dive.html">强化学习</a>
+                <a href="frontier-deep-dive.html">前沿技术</a>
+                <a href="interview-questions.html" style="color:#f87171">面试题库</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">AI 技术演进</div>
+            <h1>从 Transformer 到 Agent</h1>
+            <p>面向 AI 工程师的技术演进全景 | 深入理解每一个技术细节</p>
+        </div>
+    </section>
+
+    <section class="content">
+        <svg viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" class="evolution-diagram">
+            <!-- Boxes -->
+            <rect x="20" y="60" width="140" height="80" fill="#1a2235" stroke="#3b82f6" stroke-width="2" rx="4"/>
+            <text x="90" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">Transformer</text>
+            <text x="90" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2017)</text>
+
+            <rect x="210" y="60" width="140" height="80" fill="#1a2235" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+            <text x="280" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">LLM</text>
+            <text x="280" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2018-2023)</text>
+
+            <rect x="400" y="60" width="140" height="80" fill="#1a2235" stroke="#06b6d4" stroke-width="2" rx="4"/>
+            <text x="470" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">对齐</text>
+            <text x="470" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2022-)</text>
+
+            <rect x="590" y="60" width="140" height="80" fill="#1a2235" stroke="#10b981" stroke-width="2" rx="4"/>
+            <text x="660" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">提示工程</text>
+            <text x="660" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2023-)</text>
+
+            <rect x="780" y="60" width="140" height="80" fill="#1a2235" stroke="#f59e0b" stroke-width="2" rx="4"/>
+            <text x="850" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">RAG</text>
+            <text x="850" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2023-)</text>
+
+            <rect x="970" y="60" width="140" height="80" fill="#1a2235" stroke="#ec4899" stroke-width="2" rx="4"/>
+            <text x="1040" y="95" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="bold">Agent</text>
+            <text x="1040" y="115" text-anchor="middle" fill="#e2e8f0" font-size="12">(2024-)</text>
+
+            <!-- Arrows -->
+            <line x1="160" y1="100" x2="210" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrowhead)"/>
+            <line x1="350" y1="100" x2="400" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrowhead)"/>
+            <line x1="540" y1="100" x2="590" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrowhead)"/>
+            <line x1="730" y1="100" x2="780" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrowhead)"/>
+            <line x1="920" y1="100" x2="970" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+            <!-- Arrow marker -->
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#334155"/>
+                </marker>
+            </defs>
+        </svg>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="year">2017</div>
+                <h3>Transformer 架构问世</h3>
+                <p>"Attention is All You Need" 论文发布，彻底改变了 NLP 领域的发展方向。Self-attention 机制成为现代 AI 的基础。</p>
+            </div>
+
+            <div class="timeline-item">
+                <div class="year">2018-2019</div>
+                <h3>BERT 和 GPT 时代</h3>
+                <p>预训练语言模型的爆炸式发展。BERT、GPT-2 等模型展示了大规模预训练的强大能力。</p>
+            </div>
+
+            <div class="timeline-item">
+                <div class="year">2022-2023</div>
+                <h3>LLM 规模爆炸与对齐</h3>
+                <p>GPT-3、ChatGPT、Claude 等大规模模型问世。RLHF 成为关键的对齐技术，使模型能够更好地遵循人类指令。</p>
+            </div>
+
+            <div class="timeline-item">
+                <div class="year">2023-2024</div>
+                <h3>提示工程、RAG 与 Agent</h3>
+                <p>Prompt engineering、检索增强生成（RAG）和 AI Agent 框架迅速发展，拓展了 LLM 的应用场景和能力边界。</p>
+            </div>
+
+            <div class="timeline-item">
+                <div class="year">2024-</div>
+                <h3>AI Agent 与智能系统</h3>
+                <p>端到端的 AI Agent 系统成为焦点，集成了推理、规划、工具使用和反馈循环的完整能力。</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">核心技术路线图</h2>
+        <div class="cards-grid">
+            <a href="transformer.html" class="card">
+                <div class="card-icon">⚙️</div>
+                <div class="card-tag tag-blue">基础</div>
+                <h3>Transformer</h3>
+                <p>Self-Attention 机制、多头注意力、位置编码等核心概念。深入理解 Transformer 的数学原理和实现细节。</p>
+            </a>
+
+            <a href="llm.html" class="card">
+                <div class="card-icon">📚</div>
+                <div class="card-tag tag-purple">核心</div>
+                <h3>大语言模型</h3>
+                <p>从 GPT 系列到 Claude、Llama 等。预训练、微调、扩展定律等关键概念。理解 LLM 的能力来源。</p>
+            </a>
+
+            <a href="alignment.html" class="card">
+                <div class="card-icon">🎯</div>
+                <div class="card-tag tag-cyan">安全</div>
+                <h3>对齐与RLHF</h3>
+                <p>强化学习从人类反馈（RLHF）、DPO、PPO 等对齐方法。让 AI 系统能够安全地遵循人类意图。</p>
+            </a>
+
+            <a href="prompting.html" class="card">
+                <div class="card-icon">💡</div>
+                <div class="card-tag tag-green">应用</div>
+                <h3>提示工程</h3>
+                <p>Few-shot learning、Chain-of-Thought、Prompt Injection 防护等。掌握与 LLM 有效交互的技巧。</p>
+            </a>
+
+            <a href="rag.html" class="card">
+                <div class="card-icon">🔍</div>
+                <div class="card-tag tag-orange">扩展</div>
+                <h3>RAG与工具</h3>
+                <p>检索增强生成、向量数据库、工具调用。扩展 LLM 的知识和能力边界。</p>
+            </a>
+
+            <a href="agents.html" class="card">
+                <div class="card-icon">🤖</div>
+                <div class="card-tag tag-pink">前沿</div>
+                <h3>AI Agent</h3>
+                <p>自主推理、规划与执行、多轮交互。构建能够独立完成复杂任务的智能系统。</p>
+            </a>
+        </div>
+    </section>
+
+    <!-- Deep Dive Section -->
+    <section style="padding: 4rem 2rem; max-width: 1200px; margin: 0 auto;">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 0.5rem; color: #f1f5f9;">🔬 专题深度解析</h2>
+      <p style="text-align: center; color: #94a3b8; margin-bottom: 2rem;">为 AI Engineer 面试准备的深度技术文档，包含完整数学推导与代码实现</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+
+        <a href="attention-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(147,51,234,0.1)); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🧠</div>
+          <h3 style="color: #60a5fa; margin: 0 0 0.5rem 0; font-size: 1.1rem;">Attention 机制演进</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">从 Bahdanau Attention 到 Flash Attention 3，覆盖 MHA、MQA/GQA、稀疏注意力</p>
+        </a>
+
+        <a href="context-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(14,165,233,0.1), rgba(59,130,246,0.1)); border: 1px solid rgba(14,165,233,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📏</div>
+          <h3 style="color: #38bdf8; margin: 0 0 0.5rem 0; font-size: 1.1rem;">上下文窗口演进</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">从 512 到 1M tokens，RoPE、YaRN、ALiBi、Ring Attention 完整技术路线</p>
+        </a>
+
+        <a href="finetune-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(34,197,94,0.1)); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
+          <h3 style="color: #34d399; margin: 0 0 0.5rem 0; font-size: 1.1rem;">微调与分布式训练</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">LoRA、QLoRA、DoRA、FSDP/ZeRO、DeepSpeed、3D 并行完整指南</p>
+        </a>
+
+        <a href="inference-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(20,184,166,0.1), rgba(6,182,212,0.1)); border: 1px solid rgba(20,184,166,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🚀</div>
+          <h3 style="color: #2dd4bf; margin: 0 0 0.5rem 0; font-size: 1.1rem;">推理优化</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">KV Cache、量化 (GPTQ/AWQ)、投机解码、PagedAttention、vLLM</p>
+        </a>
+
+        <a href="alignment-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(236,72,153,0.1)); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎯</div>
+          <h3 style="color: #c084fc; margin: 0 0 0.5rem 0; font-size: 1.1rem;">对齐算法数学推导</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">PPO、DPO、GRPO、ORPO/KTO/IPO 完整数学推导与代码实现</p>
+        </a>
+
+        <a href="agent-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.1)); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🤖</div>
+          <h3 style="color: #fbbf24; margin: 0 0 0.5rem 0; font-size: 1.1rem;">AI Agent 架构</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">ReAct、Reflexion、LATS、多智能体系统、MCP/A2A 协议详解</p>
+        </a>
+
+        <a href="rl-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(20,184,166,0.1)); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎮</div>
+          <h3 style="color: #34d399; margin: 0 0 0.5rem 0; font-size: 1.1rem;">强化学习与 RLHF</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">从 MDP 到 GRPO，Policy Gradient、PPO、DPO、RLVR、推理模型训练完整技术路线</p>
+        </a>
+
+        <a href="frontier-deep-dive.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(96,165,250,0.1)); border: 1px solid rgba(34,211,238,0.3); border-radius: 12px; padding: 1.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔮</div>
+          <h3 style="color: #22d3ee; margin: 0 0 0.5rem 0; font-size: 1.1rem;">前沿技术 2025-2026</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">Context Engineering、Test-Time Compute、AI Coding Agents、Constrained Decoding、合成数据、模型合并、DiT、World Models</p>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Interview Questions Section -->
+    <section style="padding: 2rem 2rem 4rem; max-width: 1200px; margin: 0 auto;">
+      <a href="interview-questions.html" style="text-decoration: none; display: block; background: linear-gradient(135deg, rgba(248,113,113,0.08), rgba(244,114,182,0.08)); border: 1px solid rgba(248,113,113,0.3); border-radius: 12px; padding: 2rem; transition: transform 0.2s, box-shadow 0.2s; text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+        <h3 style="color: #f87171; margin: 0 0 0.5rem 0; font-size: 1.3rem;">AI Engineer 面试题库 — 200+ 道必考题</h3>
+        <p style="color: #94a3b8; font-size: 0.95rem; margin: 0;">从 Transformer 基础到系统设计，覆盖全部 8 大主题。包含详细解答、公式推导、代码示例与面试加分点。</p>
+      </a>
+    </section>
+
+    <footer class="site-footer">
+        <p>AI 技术演进 - 面向 AI 工程师的学习资源</p>
+        <p>深入理解从 Transformer 到 Agent 的完整技术演进链路</p>
+    </footer>
+</body>
+</html>

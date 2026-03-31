@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attention 机制演进全解析</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --bg:#07080f; --bg2:#0d0f1a; --bg3:#131520; --bg4:#191c2a; --card:#1b1e2d;
+      --line:rgba(255,255,255,0.06); --line2:rgba(255,255,255,0.11);
+      --text:#dde0ef; --sub:#7a7d94; --dim:#4a4d62;
+      --green:#34d399; --teal:#22d3ee; --blue:#60a5fa; --purple:#a78bfa;
+      --pink:#f472b6; --amber:#fbbf24; --coral:#f87171; --orange:#fb923c;
+      --gd:rgba(52,211,153,0.08); --td:rgba(34,211,238,0.08); --bd:rgba(96,165,250,0.08);
+      --pd:rgba(167,139,250,0.08); --ad:rgba(251,191,36,0.08); --cd:rgba(248,113,113,0.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+
+    .hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;margin-left:220px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(96,165,250,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(167,139,250,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+    .hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+    .hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--blue);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+    .hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px}
+    .hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px}
+
+    .sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+    .sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+    .sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+    .sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--blue);background:rgba(96,165,250,0.05)}
+    .sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+    .sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--blue);text-decoration:none;border-bottom:1px solid var(--line)}
+
+    .main{margin-left:220px;max-width:900px}
+    .section{padding:56px 48px;border-bottom:1px solid var(--line)}
+    .section:last-child{border-bottom:none}
+    .section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+    .section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+    .section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+
+    .prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}
+    .prose strong{color:var(--text)}
+    .prose em{color:var(--teal);font-style:normal}
+    .prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}
+    .prose ul,.prose ol{margin:8px 0 16px 20px}
+    .prose li{margin-bottom:6px}
+
+    .callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+    .callout.green{border-left-color:var(--green);background:var(--gd)}
+    .callout.amber{border-left-color:var(--amber);background:var(--ad)}
+    .callout.blue{border-left-color:var(--blue);background:var(--bd)}
+    .callout.coral{border-left-color:var(--coral);background:var(--cd)}
+
+    .diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+    .diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+    .diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+
+    .formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+    .formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+
+    .cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+    .cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+    .cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}
+    .cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+
+    .steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+    .step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+    .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px}
+    .step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+    .step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+
+    .tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+    @media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+    .tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}
+    .tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+    .tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+    .tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+
+    .interview-box{background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:18px 20px;margin:24px 0}
+    .interview-box .ib-tag{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+    .interview-box p{color:var(--sub);font-size:0.88rem;margin-bottom:6px;line-height:1.7}
+    .interview-box ul{margin:6px 0 0 18px;color:var(--sub);font-size:0.85rem}
+    .interview-box li{margin-bottom:4px}
+
+    .highlight{background:rgba(96,165,250,0.15);padding:2px 4px;border-radius:3px}
+  </style>
+</head>
+<body>
+
+<div class="sidenav">
+  <a href="transformer.html" class="back-link">← 返回 Transformer</a>
+  <div class="sidenav-title">导航</div>
+  <a href="#sec0" class="nav-link"><span class="nav-num">00</span>序列建模的挑战</a>
+  <a href="#sec1" class="nav-link"><span class="nav-num">01</span>Bahdanau Attention</a>
+  <a href="#sec2" class="nav-link"><span class="nav-num">02</span>Luong Attention</a>
+  <a href="#sec3" class="nav-link"><span class="nav-num">03</span>Self-Attention</a>
+  <a href="#sec4" class="nav-link"><span class="nav-num">04</span>Multi-Head Attention</a>
+  <a href="#sec5" class="nav-link"><span class="nav-num">05</span>MQA & GQA</a>
+  <a href="#sec6" class="nav-link"><span class="nav-num">06</span>Flash Attention</a>
+  <a href="#sec7" class="nav-link"><span class="nav-num">07</span>稀疏与线性注意力</a>
+  <a href="#sec8" class="nav-link"><span class="nav-num">08</span>总结与面试题</a>
+</div>
+
+<div class="hero">
+  <div class="hero-tag">深度技术解析</div>
+  <h1>Attention <em>机制演进全解析</em></h1>
+  <p class="hero-sub">从 Bahdanau 注意力到 Flash Attention 3 — 每一步突破的数学原理与工程实现</p>
+</div>
+
+<div class="main">
+
+<!-- ===== SECTION 00: RNN Challenge ===== -->
+<div class="section" id="sec0">
+  <span class="section-badge" style="border-color:var(--blue);color:var(--blue)">背景</span>
+  <h2 class="section-title">序列建模的挑战</h2>
+  <p class="section-sub">理解为什么需要 Attention 机制</p>
+
+  <div class="prose">
+    <p>在 Attention 机制出现之前，序列到序列 (Seq2Seq) 模型主要依赖 <strong>循环神经网络 (RNN)</strong> 实现。但 RNN 面临根本性的瓶颈：</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">信息瓶颈 (Information Bottleneck)</div>
+        <div class="desc">整个输入序列被压缩为单一的固定大小上下文向量 c。长序列的信息大量丧失。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">长距离依赖困难</div>
+        <div class="desc">梯度通过多个时间步传播时产生梯度消失/爆炸，难以学习长距离的语义关联。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">线性时间依赖</div>
+        <div class="desc">RNN 必须顺序处理，难以并行化，计算效率低下。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">RNN Seq2Seq 的信息瓶颈</div>
+    <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+      <!-- Encoder -->
+      <g>
+        <text x="50" y="25" font-size="12" fill="#a78bfa" font-weight="600">编码器 Encoder</text>
+        <circle cx="80" cy="70" r="18" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <text x="73" y="76" font-size="11" fill="#60a5fa">x₁</text>
+
+        <line x1="98" y1="70" x2="132" y2="70" stroke="#60a5fa" stroke-width="2"/>
+        <polygon points="132,70 122,65 122,75" fill="#60a5fa"/>
+
+        <circle cx="160" cy="70" r="18" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <text x="153" y="76" font-size="11" fill="#60a5fa">x₂</text>
+
+        <line x1="178" y1="70" x2="212" y2="70" stroke="#60a5fa" stroke-width="2"/>
+        <polygon points="212,70 202,65 202,75" fill="#60a5fa"/>
+
+        <circle cx="240" cy="70" r="18" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <text x="233" y="76" font-size="11" fill="#60a5fa">x₃</text>
+
+        <circle cx="300" cy="70" r="20" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,4"/>
+        <text x="288" y="76" font-size="11" fill="#60a5fa">xₙ</text>
+      </g>
+
+      <!-- RNN states -->
+      <g>
+        <text x="50" y="145" font-size="12" fill="#22d3ee" font-weight="600">隐藏状态</text>
+        <rect x="60" y="160" width="35" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="68" y="190" font-size="10" fill="#22d3ee">h₁</text>
+
+        <line x1="95" y1="180" x2="130" y2="180" stroke="#22d3ee" stroke-width="2"/>
+        <polygon points="130,180 120,175 120,185" fill="#22d3ee"/>
+
+        <rect x="130" y="160" width="35" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="138" y="190" font-size="10" fill="#22d3ee">h₂</text>
+
+        <line x1="165" y1="180" x2="200" y2="180" stroke="#22d3ee" stroke-width="2"/>
+        <polygon points="200,180 190,175 190,185" fill="#22d3ee"/>
+
+        <rect x="200" y="160" width="35" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="208" y="190" font-size="10" fill="#22d3ee">h₃</text>
+      </g>
+
+      <!-- Bottleneck -->
+      <g>
+        <circle cx="350" cy="180" r="25" fill="none" stroke="#f87171" stroke-width="3"/>
+        <text x="335" y="185" font-size="11" fill="#f87171" font-weight="600">c</text>
+        <text x="310" y="210" font-size="10" fill="#f87171">信息瓶颈</text>
+      </g>
+
+      <!-- Decoder -->
+      <g>
+        <text x="430" y="25" font-size="12" fill="#a78bfa" font-weight="600">解码器 Decoder</text>
+        <rect x="420" y="160" width="35" height="40" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="428" y="190" font-size="10" fill="#34d399">s₁</text>
+
+        <line x1="455" y1="180" x2="490" y2="180" stroke="#34d399" stroke-width="2"/>
+        <polygon points="490,180 480,175 480,185" fill="#34d399"/>
+
+        <rect x="490" y="160" width="35" height="40" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="498" y="190" font-size="10" fill="#34d399">s₂</text>
+
+        <line x1="525" y1="180" x2="560" y2="180" stroke="#34d399" stroke-width="2"/>
+        <polygon points="560,180 550,175 550,185" fill="#34d399"/>
+
+        <rect x="560" y="160" width="35" height="40" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="568" y="190" font-size="10" fill="#34d399">s₃</text>
+      </g>
+
+      <!-- Bottleneck to decoder -->
+      <line x1="375" y1="180" x2="420" y2="180" stroke="#f87171" stroke-width="2" stroke-dasharray="3,3"/>
+
+      <!-- Problem annotation -->
+      <g>
+        <text x="300" y="260" font-size="11" fill="#fbbf24">问题：所有解码步骤依赖同一个压缩上下文 c</text>
+        <text x="300" y="280" font-size="11" fill="#fbbf24">导致无法动态地关注不同的输入位置</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="callout blue">
+    <strong>Attention 的核心洞察</strong>：与其强制将整个输入压缩为单一向量，不如让解码器在<em>每个步骤</em>动态地从输入中选择相关信息。这就是 Attention 的本质。
+  </div>
+</div>
+
+<!-- ===== SECTION 01: Bahdanau Attention ===== -->
+<div class="section" id="sec1">
+  <span class="section-badge" style="border-color:var(--blue);color:var(--blue)">2015</span>
+  <h2 class="section-title">Bahdanau Attention (加法注意力)</h2>
+  <p class="section-sub">神经机器翻译的突破</p>
+
+  <div class="prose">
+    <p>Bahdanau et al. 在 2015 年提出的加法注意力 (Additive Attention) 为每个解码时间步计算一个动态的上下文向量。关键创新是使用一个<em>对齐模型</em>（alignment model）来计算注意力权重。</p>
+  </div>
+
+  <div class="formula">
+    score(s_t, h_i) = v^T tanh(W_s s_t + W_h h_i)
+    <span class="comment">其中 v ∈ ℝ^d_a, W_s ∈ ℝ^{d_a × d_s}, W_h ∈ ℝ^{d_a × d_h}</span>
+  </div>
+
+  <div class="prose">
+    <p><strong>计算流程</strong>：</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">计算对齐分数 (Alignment Scores)</div>
+        <div class="desc">对于解码状态 s_t 和每个编码隐藏状态 h_i，通过非线性变换计算相似度。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Softmax 归一化</div>
+        <div class="desc">α_ti = softmax_i(score(s_t, h_i)) 得到注意力权重，和为 1。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">加权求和得上下文</div>
+        <div class="desc">c_t = Σ_i α_ti h_i — 编码表示的加权组合。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">拼接与解码</div>
+        <div class="desc">[s_t; c_t] 拼接后送入解码器得到输出。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Bahdanau 注意力机制流程</div>
+    <svg viewBox="0 0 750 380" xmlns="http://www.w3.org/2000/svg">
+      <!-- Encoder hidden states -->
+      <g>
+        <text x="30" y="25" font-size="12" fill="#a78bfa" font-weight="600">编码器隐藏状态</text>
+        <rect x="20" y="40" width="50" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="30" y="65" font-size="10" fill="#60a5fa">h₁</text>
+
+        <rect x="80" y="40" width="50" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="90" y="65" font-size="10" fill="#60a5fa">h₂</text>
+
+        <rect x="140" y="40" width="50" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="150" y="65" font-size="10" fill="#60a5fa">h₃</text>
+
+        <rect x="200" y="40" width="50" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="215" y="65" font-size="10" fill="#60a5fa">...</text>
+      </g>
+
+      <!-- Decoder state -->
+      <g>
+        <text x="280" y="25" font-size="12" fill="#a78bfa" font-weight="600">解码器状态 t</text>
+        <rect x="280" y="40" width="50" height="35" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="295" y="65" font-size="10" fill="#34d399">s_t</text>
+      </g>
+
+      <!-- Scoring -->
+      <g>
+        <text x="30" y="130" font-size="12" fill="#22d3ee" font-weight="600">1. 对齐分数</text>
+        <line x1="45" y1="75" x2="45" y2="105" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <line x1="305" y1="75" x2="305" y2="105" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+        <circle cx="120" cy="130" r="25" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="108" y="135" font-size="9" fill="#22d3ee" font-weight="600">tanh</text>
+        <text x="100" y="150" font-size="8" fill="#22d3ee">e₁</text>
+
+        <circle cx="180" cy="130" r="25" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="168" y="135" font-size="9" fill="#22d3ee" font-weight="600">tanh</text>
+        <text x="170" y="150" font-size="8" fill="#22d3ee">e₂</text>
+
+        <circle cx="240" cy="130" r="25" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="228" y="135" font-size="9" fill="#22d3ee" font-weight="600">tanh</text>
+        <text x="235" y="150" font-size="8" fill="#22d3ee">e₃</text>
+      </g>
+
+      <!-- Softmax -->
+      <g>
+        <text x="30" y="210" font-size="12" fill="#fbbf24" font-weight="600">2. Softmax 权重</text>
+        <rect x="100" y="215" width="35" height="30" fill="none" stroke="#fbbf24" stroke-width="2" rx="3"/>
+        <text x="105" y="237" font-size="9" fill="#fbbf24">α₁</text>
+
+        <rect x="160" y="215" width="35" height="30" fill="none" stroke="#fbbf24" stroke-width="2" rx="3"/>
+        <text x="165" y="237" font-size="9" fill="#fbbf24">α₂</text>
+
+        <rect x="220" y="215" width="35" height="30" fill="none" stroke="#fbbf24" stroke-width="2" rx="3"/>
+        <text x="225" y="237" font-size="9" fill="#fbbf24">α₃</text>
+      </g>
+
+      <!-- Context -->
+      <g>
+        <text x="30" y="295" font-size="12" fill="#f87171" font-weight="600">3. 加权求和</text>
+        <line x1="117" y1="245" x2="117" y2="285" stroke="#f87171" stroke-width="1.5"/>
+        <line x1="177" y1="245" x2="177" y2="285" stroke="#f87171" stroke-width="1.5"/>
+        <line x1="237" y1="245" x2="237" y2="285" stroke="#f87171" stroke-width="1.5"/>
+
+        <circle cx="180" cy="315" r="28" fill="none" stroke="#f87171" stroke-width="2"/>
+        <text x="165" y="320" font-size="10" fill="#f87171" font-weight="600">c_t</text>
+        <text x="165" y="335" font-size="8" fill="#f87171">上下文向量</text>
+      </g>
+
+      <!-- Output -->
+      <g>
+        <text x="420" y="210" font-size="12" fill="#a78bfa" font-weight="600">4. 输出</text>
+        <line x1="210" y1="315" x2="380" y2="315" stroke="#a78bfa" stroke-width="2"/>
+        <polygon points="380,315 370,310 370,320" fill="#a78bfa"/>
+
+        <rect x="380" y="290" width="60" height="50" fill="none" stroke="#a78bfa" stroke-width="2" rx="4"/>
+        <text x="390" y="310" font-size="10" fill="#a78bfa" font-weight="600">tanh</text>
+        <text x="395" y="330" font-size="8" fill="#a78bfa">[s_t;c_t]</text>
+
+        <line x1="440" y1="315" x2="480" y2="315" stroke="#a78bfa" stroke-width="2"/>
+        <polygon points="480,315 470,310 470,320" fill="#a78bfa"/>
+
+        <circle cx="520" cy="315" r="22" fill="none" stroke="#34d399" stroke-width="2"/>
+        <text x="508" y="320" font-size="10" fill="#34d399" font-weight="600">y_t</text>
+      </g>
+
+      <!-- Formula box -->
+      <g>
+        <rect x="420" y="40" width="310" height="130" fill="var(--bg3)" stroke="var(--line2)" stroke-width="1" rx="6"/>
+        <text x="435" y="60" font-size="11" fill="#22d3ee" font-weight="600">核心公式</text>
+
+        <text x="435" y="85" font-size="9" fill="#22d3ee" font-family="monospace">score(s_t, h_i) = v^T tanh(W_s s_t + W_h h_i)</text>
+
+        <text x="435" y="110" font-size="9" fill="#22d3ee" font-family="monospace">α_ti = exp(score) / Σ exp(score)</text>
+
+        <text x="435" y="135" font-size="9" fill="#22d3ee" font-family="monospace">c_t = Σ α_ti h_i</text>
+
+        <text x="435" y="160" font-size="8" fill="#4a4d62">参数: d_a ≈ 256, 独立学习</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">计算复杂度</div>
+      <div class="tc-val">O(n²d)</div>
+      <div class="tc-desc">n 是序列长度，d 是隐藏维度。对齐分数计算需要 O(n) 次非线性变换。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">内存占用</div>
+      <div class="tc-val">O(n²)</div>
+      <div class="tc-desc">需存储 n×n 的注意力权重矩阵，长序列时成为瓶颈。</div>
+    </div>
+  </div>
+
+  <div class="callout amber">
+    <strong>优势</strong>: 解决了 RNN 的信息瓶颈，每个解码步骤可动态关注不同输入。
+    <br><strong>劣势</strong>: 非线性变换的计算成本高；无法并行计算整个解码序列。
+  </div>
+</div>
+
+<!-- ===== SECTION 02: Luong Attention ===== -->
+<div class="section" id="sec2">
+  <span class="section-badge" style="border-color:var(--green);color:var(--green)">2015</span>
+  <h2 class="section-title">Luong Attention (乘法注意力)</h2>
+  <p class="section-sub">简化高效的注意力机制</p>
+
+  <div class="prose">
+    <p>同年，Luong et al. 提出了<em>乘法注意力</em>（Multiplicative Attention），通过一个简单的点积操作替代了 Bahdanau 的非线性变换，大幅降低计算成本。</p>
+  </div>
+
+  <div class="formula">
+    score(s_t, h_i) = s_t^T h_i
+    <span class="comment">最简单的形式：直接点积</span>
+  </div>
+
+  <div class="prose">
+    <p><strong>三种变体</strong>：</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">点积注意力 (Dot)</div>
+        <div class="desc">score = s_t^T h_i。最快，但要求 s_t 和 h_i 维度相同。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">一般注意力 (General)</div>
+        <div class="desc">score = s_t^T W h_i。通过矩阵 W 适配维度差异，灵活性最好。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">拼接注意力 (Concat)</div>
+        <div class="desc">score = v^T tanh(W[s_t; h_i])。相当于 Bahdanau，但拼接而非求和。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <strong>关键优势</strong>：乘法注意力可以用矩阵乘法高效实现。对于向量化计算（GPU）来说，这比逐元素非线性操作快一个数量级。
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">全局注意力 vs 本地注意力</div>
+    <svg viewBox="0 0 750 250" xmlns="http://www.w3.org/2000/svg">
+      <!-- Global Attention -->
+      <g>
+        <text x="50" y="25" font-size="12" fill="#a78bfa" font-weight="600">全局注意力 (Global)</text>
+        <text x="50" y="45" font-size="10" fill="#7a7d94">所有编码状态都参与计算</text>
+
+        <circle cx="80" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="92" y1="90" x2="138" y2="90" stroke="#60a5fa" stroke-width="2"/>
+
+        <circle cx="150" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="162" y1="90" x2="208" y2="90" stroke="#60a5fa" stroke-width="2"/>
+
+        <circle cx="220" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="232" y1="90" x2="278" y2="90" stroke="#60a5fa" stroke-width="2"/>
+
+        <rect x="280" y="75" width="50" height="30" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="295" y="97" font-size="10" fill="#34d399">s_t</text>
+
+        <text x="50" y="150" font-size="9" fill="#4a4d62">• 内存: O(n²)</text>
+        <text x="50" y="170" font-size="9" fill="#4a4d62">• 计算: O(n²d)</text>
+      </g>
+
+      <!-- Local Attention -->
+      <g>
+        <text x="420" y="25" font-size="12" fill="#a78bfa" font-weight="600">本地注意力 (Local)</text>
+        <text x="420" y="45" font-size="10" fill="#7a7d94">仅关注滑动窗口范围</text>
+
+        <circle cx="450" cy="90" r="12" fill="none" stroke="#f87171" stroke-width="1"/>
+        <circle cx="480" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <circle cx="510" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <circle cx="540" cy="90" r="12" fill="none" stroke="#60a5fa" stroke-width="2"/>
+        <circle cx="570" cy="90" r="12" fill="none" stroke="#f87171" stroke-width="1"/>
+
+        <rect x="600" y="75" width="50" height="30" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="615" y="97" font-size="10" fill="#34d399">s_t</text>
+
+        <text x="420" y="150" font-size="9" fill="#4a4d62">• 内存: O(n×w)</text>
+        <text x="420" y="170" font-size="9" fill="#4a4d62">• 计算: O(n×w×d)</text>
+        <text x="420" y="190" font-size="9" fill="#4a4d62">w = 窗口大小</text>
+      </g>
+    </svg>
+  </div>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>特征</th>
+        <th>Bahdanau</th>
+        <th>Luong</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>打分函数</strong></td>
+        <td>v^T tanh(W_s s_t + W_h h_i)</td>
+        <td>s_t^T W h_i (一般形式)</td>
+      </tr>
+      <tr>
+        <td><strong>计算速度</strong></td>
+        <td>慢 (非线性操作)</td>
+        <td>快 (矩阵乘法)</td>
+      </tr>
+      <tr>
+        <td><strong>参数量</strong></td>
+        <td>多 (d_a × (d_s + d_h) + d_a)</td>
+        <td>少 (d_s × d_h)</td>
+      </tr>
+      <tr>
+        <td><strong>可并行化</strong></td>
+        <td>困难</td>
+        <td>容易 (内积高度并行)</td>
+      </tr>
+      <tr>
+        <td><strong>应用</strong></td>
+        <td>小规模、精度优先</td>
+        <td>大规模、效率优先</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="interview-box">
+    <div class="ib-tag">面试考点</div>
+    <p><strong>Q: 为什么 Luong 注意力比 Bahdanau 快？</strong></p>
+    <p>A: Bahdanau 在计算对齐分数时使用 v^T tanh(...)，需要多次矩阵乘法和非线性激活。Luong 使用点积 s_t^T h_i，直接可用 BLAS 优化，GPU 上的矩阵乘法操作远快于逐步非线性变换。</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 03: Self-Attention ===== -->
+<div class="section" id="sec3">
+  <span class="section-badge" style="border-color:var(--teal);color:var(--teal)">2017</span>
+  <h2 class="section-title">Self-Attention (自注意力)</h2>
+  <p class="section-sub">Transformer 的核心机制</p>
+
+  <div class="prose">
+    <p>Self-attention 是指序列中的每个位置都能与<em>同一序列</em>中的所有其他位置建立直接的关联，而不依赖递归结构。这使得整个序列可以<em>并行处理</em>，成为 Transformer 的基石。</p>
+  </div>
+
+  <div class="formula">
+    Attention(Q, K, V) = softmax(Q K^T / √d_k) V
+    <span class="comment">Q, K, V ∈ ℝ^{n × d}, n 是序列长度</span>
+  </div>
+
+  <div class="prose">
+    <p><strong>三个矩阵的直觉</strong>：</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">Q</div>
+      <div class="step-body">
+        <div class="title">查询 (Query)</div>
+        <div class="desc">当前位置"想问什么问题"。来自 x_i W_Q。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">K</div>
+      <div class="step-body">
+        <div class="title">键 (Key)</div>
+        <div class="desc">"每个位置是什么"。来自 x_j W_K。与 Q 计算相似度。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">V</div>
+      <div class="step-body">
+        <div class="title">值 (Value)</div>
+        <div class="desc">"每个位置的信息"。来自 x_j W_V。被加权平均。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Self-Attention 计算流程</div>
+    <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg">
+      <!-- Input -->
+      <g>
+        <text x="30" y="25" font-size="12" fill="#a78bfa" font-weight="600">输入序列</text>
+        <rect x="30" y="40" width="45" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="40" y="65" font-size="10" fill="#60a5fa">x₁</text>
+
+        <rect x="85" y="40" width="45" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="95" y="65" font-size="10" fill="#60a5fa">x₂</text>
+
+        <rect x="140" y="40" width="45" height="35" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="150" y="65" font-size="10" fill="#60a5fa">x₃</text>
+      </g>
+
+      <!-- W_Q, W_K, W_V -->
+      <g>
+        <line x1="52" y1="75" x2="52" y2="105" stroke="#22d3ee" stroke-width="2"/>
+        <line x1="107" y1="75" x2="107" y2="105" stroke="#22d3ee" stroke-width="2"/>
+        <line x1="162" y1="75" x2="162" y2="105" stroke="#22d3ee" stroke-width="2"/>
+
+        <text x="30" y="145" font-size="12" fill="#22d3ee" font-weight="600">线性投影</text>
+        <circle cx="52" cy="130" r="8" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="48" y="135" font-size="8" fill="#22d3ee">W_Q</text>
+
+        <circle cx="107" cy="130" r="8" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="103" y="135" font-size="8" fill="#22d3ee">W_K</text>
+
+        <circle cx="162" cy="130" r="8" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="158" y="135" font-size="8" fill="#22d3ee">W_V</text>
+      </g>
+
+      <!-- Q, K, V -->
+      <g>
+        <rect x="30" y="160" width="45" height="35" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="42" y="185" font-size="10" fill="#34d399">Q</text>
+
+        <rect x="85" y="160" width="45" height="35" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="97" y="185" font-size="10" fill="#34d399">K</text>
+
+        <rect x="140" y="160" width="45" height="35" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="152" y="185" font-size="10" fill="#34d399">V</text>
+      </g>
+
+      <!-- Scoring: Q K^T -->
+      <g>
+        <line x1="52" y1="195" x2="52" y2="225" stroke="#f87171" stroke-width="2"/>
+        <line x1="107" y1="195" x2="107" y2="225" stroke="#f87171" stroke-width="2"/>
+
+        <circle cx="80" cy="250" r="28" fill="none" stroke="#f87171" stroke-width="2"/>
+        <text x="70" y="250" font-size="10" fill="#f87171" font-weight="600">Q K^T</text>
+        <text x="65" y="265" font-size="8" fill="#f87171">n × n</text>
+      </g>
+
+      <!-- Scale -->
+      <g>
+        <line x1="80" y1="278" x2="80" y2="305" stroke="#fbbf24" stroke-width="2"/>
+        <circle cx="80" cy="330" r="20" fill="none" stroke="#fbbf24" stroke-width="2"/>
+        <text x="72" y="335" font-size="9" fill="#fbbf24">÷√d_k</text>
+      </g>
+
+      <!-- Softmax -->
+      <g>
+        <line x1="80" y1="350" x2="80" y2="375" stroke="#22d3ee" stroke-width="2"/>
+        <circle cx="80" cy="395" r="15" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="72" y="400" font-size="8" fill="#22d3ee">softmax</text>
+      </g>
+
+      <!-- Right side: multiply by V -->
+      <g>
+        <line x1="162" y1="195" x2="220" y2="230" stroke="#a78bfa" stroke-width="2"/>
+        <line x1="95" y1="410" x2="220" y2="230" stroke="#a78bfa" stroke-width="2"/>
+
+        <circle cx="250" cy="260" r="28" fill="none" stroke="#a78bfa" stroke-width="2"/>
+        <text x="240" y="265" font-size="9" fill="#a78bfa" font-weight="600">× V</text>
+        <text x="240" y="280" font-size="8" fill="#a78bfa">加权求和</text>
+      </g>
+
+      <!-- Output -->
+      <g>
+        <line x1="278" y1="260" x2="320" y2="260" stroke="#34d399" stroke-width="2"/>
+        <polygon points="320,260 310,255 310,265" fill="#34d399"/>
+
+        <rect x="320" y="240" width="50" height="40" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="335" y="265" font-size="10" fill="#34d399" font-weight="600">Output</text>
+      </g>
+
+      <!-- Formula box -->
+      <g>
+        <rect x="420" y="40" width="360" height="160" fill="var(--bg3)" stroke="var(--line2)" stroke-width="1" rx="6"/>
+        <text x="435" y="60" font-size="11" fill="#22d3ee" font-weight="600">缩放因子 √d_k 的意义</text>
+
+        <text x="435" y="85" font-size="9" fill="#22d3ee" font-family="monospace">• 不缩放时，大维度下点积方差很大</text>
+        <text x="435" y="105" font-size="9" fill="#22d3ee" font-family="monospace">• softmax 变得过于尖锐 (峰值高)</text>
+        <text x="435" y="125" font-size="9" fill="#22d3ee" font-family="monospace">• 梯度容易消失，学习困难</text>
+
+        <text x="435" y="150" font-size="9" fill="#22d3ee" font-family="monospace">除以 √d_k 使方差保持为 1，稳定训练</text>
+
+        <text x="435" y="180" font-size="8" fill="#4a4d62">d_k 通常为 d_model / num_heads</text>
+      </g>
+
+      <!-- Complexity -->
+      <g>
+        <rect x="420" y="220" width="360" height="120" fill="var(--bg3)" stroke="var(--line2)" stroke-width="1" rx="6"/>
+        <text x="435" y="240" font-size="11" fill="#fbbf24" font-weight="600">计算复杂度分析</text>
+
+        <text x="435" y="265" font-size="9" fill="#22d3ee" font-family="monospace">Q K^T 计算: O(n² d)</text>
+        <text x="435" y="285" font-size="9" fill="#22d3ee" font-family="monospace">注意力权重 × V: O(n² d)</text>
+        <text x="435" y="305" font-size="9" fill="#22d3ee" font-family="monospace">总计: O(n² d)</text>
+
+        <text x="435" y="330" font-size="8" fill="#4a4d62">对于 n = 4096, d = 768: ~12B 次操作</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="callout coral">
+    <strong>为什么能并行？</strong> Self-attention 中，每个位置的输出只依赖输入矩阵，不依赖前一个隐藏状态。因此整个序列可以一次性处理，无需循环迭代。
+  </div>
+
+  <div class="prose">
+    <p><strong>Causal Mask (因果掩码) 用于解码器</strong>：在 Transformer 解码器中，防止模型看到未来 token，掩码注意力权重使其为 -∞。</p>
+  </div>
+
+  <div class="formula">
+    Attention(Q, K, V) = softmax(Q K^T / √d_k + M) V
+    <span class="comment">M[i,j] = -∞ 如果 j > i (下三角掩码)</span>
+  </div>
+</div>
+
+<!-- ===== SECTION 04: Multi-Head Attention ===== -->
+<div class="section" id="sec4">
+  <span class="section-badge" style="border-color:var(--purple);color:var(--purple)">2017</span>
+  <h2 class="section-title">Multi-Head Attention (多头注意力)</h2>
+  <p class="section-sub">捕获多个语义子空间</p>
+
+  <div class="prose">
+    <p>单个注意力头只能学习一种"注意模式"。多头注意力将 d_model 维度分成 h 个头，每个头独立地学习，最后拼接。这使模型能捕获多个不同的语义关系。</p>
+  </div>
+
+  <div class="formula">
+    MultiHead(Q, K, V) = Concat(head_1, ..., head_h) W_O
+    <br>其中 head_i = Attention(Q W_Q^i, K W_K^i, V W_V^i)
+    <span class="comment">每个头使用独立的投影矩阵</span>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">投影到子空间</div>
+        <div class="desc">Q, K, V 分别投影到 h 个不同的 d_k 维子空间 (d_k = d_model / h)。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">并行计算头部注意力</div>
+        <div class="desc">h 个注意力计算可完全并行，每个消耗 O(n² d_k) 时间。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">拼接与输出投影</div>
+        <div class="desc">[head_1; ...; head_h] 维度为 n × d_model，再投影回原维度。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">多头注意力的并行结构</div>
+    <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg">
+      <!-- Input -->
+      <g>
+        <text x="30" y="20" font-size="12" fill="#a78bfa" font-weight="600">输入 x (d_model = 512)</text>
+        <rect x="30" y="35" width="700" height="30" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="330" y="57" font-size="10" fill="#60a5fa">512-dim</text>
+      </g>
+
+      <!-- Linear projections -->
+      <g>
+        <text x="30" y="95" font-size="12" fill="#22d3ee" font-weight="600">线性投影 (8 个头)</text>
+
+        <rect x="35" y="110" width="85" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="50" y="130" font-size="9" fill="#22d3ee">W_Q^1</text>
+        <text x="50" y="145" font-size="8" fill="#4a4d62">64×512</text>
+
+        <rect x="130" y="110" width="85" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="145" y="130" font-size="9" fill="#22d3ee">W_Q^2</text>
+
+        <text x="270" y="130" font-size="10" fill="#4a4d62">... (8 heads)</text>
+
+        <rect x="615" y="110" width="85" height="40" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="630" y="130" font-size="9" fill="#22d3ee">W_Q^8</text>
+      </g>
+
+      <!-- Head computations -->
+      <g>
+        <text x="30" y="180" font-size="12" fill="#34d399" font-weight="600">注意力计算 (并行)</text>
+
+        <circle cx="77" cy="200" r="28" fill="none" stroke="#34d399" stroke-width="2"/>
+        <text x="60" y="205" font-size="9" fill="#34d399" font-weight="600">Attn</text>
+        <text x="70" y="220" font-size="8" fill="#34d399">head1</text>
+
+        <circle cx="172" cy="200" r="28" fill="none" stroke="#34d399" stroke-width="2"/>
+        <text x="155" y="205" font-size="9" fill="#34d399" font-weight="600">Attn</text>
+        <text x="165" y="220" font-size="8" fill="#34d399">head2</text>
+
+        <text x="270" y="210" font-size="10" fill="#4a4d62">...</text>
+
+        <circle cx="657" cy="200" r="28" fill="none" stroke="#34d399" stroke-width="2"/>
+        <text x="640" y="205" font-size="9" fill="#34d399" font-weight="600">Attn</text>
+        <text x="650" y="220" font-size="8" fill="#34d399">head8</text>
+      </g>
+
+      <!-- Concatenation -->
+      <g>
+        <line x1="77" y1="228" x2="150" y2="265" stroke="#f87171" stroke-width="2"/>
+        <line x1="172" y1="228" x2="150" y2="265" stroke="#f87171" stroke-width="2"/>
+        <line x1="657" y1="228" x2="450" y2="265" stroke="#f87171" stroke-width="2"/>
+
+        <rect x="100" y="270" width="700" height="30" fill="none" stroke="#f87171" stroke-width="2" rx="4"/>
+        <text x="370" y="292" font-size="10" fill="#f87171">Concat [head1, head2, ..., head8]</text>
+      </g>
+
+      <!-- Output projection -->
+      <g>
+        <line x1="450" y1="300" x2="450" y2="320" stroke="#a78bfa" stroke-width="2"/>
+        <circle cx="450" cy="340" r="18" fill="none" stroke="#a78bfa" stroke-width="2"/>
+        <text x="438" y="345" font-size="9" fill="#a78bfa" font-weight="600">W_O</text>
+
+        <line x1="450" y1="358" x2="450" y2="380" stroke="#a78bfa" stroke-width="2"/>
+        <rect x="400" y="385" width="100" height="25" fill="none" stroke="#a78bfa" stroke-width="2" rx="4"/>
+        <text x="420" y="403" font-size="10" fill="#a78bfa">Output (512-dim)</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">参数数量</div>
+      <div class="tc-val">h × 3 × d_k² + d²</div>
+      <div class="tc-desc">由于 d_k = d/h，总参数与单头相同，但计算可并行。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">不同头学到的内容</div>
+      <div class="tc-val">多样化</div>
+      <div class="tc-desc">头1: 语法关系；头2: 语义相似度；头3: 位置偏移...</div>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <strong>为什么多头比单头好？</strong> 单个 512-dim 的注意力头必须同时捕捉所有类型的关系。多头让每个头专注于一个特定的语义子空间，增加了表达能力。实验证明 h=8 是一个很好的平衡。
+  </div>
+</div>
+
+<!-- ===== SECTION 05: MQA & GQA ===== -->
+<div class="section" id="sec5">
+  <span class="section-badge" style="border-color:var(--orange);color:var(--orange)">2019-2023</span>
+  <h2 class="section-title">MQA & GQA (减少 KV Cache)</h2>
+  <p class="section-sub">加速大模型推理的关键优化</p>
+
+  <div class="prose">
+    <p>在多头注意力中，每个查询头都有独立的 K 和 V。这在推理时产生巨大的内存开销：KV Cache 大小为 <code>O(batch × seq_len × num_heads × d_k)</code>。MQA 和 GQA 通过共享键值来大幅降低这个开销。</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">MHA</div>
+      <div class="step-body">
+        <div class="title">多头注意力 (原始)</div>
+        <div class="desc">h 个 Q，h 个 K，h 个 V。每个头都独立计算。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">MQA</div>
+      <div class="step-body">
+        <div class="title">多查询注意力</div>
+        <div class="desc">h 个 Q，1 个 K，1 个 V。所有查询共享一套键值。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">GQA</div>
+      <div class="step-body">
+        <div class="title">分组查询注意力</div>
+        <div class="desc">h 个 Q，g 个 K，g 个 V (g ≪ h)。查询分成 h/g 个组，每组共享一对 K、V。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">三种注意力机制的 KV 缓存对比</div>
+    <svg viewBox="0 0 850 300" xmlns="http://www.w3.org/2000/svg">
+      <!-- MHA -->
+      <g>
+        <text x="50" y="25" font-size="12" fill="#a78bfa" font-weight="600">MHA (h=8)</text>
+
+        <rect x="50" y="45" width="35" height="80" fill="none" stroke="#60a5fa" stroke-width="2" rx="3"/>
+        <text x="57" y="95" font-size="9" fill="#60a5fa">Q</text>
+
+        <rect x="95" y="45" width="35" height="80" fill="none" stroke="#34d399" stroke-width="2" rx="3"/>
+        <text x="100" y="75" font-size="8" fill="#34d399">K</text>
+        <text x="100" y="95" font-size="8" fill="#34d399">8×</text>
+
+        <rect x="140" y="45" width="35" height="80" fill="none" stroke="#f87171" stroke-width="2" rx="3"/>
+        <text x="145" y="75" font-size="8" fill="#f87171">V</text>
+        <text x="145" y="95" font-size="8" fill="#f87171">8×</text>
+
+        <text x="50" y="155" font-size="10" fill="#4a4d62">KV Cache Size:</text>
+        <text x="50" y="175" font-size="10" fill="#22d3ee" font-weight="600">8 × seq_len × 64</text>
+      </g>
+
+      <!-- MQA -->
+      <g>
+        <text x="330" y="25" font-size="12" fill="#a78bfa" font-weight="600">MQA</text>
+
+        <rect x="330" y="45" width="35" height="80" fill="none" stroke="#60a5fa" stroke-width="2" rx="3"/>
+        <text x="335" y="75" font-size="8" fill="#60a5fa">Q</text>
+        <text x="335" y="95" font-size="8" fill="#60a5fa">8×</text>
+
+        <rect x="375" y="45" width="35" height="80" fill="none" stroke="#34d399" stroke-width="2" rx="3"/>
+        <text x="382" y="95" font-size="9" fill="#34d399">K</text>
+
+        <rect x="420" y="45" width="35" height="80" fill="none" stroke="#f87171" stroke-width="2" rx="3"/>
+        <text x="427" y="95" font-size="9" fill="#f87171">V</text>
+
+        <text x="330" y="155" font-size="10" fill="#4a4d62">KV Cache Size:</text>
+        <text x="330" y="175" font-size="10" fill="#22d3ee" font-weight="600">1 × seq_len × 64</text>
+        <text x="330" y="195" font-size="9" fill="#34d399">↓ 8× 更小</text>
+      </g>
+
+      <!-- GQA -->
+      <g>
+        <text x="610" y="25" font-size="12" fill="#a78bfa" font-weight="600">GQA (g=2)</text>
+
+        <rect x="610" y="45" width="35" height="80" fill="none" stroke="#60a5fa" stroke-width="2" rx="3"/>
+        <text x="615" y="75" font-size="8" fill="#60a5fa">Q</text>
+        <text x="615" y="95" font-size="8" fill="#60a5fa">8×</text>
+
+        <rect x="655" y="45" width="35" height="80" fill="none" stroke="#34d399" stroke-width="2" rx="3"/>
+        <text x="660" y="75" font-size="8" fill="#34d399">K</text>
+        <text x="660" y="95" font-size="8" fill="#34d399">2×</text>
+
+        <rect x="700" y="45" width="35" height="80" fill="none" stroke="#f87171" stroke-width="2" rx="3"/>
+        <text x="705" y="75" font-size="8" fill="#f87171">V</text>
+        <text x="705" y="95" font-size="8" fill="#f87171">2×</text>
+
+        <text x="610" y="155" font-size="10" fill="#4a4d62">KV Cache Size:</text>
+        <text x="610" y="175" font-size="10" fill="#22d3ee" font-weight="600">2 × seq_len × 64</text>
+        <text x="610" y="195" font-size="9" fill="#34d399">↓ 4× 更小</text>
+      </g>
+
+      <!-- Real world example -->
+      <g>
+        <rect x="50" y="230" width="790" height="60" fill="var(--bg3)" stroke="var(--line2)" stroke-width="1" rx="6"/>
+        <text x="65" y="250" font-size="11" fill="#22d3ee" font-weight="600">实际例子 (LLaMA 2 70B)</text>
+
+        <text x="65" y="275" font-size="9" fill="#22d3ee" font-family="monospace">seq_len=4096, h=64, d_k=128</text>
+        <text x="380" y="275" font-size="9" fill="#22d3ee" font-family="monospace">MHA: 33 GB | MQA: 4.1 GB | GQA(g=8): 8.2 GB</text>
+      </g>
+    </svg>
+  </div>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>方案</th>
+        <th>查询头数</th>
+        <th>KV 头数</th>
+        <th>推理速度</th>
+        <th>质量</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>MHA</strong></td>
+        <td>h</td>
+        <td>h</td>
+        <td>基准</td>
+        <td>最好</td>
+      </tr>
+      <tr>
+        <td><strong>MQA</strong></td>
+        <td>h</td>
+        <td>1</td>
+        <td>最快</td>
+        <td>稍差 (训练仔细的话可弥补)</td>
+      </tr>
+      <tr>
+        <td><strong>GQA</strong></td>
+        <td>h</td>
+        <td>h/g</td>
+        <td>快</td>
+        <td>很好 (平衡)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout amber">
+    <strong>为什么共享 KV 可行？</strong> 经验表明，多个查询可以"重用"同一组键值。虽然理论上损失了一些表达力，但实践中调整学习率和初始化，MQA/GQA 的性能与 MHA 接近，同时推理速度快 2-4 倍。
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">面试考点</div>
+    <p><strong>Q: GQA 中的 g 应该设为多少？</strong></p>
+    <p>A: g 通常为 1 (MQA) 或 8 (GQA)。LLaMA 2 70B 使用 g=8，平衡了内存与质量。如果内存充足优先选择 MHA；如果需要最快推理选 MQA；否则 GQA 是一个很好的折中。</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 06: Flash Attention ===== -->
+<div class="section" id="sec6">
+  <span class="section-badge" style="border-color:var(--pink);color:var(--pink)">2022-2024</span>
+  <h2 class="section-title">Flash Attention (1/2/3)</h2>
+  <p class="section-sub">GPU 内存的革命性优化</p>
+
+  <div class="prose">
+    <p>标准注意力实现将整个 n×n 注意力矩阵加载到 HBM (高带宽内存) 中。对于长序列，这会导致 OOM。Flash Attention 通过 <em>tiling</em> 和 <em>online softmax</em> 减少 HBM 访问，实现 <strong>O(n) 内存</strong> 和显著的性能提升。</p>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">GPU 内存层级与 Flash Attention 的 Tiling 策略</div>
+    <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+      <!-- Memory hierarchy -->
+      <g>
+        <text x="30" y="25" font-size="12" fill="#a78bfa" font-weight="600">GPU 内存层级</text>
+
+        <rect x="50" y="50" width="120" height="60" fill="none" stroke="#60a5fa" stroke-width="2" rx="4"/>
+        <text x="65" y="72" font-size="10" fill="#60a5fa" font-weight="600">SRAM (快)</text>
+        <text x="65" y="90" font-size="8" fill="#4a4d62">~20 MB</text>
+        <text x="65" y="105" font-size="8" fill="#4a4d62">低延迟</text>
+
+        <rect x="50" y="130" width="120" height="80" fill="none" stroke="#22d3ee" stroke-width="2" rx="4"/>
+        <text x="65" y="160" font-size="10" fill="#22d3ee" font-weight="600">HBM (慢)</text>
+        <text x="65" y="178" font-size="8" fill="#4a4d62">~40 GB</text>
+        <text x="65" y="196" font-size="8" fill="#4a4d62">带宽: 2 TB/s</text>
+
+        <text x="30" y="230" font-size="10" fill="#4a4d62">关键问题：HBM 访问是注意力的瓶颈</text>
+      </g>
+
+      <!-- Standard attention -->
+      <g>
+        <text x="280" y="25" font-size="12" fill="#a78bfa" font-weight="600">标准注意力的问题</text>
+
+        <line x1="280" y1="45" x2="380" y2="45" stroke="#f87171" stroke-width="2"/>
+        <circle cx="330" cy="65" r="20" fill="none" stroke="#f87171" stroke-width="2"/>
+        <text x="318" y="70" font-size="9" fill="#f87171" font-weight="600">Q K^T</text>
+
+        <line x1="330" y1="85" x2="330" y2="120" stroke="#f87171" stroke-width="2"/>
+        <circle cx="330" cy="145" r="20" fill="none" stroke="#f87171" stroke-width="2"/>
+        <text x="322" y="150" font-size="8" fill="#f87171">softmax</text>
+
+        <text x="280" y="190" font-size="9" fill="#4a4d62">• 存储 n×n 注意力矩阵</text>
+        <text x="280" y="210" font-size="9" fill="#4a4d62">• 每个 token 读写 n 倍的数据</text>
+        <text x="280" y="230" font-size="9" fill="#4a4d62">• 瓶颈: HBM 访问，非计算</text>
+      </g>
+
+      <!-- Flash Attention -->
+      <g>
+        <text x="520" y="25" font-size="12" fill="#a78bfa" font-weight="600">Flash Attention Tiling</text>
+
+        <rect x="520" y="50" width="70" height="70" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="530" y="95" font-size="8" fill="#34d399">Block</text>
+
+        <line x1="590" y1="85" x2="620" y2="85" stroke="#34d399" stroke-width="1.5"/>
+
+        <rect x="620" y="50" width="70" height="70" fill="none" stroke="#34d399" stroke-width="2" rx="4"/>
+        <text x="630" y="95" font-size="8" fill="#34d399">Block</text>
+
+        <text x="520" y="145" font-size="9" fill="#4a4d62">分块加载到 SRAM</text>
+
+        <circle cx="555" cy="190" r="28" fill="none" stroke="#22d3ee" stroke-width="2"/>
+        <text x="540" y="195" font-size="9" fill="#22d3ee" font-weight="600">SRAM</text>
+
+        <text x="520" y="240" font-size="9" fill="#4a4d62">• 每个块独立计算 softmax</text>
+        <text x="520" y="260" font-size="9" fill="#4a4d62">• Online softmax 跟踪最大值</text>
+        <text x="520" y="280" font-size="9" fill="#4a4d62">• 内存: O(n)，速度: 2-4x 快</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="formula">
+    Online Softmax:
+    <br> m_new = max(m_old, max(Q K^T))
+    <br> l_new = l_old × exp(m_old - m_new) + Σ exp(Q K^T - m_new)
+    <span class="comment">维持最大值和指数和的运行值，避免重新计算</span>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">FA1</div>
+      <div class="step-body">
+        <div class="title">Flash Attention (2022)</div>
+        <div class="desc">核心 tiling 算法，O(n) 内存，2x 快。关键：online softmax。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">FA2</div>
+      <div class="step-body">
+        <div class="title">改进 (2023)</div>
+        <div class="desc">减少非矩阵乘法 FLOPs，更好的并行性，4x 快。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">FA3</div>
+      <div class="step-body">
+        <div class="title">H100 优化 (2024)</div>
+        <div class="desc">利用 WGMMA 张量操作和异步 DMA，极致性能。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">内存复杂度</div>
+      <div class="tc-val">O(n) vs O(n²)</div>
+      <div class="tc-desc">对于 n=4096，从 64 MB 降至 <160 KB。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">执行时间</div>
+      <div class="tc-val">2-4x 加速</div>
+      <div class="tc-desc">FA1: 2x；FA2: 3x；FA3: 4x (理想条件)。</div>
+    </div>
+  </div>
+
+  <div class="callout coral">
+    <strong>为什么这么快？</strong> 标准实现将 n×n 的 S 矩阵、n×n 的 P 矩阵写回 HBM。Flash Attention 只在 SRAM 中处理，将 HBM 访问从 O(n²) 降至 O(n)，带宽瓶颈消除。
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">面试考点</div>
+    <p><strong>Q: Flash Attention 的瓶颈是什么？</strong></p>
+    <p>A: 取决于硬件。在 A100 上，主瓶颈是 HBM 带宽。Flash Attention 将其改为计算瓶颈（矩阵乘法），利用率更高。在 H100 上，可进一步优化至接近理论峰值。</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 07: Sparse & Linear ===== -->
+<div class="section" id="sec7">
+  <span class="section-badge" style="border-color:var(--green);color:var(--green)">2020-2023</span>
+  <h2 class="section-title">稀疏与线性注意力</h2>
+  <p class="section-sub">处理超长序列的方法</p>
+
+  <div class="prose">
+    <p>虽然 Flash Attention 大幅优化了计算，但 O(n²) 的时间复杂度仍对超长序列 (n > 100K) 成为瓶颈。稀疏注意力和线性注意力提供了不同的折中方案。</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">滑动窗口注意力 (Sliding Window)</div>
+        <div class="desc">每个位置只关注最近的 W 个位置。Mistral-7B 使用 W=4096。复杂度: O(n×W)。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">全局+窗口 (Longformer)</div>
+        <div class="desc">某些 token (如 [CLS]) 全局关注所有位置，其余只看窗口。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">随机稀疏 (BigBird)</div>
+        <div class="desc">窗口 + 随机采样 + 全局 token。细粒度控制覆盖率。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">线性注意力 (Kernel Trick)</div>
+        <div class="desc">用核方法近似 softmax，O(n) 复杂度，但表达力下降。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">不同稀疏注意力模式的对比</div>
+    <svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+      <!-- Dense -->
+      <g>
+        <text x="30" y="20" font-size="11" fill="#a78bfa" font-weight="600">标准注意力</text>
+        <rect x="20" y="35" width="100" height="100" fill="none" stroke="#dde0ef" stroke-width="1"/>
+        <rect x="25" y="40" width="90" height="90" fill="rgba(96,165,250,0.3)"/>
+      </g>
+
+      <!-- Sliding Window -->
+      <g>
+        <text x="170" y="20" font-size="11" fill="#a78bfa" font-weight="600">滑动窗口</text>
+        <rect x="160" y="35" width="100" height="100" fill="none" stroke="#dde0ef" stroke-width="1"/>
+        <line x1="165" y1="40" x2="165" y2="130" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="170" y1="35" x2="170" y2="135" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="175" y1="35" x2="175" y2="135" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="180" y1="35" x2="180" y2="135" stroke="#60a5fa" stroke-width="2"/>
+        <line x1="185" y1="35" x2="185" y2="135" stroke="#60a5fa" stroke-width="2"/>
+
+        <text x="160" y="145" font-size="9" fill="#4a4d62">O(n×W)</text>
+      </g>
+
+      <!-- Longformer (global + local) -->
+      <g>
+        <text x="310" y="20" font-size="11" fill="#a78bfa" font-weight="600">全局 + 窗口</text>
+        <rect x="300" y="35" width="100" height="100" fill="none" stroke="#dde0ef" stroke-width="1"/>
+
+        <!-- Window -->
+        <line x1="305" y1="40" x2="305" y2="130" stroke="#60a5fa" stroke-width="1.5"/>
+        <line x1="310" y1="40" x2="310" y2="130" stroke="#60a5fa" stroke-width="1.5"/>
+        <line x1="315" y1="40" x2="315" y2="130" stroke="#60a5fa" stroke-width="1.5"/>
+
+        <!-- Global from token 0 -->
+        <line x1="305" y1="40" x2="395" y2="40" stroke="#fbbf24" stroke-width="2"/>
+        <circle cx="305" cy="40" r="3" fill="#fbbf24"/>
+
+        <text x="300" y="145" font-size="9" fill="#4a4d62">稀疏程度中等</text>
+      </g>
+
+      <!-- BigBird -->
+      <g>
+        <text x="450" y="20" font-size="11" fill="#a78bfa" font-weight="600">随机 + 窗口 + 全局</text>
+        <rect x="440" y="35" width="100" height="100" fill="none" stroke="#dde0ef" stroke-width="1"/>
+
+        <!-- Window -->
+        <line x1="445" y1="40" x2="445" y2="130" stroke="#60a5fa" stroke-width="1.5"/>
+        <line x1="480" y1="35" x2="480" y2="135" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="2,2"/>
+
+        <!-- Random -->
+        <circle cx="460" cy="50" r="2" fill="#f87171"/>
+        <circle cx="475" cy="70" r="2" fill="#f87171"/>
+        <circle cx="490" cy="100" r="2" fill="#f87171"/>
+
+        <!-- Global -->
+        <line x1="445" y1="40" x2="535" y2="40" stroke="#fbbf24" stroke-width="1.5"/>
+        <circle cx="445" cy="40" r="2" fill="#fbbf24"/>
+      </g>
+
+      <!-- Linear Attention -->
+      <g>
+        <text x="610" y="20" font-size="11" fill="#a78bfa" font-weight="600">线性注意力</text>
+        <text x="600" y="50" font-size="10" fill="#4a4d62">近似 softmax</text>
+        <text x="600" y="75" font-size="10" fill="#4a4d62">使用核方法</text>
+        <text x="600" y="100" font-size="10" fill="#4a4d62">O(n) 复杂度</text>
+        <text x="610" y="145" font-size="9" fill="#4a4d62">速度快，精度低</text>
+      </g>
+
+      <!-- Complexity comparison -->
+      <g>
+        <rect x="30" y="160" width="850" height="70" fill="var(--bg3)" stroke="var(--line2)" stroke-width="1" rx="6"/>
+        <text x="45" y="180" font-size="11" fill="#22d3ee" font-weight="600">时间和空间复杂度对比</text>
+
+        <text x="45" y="195" font-size="9" fill="#22d3ee" font-family="monospace">• 标准: O(n²d) 时间，O(n²) 空间</text>
+        <text x="300" y="210" font-size="9" fill="#22d3ee" font-family="monospace">• 滑动窗口: O(n×W×d)，O(n×W)</text>
+        <text x="600" y="225" font-size="9" fill="#22d3ee" font-family="monospace">• 线性: O(n×d)，O(n×d)</text>
+
+        <text x="45" y="220" font-size="8" fill="#4a4d62">在实践中，滑动窗口 + Flash Attention 已足以处理 4K~32K 长度。</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">面试考点</div>
+    <p><strong>Q: Ring Attention 是什么？</strong></p>
+    <p>A: 用于分布式环境的长序列注意力。将序列分割到多个 GPU，通过环形通信模式循环计算注意力。每个 GPU 处理一个序列块，通过环形同步传递，实现 O(nlog p) 通信复杂度 (p 为 GPU 数)。适合处理百万级长度。</p>
+  </div>
+</div>
+
+<!-- ===== SECTION 08: Summary & Interview ===== -->
+<div class="section" id="sec8">
+  <span class="section-badge" style="border-color:var(--amber);color:var(--amber)">复习</span>
+  <h2 class="section-title">总结与面试题</h2>
+  <p class="section-sub">注意力机制的演进路线与高频问题</p>
+
+  <div class="diagram">
+    <div class="diagram-title">注意力机制演进时间线</div>
+    <svg viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+      <!-- Timeline -->
+      <line x1="60" y1="140" x2="760" y2="140" stroke="var(--line2)" stroke-width="2"/>
+
+      <!-- 2015 -->
+      <g>
+        <circle cx="100" cy="140" r="6" fill="#60a5fa"/>
+        <text x="80" y="165" font-size="10" fill="#dde0ef" font-weight="600">Bahdanau</text>
+        <text x="85" y="180" font-size="8" fill="#7a7d94">Additive</text>
+      </g>
+
+      <!-- Luong -->
+      <g>
+        <circle cx="160" cy="140" r="6" fill="#60a5fa"/>
+        <text x="140" y="165" font-size="10" fill="#dde0ef" font-weight="600">Luong</text>
+        <text x="145" y="180" font-size="8" fill="#7a7d94">Multiplicative</text>
+      </g>
+
+      <!-- Transformer -->
+      <g>
+        <circle cx="260" cy="140" r="6" fill="#22d3ee"/>
+        <text x="235" y="165" font-size="10" fill="#dde0ef" font-weight="600">Transformer</text>
+        <text x="240" y="180" font-size="8" fill="#7a7d94">Self-Attention</text>
+      </g>
+
+      <!-- MQA/GQA -->
+      <g>
+        <circle cx="420" cy="140" r="6" fill="#34d399"/>
+        <text x="395" y="165" font-size="10" fill="#dde0ef" font-weight="600">MQA/GQA</text>
+        <text x="395" y="180" font-size="8" fill="#7a7d94">KV Sharing</text>
+      </g>
+
+      <!-- Flash Attention -->
+      <g>
+        <circle cx="580" cy="140" r="6" fill="#f87171"/>
+        <text x="555" y="165" font-size="10" fill="#dde0ef" font-weight="600">Flash Attn</text>
+        <text x="560" y="180" font-size="8" fill="#7a7d94">GPU 优化</text>
+      </g>
+
+      <!-- Sparse -->
+      <g>
+        <circle cx="700" cy="140" r="6" fill="#fbbf24"/>
+        <text x="670" y="165" font-size="10" fill="#dde0ef" font-weight="600">稀疏 Attn</text>
+        <text x="675" y="180" font-size="8" fill="#7a7d94">长序列</text>
+      </g>
+
+      <!-- Key improvements -->
+      <g>
+        <text x="60" y="230" font-size="9" fill="#22d3ee">关键改进: 效率 ↑，内存 ↓，延迟 ↓，精度 ≈</text>
+      </g>
+    </svg>
+  </div>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>机制</th>
+        <th>时间复杂度</th>
+        <th>空间复杂度</th>
+        <th>并行化</th>
+        <th>应用场景</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Bahdanau</strong></td>
+        <td>O(n²d)</td>
+        <td>O(n²)</td>
+        <td>困难</td>
+        <td>序列 Seq2Seq，小规模</td>
+      </tr>
+      <tr>
+        <td><strong>Luong</strong></td>
+        <td>O(n²d)</td>
+        <td>O(n²)</td>
+        <td>容易</td>
+        <td>标准神经翻译</td>
+      </tr>
+      <tr>
+        <td><strong>Self-Attention</strong></td>
+        <td>O(n²d)</td>
+        <td>O(n²)</td>
+        <td>完全</td>
+        <td>Transformer 基础</td>
+      </tr>
+      <tr>
+        <td><strong>Flash Attention</strong></td>
+        <td>O(n²d)</td>
+        <td>O(n)</td>
+        <td>完全</td>
+        <td>主流生产环境</td>
+      </tr>
+      <tr>
+        <td><strong>MQA/GQA</strong></td>
+        <td>O(n²d)</td>
+        <td>O(n)</td>
+        <td>完全</td>
+        <td>KV Cache 受限的推理</td>
+      </tr>
+      <tr>
+        <td><strong>稀疏注意力</strong></td>
+        <td>O(n×W)</td>
+        <td>O(n)</td>
+        <td>完全</td>
+        <td>超长上下文 (>4K)</td>
+      </tr>
+      <tr>
+        <td><strong>线性注意力</strong></td>
+        <td>O(n)</td>
+        <td>O(n)</td>
+        <td>完全</td>
+        <td>极端长序列，精度可接受</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-sub" style="margin-top: 48px; margin-bottom: 24px;">10+ 高频面试题</div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q1</div>
+    <p><strong>Self-attention 如何实现并行计算？</strong></p>
+    <p>A: Self-attention 不依赖递归（如 RNN 需要 h_t-1 来计算 h_t）。整个输入序列可一次性投影到 Q、K、V，然后通过矩阵乘法并行计算所有位置的注意力权重，无需循环迭代。这是 Transformer 相比 RNN 的核心优势。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q2</div>
+    <p><strong>缩放因子 √d_k 的数学原因是什么？</strong></p>
+    <p>A: 点积 Q K^T 的方差约为 d_k（当 Q、K 的元素 iid）。大维度下方差增大，softmax 变尖锐，梯度消失。除以 √d_k 使方差回到 1，梯度稳定。可证明这使梯度范数保持恒定。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q3</div>
+    <p><strong>多头注意力为什么比单头好？</strong></p>
+    <p>A: 不同头可学习不同的"投影子空间"。单头 512-dim 必须同时捕捉语法、语义、位置等所有关系。多头让每个头专注一个方面，总参数不增加（d_k = d/h），但表达能力更强。实验验证 h=8~12 效果最好。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q4</div>
+    <p><strong>Bahdanau vs Luong 注意力的核心区别？</strong></p>
+    <p>A: Bahdanau 用非线性打分 v^T tanh(Ws + Wh)，精度高但计算慢。Luong 用点积 s^T h，快但需要维度匹配。现代系统（含 Transformer）多用 Luong 的点积形式，通过 Flash Attention 优化性能。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q5</div>
+    <p><strong>Flash Attention 如何解决 O(n²) 内存问题？</strong></p>
+    <p>A: 标准实现在 HBM 中维护整个 n×n 的 S（分数）和 P（概率）矩阵。Flash Attention 用分块 (tiling) 策略：逐块加载 Q、K、V 到 SRAM（快速），在 SRAM 中计算块级注意力，只保存必要的中间值（最大值、指数和），内存从 O(n²) 降至 O(n)。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q6</div>
+    <p><strong>GQA 和 MQA 为什么能减少 KV Cache？</strong></p>
+    <p>A: MHA 为 h 个查询头维护 h 套 KV。推理时，KV Cache 大小为 batch×seq_len×h×d_k，这往往是最大的内存消耗。MQA 共享 1 套 K、V（只有 1 倍），MQA 共享 h/g 套（g 倍）。虽然牺牲一点精度，但推理吞吐量能提升 2-8 倍。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q7</div>
+    <p><strong>如何计算 Self-Attention 的 FLOPs？</strong></p>
+    <p>A: 对于 n×d 的输入：① Q K^T: O(n² d)；② softmax: O(n²)；③ (P)V: O(n² d)。总计 O(n²d)。对于 seq_len=4096, d=768，约 12B FLOPs。这是为什么长序列注意力成为瓶颈，Flash Attention 和稀疏注意力很关键。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q8</div>
+    <p><strong>Decoder 中的因果掩码如何实现？</strong></p>
+    <p>A: 在 softmax 前，对注意力分数矩阵的上三角（j > i 位置）设为 -∞。softmax(-∞) = 0，使未来位置的权重为 0。这保证了自回归生成时，token 只能看到已生成的历史，不会"作弊"。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q9</div>
+    <p><strong>线性注意力的核心思想是什么？</strong></p>
+    <p>A: 标准注意力用 softmax(QK^T)V，计算 O(n²)。线性注意力用核方法：将 softmax 近似为可分离的核 φ(q)·φ(k)，得到 Σ_i φ(k_i)⊙v_i φ(q) = φ(q)·(Σ_i φ(k_i)v_i)，变成 O(n)。代价是精度下降，适合超长序列且精度要求低的场景。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">Q10</div>
+    <p><strong>为什么 Luong 注意力更容易被 GPU 加速？</strong></p>
+    <p>A: Luong 注意力的核心操作是矩阵乘法（Q K^T），这是 GPU BLAS 库（cuBLAS）高度优化的操作。Bahdanau 需要逐步的非线性变换（tanh、element-wise 乘法），无法充分利用 GPU 的向量化能力。矩阵乘法 FLOPs 与内存访问比高，更能隐藏 HBM 延迟。</p>
+  </div>
+
+  <div class="callout green">
+    <strong>面试建议</strong>：深入理解注意力的数学原理（维度、复杂度分析）、实现细节（online softmax、causal mask）和工程权衡（精度 vs 速度 vs 内存）。能够从一个方法引申到相关方法，展示系统性的思维。
+  </div>
+</div>
+
+</div>
+</body>
+</html>

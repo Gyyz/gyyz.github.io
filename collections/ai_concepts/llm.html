@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大语言模型 (LLM) - AI 技术演进</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">AI 技术演进</a>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="transformer.html">Transformer</a>
+                <a href="llm.html" class="active">大语言模型</a>
+                <a href="alignment.html">对齐与RLHF</a>
+                <a href="prompting.html">提示工程</a>
+                <a href="rag.html">RAG与工具</a>
+                <a href="agents.html">AI Agent</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="chapter-num">Chapter 02</div>
+        <h1>大语言模型 (LLM)</h1>
+        <p class="subtitle">从 GPT 到 DeepSeek — 预训练、微调与推理的每一个工程细节</p>
+    </div>
+    <div class="content">
+
+            <!-- Deep Dive Info Box -->
+            <div class="info-box" style="background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.15)); border-left-color: #10b981; margin: 2rem 0;">
+              <h3 style="margin-top:0;">📖 深度解析子页面</h3>
+              <p>想要更深入了解？我们为面试准备了专题深度解析页面：</p>
+              <ul style="list-style: none; padding: 0;">
+                <li style="margin: 0.5rem 0;"><a href="context-deep-dive.html" style="color: #34d399; text-decoration: none; font-weight: 600;">🔬 上下文窗口演进深度解析</a> — 从 512 到 1M tokens 的完整技术路线</li>
+                <li style="margin: 0.5rem 0;"><a href="finetune-deep-dive.html" style="color: #34d399; text-decoration: none; font-weight: 600;">🔬 微调与分布式训练深度解析</a> — LoRA、QLoRA、FSDP、DeepSpeed 完整指南</li>
+                <li style="margin: 0.5rem 0;"><a href="inference-deep-dive.html" style="color: #34d399; text-decoration: none; font-weight: 600;">🔬 推理优化深度解析</a> — KV Cache、量化、投机解码、vLLM 全面解析</li>
+              </ul>
+            </div>
+
+            <!-- Section 1: 预训练范式 -->
+            <section class="content-section">
+                <h2>1. 预训练范式的演进</h2>
+                <p>大语言模型的成功基于一个范式转变：从传统的特征工程与监督学习，到大规模无标注数据的自监督预训练加微调，再到 Prompt-based 的零样本/少样本学习。</p>
+
+                <div class="subsection">
+                    <h3>1.1 自监督学习</h3>
+                    <p>自监督学习利用海量无标注文本数据，通过设计自动生成的标签来学习通用的语言表示。这是 LLM 预训练的核心。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>1.2 Causal Language Modeling (CLM)</h3>
+                    <p><strong>定义：</strong> P(x_t | x_1, x_2, ..., x_{t-1})，自回归地预测下一个 token。</p>
+                    <ul>
+                        <li>在前向传播时应用因果掩码 (causal mask)，防止 attention 看到未来的 token</li>
+                        <li>适合生成任务，GPT 系列都采用 CLM</li>
+                        <li>损失函数：标准交叉熵，对所有位置求和</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>1.3 Masked Language Modeling (MLM)</h3>
+                    <p><strong>定义：</strong> 随机掩盖输入的 15% tokens，模型需要预测被掩盖的 token。</p>
+                    <ul>
+                        <li><strong>掩盖策略：</strong> 80% [MASK] token，10% 随机 token，10% 保持不变</li>
+                        <li><strong>为什么是 80/10/10？</strong> 增加模型的鲁棒性，防止只学习 [MASK] 这个特殊符号</li>
+                        <li>适合理解任务，BERT 使用 MLM</li>
+                        <li>MLM 允许双向 attention，模型可以看到全上下文</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>1.4 CLM vs MLM 对比</h3>
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>特性</th>
+                                <th>CLM (GPT)</th>
+                                <th>MLM (BERT)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>目标任务</td>
+                                <td>文本生成</td>
+                                <td>文本理解</td>
+                            </tr>
+                            <tr>
+                                <td>Attention 方向</td>
+                                <td>单向（因果）</td>
+                                <td>双向</td>
+                            </tr>
+                            <tr>
+                                <td>训练目标</td>
+                                <td>预测下一个 token</td>
+                                <td>预测被掩盖的 token</td>
+                            </tr>
+                            <tr>
+                                <td>推理方式</td>
+                                <td>自回归生成</td>
+                                <td>一次性输出</td>
+                            </tr>
+                            <tr>
+                                <td>代表模型</td>
+                                <td>GPT-2/3/4, LLaMA</td>
+                                <td>BERT, RoBERTa</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 2: GPT 系列完整演进 -->
+            <section class="content-section">
+                <h2>2. GPT 系列完整演进</h2>
+                <p>从 GPT-1 到 GPT-4o，再到 o1/o3 推理模型，展示了生成式 AI 的指数级进步。以下是关键模型的详细规格：</p>
+
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>模型</th>
+                            <th>参数量</th>
+                            <th>层数</th>
+                            <th>d_model</th>
+                            <th>n_heads</th>
+                            <th>上下文</th>
+                            <th>训练数据</th>
+                            <th>关键特性</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GPT-1</td>
+                            <td>117M</td>
+                            <td>12</td>
+                            <td>768</td>
+                            <td>12</td>
+                            <td>512</td>
+                            <td>BookCorpus</td>
+                            <td>第一代生成模型</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-2</td>
+                            <td>1.5B</td>
+                            <td>48</td>
+                            <td>1600</td>
+                            <td>25</td>
+                            <td>1024</td>
+                            <td>WebText 40GB</td>
+                            <td>强零样本能力</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3</td>
+                            <td>175B</td>
+                            <td>96</td>
+                            <td>12288</td>
+                            <td>96</td>
+                            <td>2048</td>
+                            <td>570GB 文本</td>
+                            <td>In-context learning 突破</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-3.5</td>
+                            <td>~175B</td>
+                            <td>96</td>
+                            <td>12288</td>
+                            <td>96</td>
+                            <td>4096</td>
+                            <td>1T+ tokens</td>
+                            <td>RLHF 对齐，ChatGPT 基础</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-4</td>
+                            <td>~1.7T*</td>
+                            <td>~120</td>
+                            <td>12288+</td>
+                            <td>128</td>
+                            <td>8K/32K/128K</td>
+                            <td>多模态数据</td>
+                            <td>MoE 架构，多模态</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-4o</td>
+                            <td>~1.7T*</td>
+                            <td>~120</td>
+                            <td>12288+</td>
+                            <td>128</td>
+                            <td>128K</td>
+                            <td>text+image+audio</td>
+                            <td>原生多模态统一编码</td>
+                        </tr>
+                        <tr>
+                            <td>o1 (2024)</td>
+                            <td>未公开</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>128K</td>
+                            <td>推理导向训练</td>
+                            <td>推理时 CoT，长思考链</td>
+                        </tr>
+                        <tr>
+                            <td>o3 (2025)</td>
+                            <td>未公开</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>128K</td>
+                            <td>强化推理数据</td>
+                            <td>ARC-AGI 92.3% 准确率</td>
+                        </tr>
+                        <tr>
+                            <td>GPT-4.1 (2025)</td>
+                            <td>未公开</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>1M</td>
+                            <td>超长上下文优化</td>
+                            <td>100 万 token 上下文</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="subsection">
+                    <h3>2.1 关键演进点</h3>
+                    <ul>
+                        <li><strong>参数量扩展：</strong> 117M → 175B，每个数量级都带来质变</li>
+                        <li><strong>上下文长度：</strong> 512 → 1M，直接影响 RAG 和长文档理解</li>
+                        <li><strong>多模态：</strong> GPT-4o 原生支持 text/image/audio</li>
+                        <li><strong>推理优化：</strong> o1/o3 在测试时计算，实现更强泛化</li>
+                        <li><strong>标注改进：</strong> GPT-3 纯预训练，GPT-3.5+ 引入 RLHF</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 3: 上下文窗口演进 -->
+            <section class="content-section">
+                <h2>3. 上下文窗口的演进 (关键面试话题)</h2>
+                <p>上下文长度是 LLM 能力的关键指标，直接影响长文档理解、RAG 和 Agent 记忆能力。</p>
+
+                <div class="subsection">
+                    <h3>3.1 上下文长度时间线</h3>
+                    <ul>
+                        <li>GPT-2: 1024 → GPT-3: 2048 → GPT-3.5: 4096 → GPT-4: 8K~128K → Claude 3: 200K → Gemini 1.5: 1M → GPT-4.1: 1M</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>3.2 为什么长上下文很重要</h3>
+                    <ul>
+                        <li><strong>长文档理解：</strong> 一次性处理整本书或完整代码库</li>
+                        <li><strong>RAG 系统：</strong> 检索更多相关文档，减少漏信息</li>
+                        <li><strong>Agent 记忆：</strong> 保留完整对话历史和执行轨迹</li>
+                        <li><strong>上下文学习：</strong> 更多 few-shot 示例，提升准确率</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>3.3 长上下文的实现技术</h3>
+
+                    <p><strong>RoPE 外推：</strong> 调整 base frequency，实现 position embedding 外推，YaRN 分频段拉伸</p>
+
+                    <p><strong>ALiBi：</strong> 用线性偏差而非位置编码，天然支持长度外推</p>
+
+                    <p><strong>Ring Attention & Landmark Attention：</strong> 分布式处理超长序列，压缩历史 KV 为 summary</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>3.4 长上下文的挑战</h3>
+                    <ul>
+                        <li><strong>"Needle in a Haystack"：</strong> 长文档中找相关信息，中间位置表现差</li>
+                        <li><strong>"Lost in the Middle"：</strong> 模型忽视中间信息，关注开头和结尾</li>
+                        <li><strong>KV Cache 膨胀：</strong> 推理时内存占用随序列长度二次方增长</li>
+                        <li><strong>计算成本：</strong> Attention O(n²) 复杂度，超长序列代价极高</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> 实现长上下文的方法与优缺点？长上下文为什么难？</p>
+                </div>
+            </section>
+
+            <!-- Section 4: BERT 系列与理解类模型 -->
+            <section class="content-section">
+                <h2>4. BERT 系列与理解类模型</h2>
+                <p>BERT 系列采用双向 Transformer 和 MLM，专注文本理解，与 GPT 生成式范式不同。</p>
+
+                <div class="subsection">
+                    <h3>4.1 BERT 与变体</h3>
+                    <ul>
+                        <li><strong>BERT-base：</strong> 110M 参数，12 层，d=768，12 heads</li>
+                        <li><strong>BERT-large：</strong> 340M 参数，24 层，d=1024，16 heads</li>
+                        <li><strong>RoBERTa：</strong> 去掉 NSP，动态 masking，更多数据和更大 batch，性能显著提升</li>
+                        <li><strong>ALBERT：</strong> 参数共享和矩阵分解实现轻量化，参数量减少 90%</li>
+                        <li><strong>DeBERTa：</strong> Disentangled Attention 分离内容和位置，性能超越 BERT</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>4.2 BERT 的 Mask 策略为什么是 80/10/10？</h3>
+                    <ul>
+                        <li><strong>80% [MASK]：</strong> 学习预测被掩盖单词，主要目标</li>
+                        <li><strong>10% 随机：</strong> 增加对噪声的鲁棒性，检测输入错误</li>
+                        <li><strong>10% 不变：</strong> 保留原始 token，表示空间与微调时更接近</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 5: 开源 LLM 生态 -->
+            <section class="content-section">
+                <h2>5. 开源 LLM 生态</h2>
+                <p>开源社区推动 LLM 民主化，高效实用的模型层出不穷。</p>
+
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th>模型</th>
+                            <th>规格</th>
+                            <th>训练数据</th>
+                            <th>上下文</th>
+                            <th>特性</th>
+                            <th>场景</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>LLaMA 1/2</td>
+                            <td>7B~70B</td>
+                            <td>1-2T tokens</td>
+                            <td>2K-4K</td>
+                            <td>高效训练，GQA</td>
+                            <td>本地部署</td>
+                        </tr>
+                        <tr>
+                            <td>LLaMA 3</td>
+                            <td>8B~405B</td>
+                            <td>15T+ tokens</td>
+                            <td>8K-128K</td>
+                            <td>Tiktoken，超长上下文</td>
+                            <td>生产级应用</td>
+                        </tr>
+                        <tr>
+                            <td>Mistral 7B</td>
+                            <td>7B</td>
+                            <td>7T tokens</td>
+                            <td>4K (Sliding Window)</td>
+                            <td>GQA，质量超 LLaMA 2 13B</td>
+                            <td>高效推理</td>
+                        </tr>
+                        <tr>
+                            <td>Mixtral 8x7B</td>
+                            <td>47B / 13B 激活</td>
+                            <td>大规模混合</td>
+                            <td>4K</td>
+                            <td>稀疏 MoE，2/8 routing</td>
+                            <td>动态计算</td>
+                        </tr>
+                        <tr>
+                            <td>DeepSeek V2</td>
+                            <td>236B (MLA)</td>
+                            <td>5T+ tokens</td>
+                            <td>4K~128K</td>
+                            <td>MLA 架构，KV 压缩</td>
+                            <td>成本优化部署</td>
+                        </tr>
+                        <tr>
+                            <td>DeepSeek R1</td>
+                            <td>1.5B~671B</td>
+                            <td>RL 导向</td>
+                            <td>8K~128K</td>
+                            <td>开源推理模型</td>
+                            <td>复杂推理任务</td>
+                        </tr>
+                        <tr>
+                            <td>Qwen 2.5</td>
+                            <td>0.5B~72B</td>
+                            <td>多语言</td>
+                            <td>128K</td>
+                            <td>全系列，MoE 版本</td>
+                            <td>多语言应用</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="subsection">
+                    <h3>5.1 核心创新模型</h3>
+
+                    <p><strong>Mistral 7B：</strong> Sliding Window Attention 让每个 token 只关注最近 4K token，KV Cache 线性增长，单个 7B 超越 LLaMA 2 13B</p>
+
+                    <p><strong>DeepSeek V2 (MLA)：</strong> 将 KV 投影到低维潜空间，KV Cache 从 40GB 减少到 1GB，推理显存节省 95%</p>
+
+                    <p><strong>DeepSeek R1：</strong> 首个完全开源推理模型，RL 训练长 CoT，R1 70B 在数学和代码超越 GPT-4，推理轨迹完全可解释</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Mixture of Experts (MoE) -->
+            <section class="content-section">
+                <h2>6. Mixture of Experts (MoE) 详解</h2>
+                <p>MoE 通过稀疏激活解耦参数量和计算量，是现代大模型提高效率的关键技术。</p>
+
+                <div class="subsection">
+                    <h3>6.1 MoE 结构</h3>
+                    <ul>
+                        <li>将 FFN 替换为多个独立 Expert FFN（如 8 个）</li>
+                        <li>Router 网络 G(x) = softmax(x·W_g) 为每个 token 计算 expert 权重</li>
+                        <li>TopK 选择概率最高的 K 个 expert，通常 K=2</li>
+                        <li>输出：y = Σ(G_i(x)·Expert_i(x))，仅对选中 expert 求和</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>6.2 训练挑战与解决方案</h3>
+
+                    <p><strong>Load Balancing Loss：</strong> L_balance = N × Σ_i (f_i × P_i)，其中 f_i 是 token 选中比例，P_i 是路由概率均值，强制 expert 负载均衡</p>
+
+                    <p><strong>Expert Capacity：</strong> 每个 expert 处理 token 数上限 = (总 token 数 / expert 数) × capacity_factor，超容处理通常丢弃或分发</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>6.3 参数量 vs 计算量</h3>
+                    <ul>
+                        <li><strong>Mixtral 8x7B：</strong> 总参数 47B，但每次只激活 ~13B（2 个 expert），推理成本接近 13B</li>
+                        <li><strong>参数效率：</strong> 存储 47B，推理仅需 13B 计算，参数和计算完全解耦</li>
+                        <li><strong>DeepSeek V3：</strong> 256 个小 expert + 1 个 shared expert，推理速度快 50%+，性能更强</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> MoE 的优势和挑战？Router 训练如何防止崩溃？Load Balancing 为什么重要？</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Scaling Laws -->
+            <section class="content-section">
+                <h2>7. Scaling Laws (扩展规律)</h2>
+                <p>Scaling Laws 是预测 LLM 性能的经验规律，对预算规划和模型设计至关重要。</p>
+
+                <div class="subsection">
+                    <h3>7.1 Kaplan et al. (2020) 的幂律</h3>
+                    <p><strong>公式：</strong> L(N,D) = (N_c/N)^α_N + (D_c/D)^α_D，其中 α_N ≈ 0.07, α_D ≈ 0.16</p>
+
+                    <p><strong>关键发现：</strong> 增加数据的收益 (0.16) > 增加参数 (0.07)，但实践中增加参数更容易（显存、通信开销小）</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>7.2 Chinchilla 定律 (2022)</h3>
+                    <p><strong>问题：</strong> 给定固定计算预算 C，如何最优分配参数 N 和数据 D？</p>
+
+                    <p><strong>发现：</strong> N 和 D 应成比例增长，N ∝ C^0.5, D ∝ C^0.5</p>
+
+                    <p><strong>具体例子：</strong> Gopher 280B (300B tokens) vs Chinchilla 70B (1.4T tokens)，同样计算量下 Chinchilla 70B 性能更好</p>
+
+                    <p><strong>启示：</strong> 数据量很重要，不应为大参数而牺牲数据。LLaMA 7B 在 1T tokens 上训练，质量超越 GPT-3 175B</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>7.3 Emergent Abilities 争议</h3>
+                    <ul>
+                        <li>涌现能力：在某个规模阈值后突然出现的能力，如 CoT 推理、多步算术</li>
+                        <li>争议：可能是评估指标不连续性，而非模型性能本身的不连续</li>
+                        <li>现共识：表现形式阈值性，但内部学习连续</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>7.4 数据质量比数据量更重要</h3>
+                    <ul>
+                        <li><strong>Phi 系列：</strong> 1.3B 模型用高质量教科书级数据，性能达 7B 模型</li>
+                        <li><strong>启示：</strong> 数据质量 > 数据量 > 模型大小</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> Chinchilla 定律的发现？为什么 LLaMA 过度训练？</p>
+                </div>
+            </section>
+
+            <!-- Section 8: 分词详解 -->
+            <section class="content-section">
+                <h2>8. 分词 (Tokenization) 详解</h2>
+                <p>分词是 LLM 的第一步，直接影响模型性能和计算效率。</p>
+
+                <div class="subsection">
+                    <h3>8.1 BPE (Byte Pair Encoding)</h3>
+                    <p>算法：初始化为字符级 → 统计相邻 token 对频率 → 合并最频繁的对 → 重复直到词表大小达标</p>
+
+                    <p><strong>应用：</strong> GPT-2 使用 Byte-level BPE，词表大小 50257</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>8.2 WordPiece vs SentencePiece</h3>
+                    <ul>
+                        <li><strong>WordPiece：</strong> BERT 使用，基于似然度选择合并，更智能但计算量大</li>
+                        <li><strong>SentencePiece：</strong> 语言无关，支持 BPE 和 Unigram，无需预处理，LLaMA/Mistral 使用</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>8.3 Tiktoken (OpenAI)</h3>
+                    <ul>
+                        <li>GPT-4 官方分词器，词表 ~100K，针对代码和多语言优化</li>
+                        <li>C++ 实现，比 Python SentencePiece 快 10 倍</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <h3>8.4 中文分词特殊挑战</h3>
+                    <ul>
+                        <li>中文无明确词边界，单个汉字可能多 token 映射</li>
+                        <li>优化：词表加入常用中文词，减少多 token 映射</li>
+                        <li>成本：中文需更多 token，影响推理成本</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> BPE 算法步骤？为什么需要 subword tokenization？</p>
+                </div>
+            </section>
+
+            <!-- Section 9: 预训练工程 -->
+            <section class="content-section">
+                <h2>9. 预训练工程 (关键面试话题)</h2>
+                <p>预训练是 LLM 的核心，涉及数据、分布式训练、优化等多方面。</p>
+
+                <div class="subsection">
+                    <h3>9.1 数据层面</h3>
+
+                    <p><strong>数据源：</strong> Common Crawl, The Pile, RedPajama, FineWeb</p>
+
+                    <p><strong>数据清洗：</strong> MinHash 去重、质量过滤、有害内容检测、语言检测</p>
+
+                    <p><strong>数据配比：</strong> 代码数据 3-5% 但影响巨大，数学数据提升计算能力，多语言混合</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>9.2 分布式训练 — 必须深入理解</h3>
+
+                    <table class="training-comparison">
+                        <thead>
+                            <tr>
+                                <th>方式</th>
+                                <th>显存 per GPU</th>
+                                <th>通信量</th>
+                                <th>复杂度</th>
+                                <th>适用</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>DP</td>
+                                <td>O(model)</td>
+                                <td>2×model</td>
+                                <td>低</td>
+                                <td>小模型，显存充足</td>
+                            </tr>
+                            <tr>
+                                <td>DDP</td>
+                                <td>O(model)</td>
+                                <td>2×model</td>
+                                <td>低</td>
+                                <td>中等规模，多节点</td>
+                            </tr>
+                            <tr>
+                                <td>FSDP (ZeRO-3)</td>
+                                <td>O(model/N)</td>
+                                <td>3×model</td>
+                                <td>中</td>
+                                <td>大模型，显存受限</td>
+                            </tr>
+                            <tr>
+                                <td>TP</td>
+                                <td>O(model/k)</td>
+                                <td>2×model</td>
+                                <td>高</td>
+                                <td>超大模型，节点内</td>
+                            </tr>
+                            <tr>
+                                <td>PP</td>
+                                <td>O(model/p)</td>
+                                <td>激活 size</td>
+                                <td>高</td>
+                                <td>超大模型，显存压力</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p><strong>Data Parallel (DP)：</strong> 每个 GPU 持完整模型，AllReduce 聚合梯度，显存占用大，扩展性差</p>
+
+                    <p><strong>DDP：</strong> PyTorch 官方推荐，Ring AllReduce 或树形 AllReduce，Gradient Bucketing 重叠通信，NCCL/Gloo 后端</p>
+
+                    <p><strong>FSDP (ZeRO Stage 3)：</strong> 分片参数/梯度/优化器状态，内存 O(model/N)，前向 AllGather + 反向 ReduceScatter，通信量 3×model_size</p>
+
+                    <p><strong>Tensor Parallelism (TP)：</strong> 列并行无需同步，行并行需 AllReduce，通常节点内使用（NVLink 高带宽）</p>
+
+                    <p><strong>Pipeline Parallelism (PP)：</strong> 不同层不同 GPU，1F1B 减少 bubble，memory-efficient</p>
+
+                    <p><strong>3D 并行：</strong> 节点内 TP (高速) + 节点间 PP + DP，超大模型标配</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>9.3 混合精度训练</h3>
+
+                    <p><strong>FP32 vs FP16 vs BF16：</strong> FP16 易上溢下溢，BF16 指数范围与 FP32 相同更稳定</p>
+
+                    <p><strong>AMP：</strong> 前向 FP16（快），反向 FP32 master weights，Loss Scaling 防止梯度下溢</p>
+
+                    <p><strong>BF16 优势：</strong> 无需 Loss Scaling，数值稳定性好，A100+ 原生支持</p>
+
+                    <p><strong>面试考点：</strong> 为什么混合精度？BF16 vs FP16？</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>9.4 训练硬件</h3>
+                    <ul>
+                        <li><strong>A100：</strong> 80GB HBM2e，312 TFLOPS，NVLink 600GB/s</li>
+                        <li><strong>H100：</strong> 80GB HBM3，989 TFLOPS，NVLink 900GB/s</li>
+                        <li><strong>Blackwell：</strong> 192GB HBM3e，1.46 POPS，NVLink 1.8TB/s</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 10: 微调技术详解 -->
+            <section class="content-section">
+                <h2>10. 微调技术详解</h2>
+                <p>微调是快速适配预训练模型的关键技术。</p>
+
+                <div class="subsection">
+                    <h3>10.1 Full Fine-tuning vs LoRA</h3>
+
+                    <p><strong>Full Fine-tuning：</strong> 更新所有参数，需完整模型 + 梯度 + 优化器状态，显存和时间成本高</p>
+
+                    <p><strong>LoRA (Low-Rank Adaptation)：</strong> W_new = W_0 + B·A，B∈R^{d×r}, A∈R^{r×k}, r << min(d,k)</p>
+
+                    <ul>
+                        <li>参数量：Full d×k vs LoRA r×(d+k)，通常节省 99%+ 参数</li>
+                        <li>初始化：A 高斯噪声，B=0（开始 ΔW=0）</li>
+                        <li>缩放：ΔW = (α/r)·B·A，α 通常 16 或 32</li>
+                        <li>应用层：通常只在 Attention 的 Q, V（K 效果差）</li>
+                        <li>推理合并：W_new = W_0 + B·A 无额外延迟</li>
+                    </ul>
+
+                    <p><strong>为什么低秩能工作？</strong> 微调主要涉及低维子空间，高秩未必必要</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>10.2 QLoRA & DoRA</h3>
+
+                    <p><strong>QLoRA：</strong> 4-bit NF4 量化基础模型 + LoRA，Double Quantization + Paged Optimizer，单张 48GB GPU 微调 65B 模型</p>
+
+                    <p><strong>DoRA：</strong> 权重分解为幅度 m 和方向 V，V 用 LoRA，m 标准梯度，更好梯度流和收敛</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>10.3 其他方法</h3>
+                    <ul>
+                        <li>Prefix Tuning：在输入前加可学习 virtual tokens</li>
+                        <li>P-Tuning：MLP 参数化 prompt</li>
+                        <li>Instruction Tuning：多样化 (instruction, output) 对微调</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> LoRA 原理？为什么低秩能工作？QLoRA 如何节省内存？</p>
+                </div>
+            </section>
+
+            <!-- Section 11: 推理优化 -->
+            <section class="content-section">
+                <h2>11. 推理优化 (关键面试话题)</h2>
+                <p>推理延迟和吞吐直接影响用户体验和部署成本。</p>
+
+                <div class="subsection">
+                    <h3>11.1 KV Cache 详解</h3>
+
+                    <p>Autoregressive 生成时，生成第 t 个 token 需要前 t-1 个 token 的 K 和 V。缓存 KV 避免重复计算。</p>
+
+                    <p><strong>内存占用：</strong> 2×n_heads×d_head×seq_len×batch×dtype_size，例 LLaMA 70B @ seq_len=4096 ≈ 40GB（超过模型参数本身）</p>
+
+                    <p><strong>减小方法：</strong> GQA 多个 Q heads 共享 KV head，MQA 极端情况，KV 量化 INT8</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>11.2 量化 (Quantization)</h3>
+
+                    <p><strong>PTQ：</strong> 训练后直接量化，快速但精度可能受影响</p>
+
+                    <p><strong>GPTQ：</strong> 逐层量化，用 Hessian 信息确定最优参数，INT4 损失 <1%</p>
+
+                    <p><strong>AWQ：</strong> 保护激活关键 channel，INT4 性能接近 FP16</p>
+
+                    <p><strong>GGUF/llama.cpp：</strong> CPU 友好的量化格式，无依赖</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>11.3 Speculative Decoding</h3>
+
+                    <p>小模型快速生成 k 个 candidates，大模型一次性验证。输出分布完全一致（概率校准）。加速比 2-3x。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>11.4 vLLM & PagedAttention</h3>
+
+                    <p><strong>PagedAttention：</strong> KV Cache 非连续物理 block，类似虚拟内存，解决内存碎片化，显存利用率 ~10% → 90%</p>
+
+                    <p><strong>Continuous Batching：</strong> 动态加入新请求，不等整个 batch 完成，吞吐 3-5x 提升</p>
+
+                    <p><strong>面试考点：</strong> PagedAttention 解决什么？Continuous Batching 原理？</p>
+                </div>
+            </section>
+
+            <!-- Section 12: 涌现能力与推理模型 -->
+            <section class="content-section">
+                <h2>12. 涌现能力与推理模型</h2>
+                <p>2024-2025 年推理能力是最激动的进展，改变了对 AI 能力边界的认知。</p>
+
+                <div class="subsection">
+                    <h3>12.1 推理模型范式转变</h3>
+
+                    <p><strong>传统 LLM：</strong> 一次性预测，token 数固定 (1-100)</p>
+
+                    <p><strong>推理模型：</strong> 花任意多时间思考再给答案</p>
+
+                    <p><strong>o1 (2024)：</strong> 长内部 CoT，AIME 83%，闭源</p>
+
+                    <p><strong>o3 (2025)：</strong> ARC-AGI 92.3%（人类 85%），计算成本高</p>
+
+                    <p><strong>DeepSeek R1 (2025)：</strong> 首个完全开源推理模型，1.5B~671B，RL 训练长 CoT，推理轨迹可解释，R1 70B 超越 GPT-4 Turbo（数学/代码）</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>12.2 Test-Time Compute Scaling</h3>
+
+                    <p>投入更多推理时计算显著提升性能，精度 vs 延迟/成本权衡。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>12.3 为什么推理模型能工作</h3>
+
+                    <ul>
+                        <li>复杂问题需深思，"思考"改进推理</li>
+                        <li>o1/o3 困难问题远超，简单问题差别不大</li>
+                        <li>RL 训练有用思考过程，而非无意义填充</li>
+                    </ul>
+
+                    <p><strong>面试考点：</strong> 什么是涌现能力？推理模型如何工作？为什么 test-time compute 有效？</p>
+                </div>
+            </section>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <a href="transformer.html">
+                <span class="label">上一章</span>
+                <span class="title">Transformer</span>
+            </a>
+            <a href="alignment.html" class="next">
+                <span class="label">下一章</span>
+                <span class="title">对齐与RLHF</span>
+            </a>
+        </div>
+
+        <!-- Deep Dive Links -->
+        <div class="bottom-nav" style="margin-top: 2rem; border-top: 1px solid #e0e0e0; padding-top: 2rem;">
+            <div style="width: 100%; text-align: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 1rem 0; color: #666;">深度解析资源</h4>
+            </div>
+            <a href="context-deep-dive.html" style="flex: 1;">
+                <span class="label">深度解析</span>
+                <span class="title">上下文窗口演进</span>
+            </a>
+            <a href="finetune-deep-dive.html" style="flex: 1;">
+                <span class="label">深度解析</span>
+                <span class="title">微调与分布式训练</span>
+            </a>
+            <a href="inference-deep-dive.html" style="flex: 1;">
+                <span class="label">深度解析</span>
+                <span class="title">推理优化</span>
+            </a>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <p>AI 技术演进 — 深度学习基础与前沿应用</p>
+        <p>最后更新：2025年3月 | 持续更新中...</p>
+    </footer>
+</body>
+</html>

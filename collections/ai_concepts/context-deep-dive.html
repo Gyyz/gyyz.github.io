@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM 上下文扩展技术深度解析</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:    #07080f;
+  --bg2:   #0d0f1a;
+  --bg3:   #131520;
+  --bg4:   #191c2a;
+  --card:  #1b1e2d;
+  --line:  rgba(255,255,255,0.06);
+  --line2: rgba(255,255,255,0.11);
+  --text:  #dde0ef;
+  --sub:   #7a7d94;
+  --dim:   #4a4d62;
+
+  --green:  #34d399;
+  --teal:   #22d3ee;
+  --blue:   #60a5fa;
+  --purple: #a78bfa;
+  --pink:   #f472b6;
+  --amber:  #fbbf24;
+  --coral:  #f87171;
+  --orange: #fb923c;
+
+  --gd: rgba(52,211,153,0.08);
+  --td: rgba(34,211,238,0.08);
+  --bd: rgba(96,165,250,0.08);
+  --pd: rgba(167,139,250,0.08);
+  --ad: rgba(251,191,36,0.08);
+  --cd: rgba(248,113,113,0.08);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'IBM Plex Sans SC',system-ui,sans-serif;
+  line-height:1.8;
+}
+
+/* ─── HERO ─── */
+.hero{
+  min-height:260px;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:60px 48px 48px;
+  margin-left:220px;
+  background:
+    radial-gradient(ellipse 70% 80% at 15% 50%, rgba(52,211,153,0.07) 0%,transparent 65%),
+    radial-gradient(ellipse 50% 60% at 85% 30%, rgba(96,165,250,0.06) 0%,transparent 60%),
+    var(--bg);
+  border-bottom:1px solid var(--line2);
+  position:relative;
+  overflow:hidden;
+}
+.hero::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);
+  pointer-events:none;
+}
+.hero-tag{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.72rem;letter-spacing:2px;
+  color:var(--green);
+  text-transform:uppercase;
+  margin-bottom:14px;
+  opacity:0.85;
+}
+.hero h1{
+  font-size:clamp(1.8rem,4vw,2.8rem);
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:-0.5px;
+  max-width:700px;
+}
+.hero h1 em{
+  font-style:normal;
+  background:linear-gradient(120deg,var(--green),var(--teal));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-sub{
+  margin-top:14px;
+  color:var(--sub);
+  font-size:0.95rem;
+  max-width:580px;
+}
+
+/* ─── NAV ─── */
+.sidenav{
+  position:fixed;top:0;left:0;bottom:0;width:220px;
+  background:var(--bg2);
+  border-right:1px solid var(--line2);
+  overflow-y:auto;
+  padding:24px 0;
+  z-index:100;
+}
+.sidenav-title{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.65rem;letter-spacing:2px;
+  color:var(--dim);
+  text-transform:uppercase;
+  padding:0 20px 12px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:12px;
+}
+.sidenav a{
+  display:block;
+  padding:7px 20px;
+  font-size:0.82rem;
+  color:var(--sub);
+  text-decoration:none;
+  transition:all 0.15s;
+  border-left:2px solid transparent;
+  line-height:1.4;
+}
+.sidenav a:hover,.sidenav a.active{
+  color:var(--text);
+  border-left-color:var(--green);
+  background:rgba(52,211,153,0.05);
+}
+.sidenav .nav-num{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.65rem;
+  color:var(--dim);
+  display:block;
+  margin-bottom:1px;
+}
+
+/* ─── MAIN CONTENT ─── */
+.main{
+  margin-left:220px;
+  max-width:900px;
+}
+
+/* ─── SECTIONS ─── */
+.section{
+  padding:56px 48px;
+  border-bottom:1px solid var(--line);
+}
+.section:last-child{border-bottom:none}
+
+.section-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.7rem;letter-spacing:1.5px;
+  text-transform:uppercase;
+  padding:4px 12px;
+  border-radius:20px;
+  margin-bottom:18px;
+  border:1px solid;
+}
+.section-title{
+  font-size:1.7rem;
+  font-weight:700;
+  letter-spacing:-0.3px;
+  margin-bottom:6px;
+  line-height:1.25;
+}
+.section-sub{
+  color:var(--sub);
+  font-size:0.9rem;
+  margin-bottom:28px;
+}
+
+.prose{
+  color:#b0b3c8;
+  font-size:0.95rem;
+  line-height:1.9;
+  margin-bottom:20px;
+}
+.prose strong{color:var(--text)}
+.prose em{color:var(--teal);font-style:normal}
+.prose code{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.85em;
+  background:var(--bg3);
+  padding:1px 6px;border-radius:4px;
+  color:var(--amber);
+}
+
+/* ─── CALLOUT ─── */
+.callout{
+  padding:16px 20px;
+  border-radius:0 10px 10px 0;
+  border-left:3px solid;
+  margin:20px 0;
+  font-size:0.9rem;
+  line-height:1.75;
+}
+
+/* ─── DIAGRAM CONTAINERS ─── */
+.diagram{
+  background:var(--bg2);
+  border:1px solid var(--line2);
+  border-radius:14px;
+  padding:28px;
+  margin:24px 0;
+  overflow-x:auto;
+}
+.diagram-title{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.72rem;
+  letter-spacing:1px;
+  color:var(--dim);
+  text-transform:uppercase;
+  margin-bottom:20px;
+}
+.diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+
+/* ─── FORMULA BOX ─── */
+.formula{
+  background:var(--bg3);
+  border:1px solid var(--line2);
+  border-radius:10px;
+  padding:18px 24px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.95rem;
+  color:var(--teal);
+  margin:16px 0;
+  text-align:center;
+  line-height:2;
+}
+.formula .comment{
+  color:var(--dim);
+  font-size:0.78rem;
+  display:block;
+  margin-top:4px;
+}
+
+/* ─── COMPARISON TABLE ─── */
+.cmp-table{
+  width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem;
+}
+.cmp-table th{
+  background:var(--bg3);
+  color:var(--sub);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.72rem;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:10px 14px;
+  border:1px solid var(--line2);
+  text-align:left;
+}
+.cmp-table td{
+  padding:10px 14px;
+  border:1px solid var(--line);
+  color:var(--text);
+  vertical-align:top;
+  line-height:1.6;
+}
+.cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+
+/* ─── STEP LIST ─── */
+.steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+.step{
+  display:flex;gap:16px;
+  padding:16px 18px;
+  background:var(--bg3);
+  border-radius:10px;
+  border:1px solid var(--line);
+}
+.step-num{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.85rem;
+  font-weight:600;
+  min-width:28px;
+  padding-top:1px;
+}
+.step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+.step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+
+/* ─── PILL GRID ─── */
+.pill-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.pill{
+  padding:5px 14px;
+  border-radius:20px;
+  font-size:0.78rem;
+  font-family:'IBM Plex Mono',monospace;
+  border:1px solid;
+}
+
+/* ─── TECH CARD ─── */
+.tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+@media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+.tech-card{
+  background:var(--bg3);
+  border-radius:10px;
+  padding:16px 18px;
+  border:1px solid var(--line);
+}
+.tech-card .tc-label{
+  font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+  color:var(--dim);letter-spacing:1px;text-transform:uppercase;
+  margin-bottom:4px;
+}
+.tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SIDENAV ═══════════════════ -->
+<nav class="sidenav" id="sidenav">
+  <div class="sidenav-title">目录</div>
+  <a href="#problem"><span class="nav-num">00</span>根本问题：O(n²)</a>
+  <a href="#flash"><span class="nav-num">01</span>Flash Attention</a>
+  <a href="#rope"><span class="nav-num">02</span>RoPE 位置编码</a>
+  <a href="#yarn"><span class="nav-num">03</span>YaRN / LongRoPE</a>
+  <a href="#gqa"><span class="nav-num">04</span>GQA / MQA</a>
+  <a href="#sparse"><span class="nav-num">05</span>稀疏 & 滑动窗口注意力</a>
+  <a href="#kvcache"><span class="nav-num">06</span>KV Cache 原理与优化</a>
+  <a href="#longdata"><span class="nav-num">07</span>长文本训练策略</a>
+  <a href="#summary"><span class="nav-num">08</span>技术对比总结</a>
+</nav>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+
+<div class="hero">
+  <div class="hero-tag">Deep Dive · 上下文扩展技术</div>
+  <h1>从 512 到 <em>100 万</em> Token<br>上下文窗口扩展技术全解析</h1>
+  <p class="hero-sub">为什么标准 Transformer 的上下文这么难扩展？每一项技术突破的核心思想是什么？本文逐一拆解，配原理图讲清楚。</p>
+</div>
+
+<!-- ═══ 00. 根本问题 ═══ -->
+<section class="section" id="problem">
+  <div class="section-badge" style="color:var(--coral);border-color:rgba(248,113,113,0.3);background:var(--cd)">
+    <span>00</span><span>根本问题</span>
+  </div>
+  <h2 class="section-title">为什么上下文这么难扩展？</h2>
+  <p class="section-sub">一切问题的根源：注意力机制的平方复杂度</p>
+
+  <p class="prose">
+    标准 Transformer 里，<em>自注意力机制</em>要让序列中的每个 Token，都和其他所有 Token 计算关系。如果序列长度是 n，那就是 n × n 次配对运算。
+  </p>
+
+  <div class="formula">
+    Attention(Q, K, V) = softmax( QKᵀ / √d ) · V
+    <span class="comment">Q、K、V 矩阵形状均为 [n × d]，QKᵀ 的形状是 [n × n]</span>
+  </div>
+
+  <p class="prose">
+    这个 <code>n × n</code> 的注意力矩阵就是一切麻烦的根源：
+  </p>
+
+  <!-- Complexity diagram -->
+  <div class="diagram">
+    <div class="diagram-title">注意力矩阵可视化 — 序列越长，矩阵越大</div>
+    <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr-w" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+      <!-- n=8 grid -->
+      <text x="54" y="22" text-anchor="middle" fill="#4a4d62" font-size="11" font-family="IBM Plex Mono">n=8</text>
+      <g id="grid8">
+        <rect x="14" y="30" width="80" height="80" rx="4" fill="rgba(248,113,113,0.08)" stroke="rgba(248,113,113,0.2)" stroke-width="0.5"/>
+        <!-- cells -->
+        <script>/* rendered by JS below */</script>
+      </g>
+      <!-- Draw small squares in 8x8 -->
+      <!-- Row 0 -->
+      <rect x="14" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.7)"/>
+      <rect x="24" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.4)"/>
+      <rect x="34" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.2)"/>
+      <rect x="44" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.15)"/>
+      <rect x="54" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.3)"/>
+      <rect x="64" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.1)"/>
+      <rect x="74" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.25)"/>
+      <rect x="84" y="30" width="9" height="9" rx="1" fill="rgba(248,113,113,0.1)"/>
+      <!-- Row 1 -->
+      <rect x="14" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.35)"/>
+      <rect x="24" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.7)"/>
+      <rect x="34" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.2)"/>
+      <rect x="44" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.4)"/>
+      <rect x="54" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.1)"/>
+      <rect x="64" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.3)"/>
+      <rect x="74" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.15)"/>
+      <rect x="84" y="40" width="9" height="9" rx="1" fill="rgba(248,113,113,0.5)"/>
+      <!-- Rows 2-7 abbreviated with rect -->
+      <rect x="14" y="50" width="80" height="62" rx="2" fill="rgba(248,113,113,0.12)" stroke="rgba(248,113,113,0.15)" stroke-width="0.5"/>
+      <text x="54" y="83" text-anchor="middle" fill="rgba(248,113,113,0.5)" font-size="10" font-family="IBM Plex Mono">8×8=64</text>
+      <text x="54" y="122" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">计算量: 64</text>
+      <text x="54" y="135" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">显存: 1×</text>
+
+      <!-- n=32 grid -->
+      <text x="194" y="22" text-anchor="middle" fill="#4a4d62" font-size="11" font-family="IBM Plex Mono">n=32</text>
+      <rect x="144" y="30" width="100" height="100" rx="4" fill="rgba(251,191,36,0.08)" stroke="rgba(251,191,36,0.25)" stroke-width="0.8"/>
+      <text x="194" y="83" text-anchor="middle" fill="rgba(251,191,36,0.6)" font-size="11" font-family="IBM Plex Mono">32×32</text>
+      <text x="194" y="97" text-anchor="middle" fill="rgba(251,191,36,0.6)" font-size="11" font-family="IBM Plex Mono">=1,024</text>
+      <text x="194" y="138" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">计算量: 1024</text>
+      <text x="194" y="151" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">显存: 16×</text>
+
+      <!-- n=128 grid -->
+      <text x="354" y="22" text-anchor="middle" fill="#4a4d62" font-size="11" font-family="IBM Plex Mono">n=128</text>
+      <rect x="304" y="30" width="100" height="100" rx="4" fill="rgba(96,165,250,0.08)" stroke="rgba(96,165,250,0.3)" stroke-width="1"/>
+      <text x="354" y="77" text-anchor="middle" fill="rgba(96,165,250,0.7)" font-size="11" font-family="IBM Plex Mono">128×128</text>
+      <text x="354" y="91" text-anchor="middle" fill="rgba(96,165,250,0.7)" font-size="11" font-family="IBM Plex Mono">=16,384</text>
+      <text x="354" y="138" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">计算量: 16K</text>
+      <text x="354" y="151" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">显存: 256×</text>
+
+      <!-- n=1024 - very large -->
+      <text x="554" y="22" text-anchor="middle" fill="#4a4d62" font-size="11" font-family="IBM Plex Mono">n=1024</text>
+      <rect x="454" y="30" width="200" height="200" rx="4" fill="rgba(167,139,250,0.06)" stroke="rgba(167,139,250,0.35)" stroke-width="1.5"/>
+      <text x="554" y="124" text-anchor="middle" fill="rgba(167,139,250,0.7)" font-size="11" font-family="IBM Plex Mono">1024×1024</text>
+      <text x="554" y="140" text-anchor="middle" fill="rgba(167,139,250,0.7)" font-size="11" font-family="IBM Plex Mono">=1,048,576</text>
+      <text x="554" y="245" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">计算量: 1M</text>
+      <text x="554" y="258" text-anchor="middle" fill="#4a4d62" font-size="10" font-family="IBM Plex Mono">显存: 16,384×</text>
+
+      <!-- Arrows -->
+      <line x1="100" y1="80" x2="138" y2="80" stroke="rgba(255,255,255,0.15)" stroke-width="1" marker-end="url(#arr-w)"/>
+      <line x1="250" y1="80" x2="298" y2="80" stroke="rgba(255,255,255,0.15)" stroke-width="1" marker-end="url(#arr-w)"/>
+      <line x1="410" y1="90" x2="448" y2="90" stroke="rgba(255,255,255,0.15)" stroke-width="1" marker-end="url(#arr-w)"/>
+
+      <text x="119" y="76" text-anchor="middle" fill="var(--dim)" font-size="9" font-family="IBM Plex Mono">×4</text>
+      <text x="274" y="76" text-anchor="middle" fill="var(--dim)" font-size="9" font-family="IBM Plex Mono">×4</text>
+      <text x="429" y="86" text-anchor="middle" fill="var(--dim)" font-size="9" font-family="IBM Plex Mono">×8</text>
+
+      <!-- Growth label -->
+      <text x="380" y="290" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">序列长度翻倍 → 注意力矩阵面积变 4 倍（平方增长）</text>
+    </svg>
+  </div>
+
+  <p class="prose">
+    这带来两个严重问题：<strong>算力（FLOPs）</strong>和<strong>显存（HBM）</strong>都是 O(n²) 增长。实际跑 128K token 的注意力，光是这个矩阵就要占用约 32GB 显存——一块 A100 都不够。
+  </p>
+
+  <div class="callout" style="border-color:var(--coral);background:var(--cd)">
+    <strong style="color:var(--coral)">核心矛盾</strong>：Transformer 的能力来自"每个词看所有词"，但这个"看所有词"在长序列下算不起、存不下。后面所有技术，都是在不同层面解决这个矛盾。
+  </div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">时间复杂度</div>
+      <div class="tc-val" style="color:var(--coral)">O(n²·d)</div>
+      <div class="tc-desc">n 个 Token，d 维向量，两两点积</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">空间复杂度（注意力矩阵）</div>
+      <div class="tc-val" style="color:var(--coral)">O(n²)</div>
+      <div class="tc-desc">需要把整个 n×n 矩阵存入显存</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">128K token 注意力矩阵大小</div>
+      <div class="tc-val" style="color:var(--amber)">≈ 32 GB</div>
+      <div class="tc-desc">仅注意力矩阵，还不含权重参数</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">1M token 注意力矩阵大小</div>
+      <div class="tc-val" style="color:var(--coral)">≈ 2 TB</div>
+      <div class="tc-desc">完全不可能硬塞——需要根本性的算法改进</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 01. Flash Attention ═══ -->
+<section class="section" id="flash">
+  <div class="section-badge" style="color:var(--teal);border-color:rgba(34,211,238,0.3);background:var(--td)">
+    <span>01</span><span>Flash Attention</span>
+  </div>
+  <h2 class="section-title">Flash Attention</h2>
+  <p class="section-sub">不改数学，只改顺序——用 IO 感知的分块计算绕过显存瓶颈</p>
+
+  <p class="prose">
+    Flash Attention（Tri Dao et al., 2022）是近年来最重要的工程突破之一。它<em>不改变任何数学结果</em>，只重新安排计算顺序，使得注意力计算几乎不需要把那个巨大的 n×n 矩阵存到显存里。
+  </p>
+
+  <p class="prose">
+    理解 Flash Attention，先要理解 GPU 的存储层次：
+  </p>
+
+  <!-- GPU memory hierarchy -->
+  <div class="diagram">
+    <div class="diagram-title">GPU 存储层次结构</div>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- SRAM -->
+      <rect x="240" y="20" width="240" height="54" rx="8" fill="rgba(52,211,153,0.18)" stroke="rgba(52,211,153,0.5)" stroke-width="1.2"/>
+      <text x="360" y="44" text-anchor="middle" fill="var(--green)" font-size="13" font-weight="600" font-family="IBM Plex Mono">SRAM (on-chip cache)</text>
+      <text x="360" y="62" text-anchor="middle" fill="rgba(52,211,153,0.7)" font-size="11" font-family="IBM Plex Mono">20–40 MB | 19 TB/s 带宽 | 极快</text>
+
+      <!-- Arrow down -->
+      <line x1="360" y1="74" x2="360" y2="102" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="420" y="93" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">搬运数据（慢）</text>
+
+      <!-- HBM -->
+      <rect x="140" y="102" width="440" height="54" rx="8" fill="rgba(248,113,113,0.1)" stroke="rgba(248,113,113,0.4)" stroke-width="1.2"/>
+      <text x="360" y="126" text-anchor="middle" fill="var(--coral)" font-size="13" font-weight="600" font-family="IBM Plex Mono">HBM (GPU 显存)</text>
+      <text x="360" y="144" text-anchor="middle" fill="rgba(248,113,113,0.7)" font-size="11" font-family="IBM Plex Mono">40–80 GB | 2 TB/s 带宽 | 快但慢于 SRAM</text>
+
+      <!-- Arrow down -->
+      <line x1="360" y1="156" x2="360" y2="184" stroke="var(--line2)" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <text x="420" y="175" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">搬运数据（更慢）</text>
+
+      <!-- DRAM -->
+      <rect x="40" y="184" width="640" height="28" rx="6" fill="rgba(255,255,255,0.03)" stroke="var(--line2)" stroke-width="1"/>
+      <text x="360" y="202" text-anchor="middle" fill="var(--dim)" font-size="11" font-family="IBM Plex Mono">CPU DRAM | TB 级 | 但 PCIe 带宽仅 ~32 GB/s</text>
+    </svg>
+  </div>
+
+  <p class="prose">
+    标准注意力计算的瓶颈不是"算得慢"，而是<strong>数据搬运太多</strong>：它要把整个 n×n 注意力矩阵反复写入/读出 HBM，而 HBM 的带宽远低于 SRAM。Flash Attention 的核心思想是：<em>把数据分成小块，让计算尽量在 SRAM 里完成，减少 HBM 读写次数</em>。
+  </p>
+
+  <!-- Flash Attention tiling diagram -->
+  <div class="diagram">
+    <div class="diagram-title">Flash Attention 分块计算 vs 标准注意力</div>
+    <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="fa-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+
+      <!-- LEFT: Standard attention -->
+      <text x="170" y="24" text-anchor="middle" fill="var(--coral)" font-size="12" font-weight="600" font-family="IBM Plex Mono">标准注意力</text>
+
+      <!-- Full n×n matrix in HBM -->
+      <rect x="40" y="38" width="260" height="180" rx="6" fill="rgba(248,113,113,0.08)" stroke="rgba(248,113,113,0.3)" stroke-width="1"/>
+      <text x="170" y="130" text-anchor="middle" fill="rgba(248,113,113,0.4)" font-size="28" font-family="IBM Plex Mono">n×n</text>
+      <text x="170" y="152" text-anchor="middle" fill="rgba(248,113,113,0.5)" font-size="11" font-family="IBM Plex Mono">完整注意力矩阵</text>
+      <text x="170" y="166" text-anchor="middle" fill="rgba(248,113,113,0.4)" font-size="10" font-family="IBM Plex Mono">存在 HBM 中</text>
+
+      <!-- Steps: write then read -->
+      <text x="40" y="238" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">① 写入 HBM: QKᵀ → S</text>
+      <text x="40" y="253" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">② 读出 HBM: softmax(S)</text>
+      <text x="40" y="268" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">③ 写入 HBM: softmax(S)</text>
+      <text x="40" y="283" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">④ 读出 HBM: · V → 输出</text>
+      <text x="40" y="300" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">HBM 读写: O(n²) 次</text>
+
+      <!-- Divider -->
+      <line x1="360" y1="20" x2="360" y2="310" stroke="var(--line)" stroke-width="1" stroke-dasharray="6 4"/>
+
+      <!-- RIGHT: Flash Attention -->
+      <text x="540" y="24" text-anchor="middle" fill="var(--green)" font-size="12" font-weight="600" font-family="IBM Plex Mono">Flash Attention</text>
+
+      <!-- Tiled blocks -->
+      <rect x="380" y="38" width="320" height="180" rx="6" fill="rgba(52,211,153,0.04)" stroke="rgba(52,211,153,0.15)" stroke-width="1"/>
+      <!-- 4x4 tile grid -->
+      <g opacity="0.85">
+        <!-- Row 0 -->
+        <rect x="382" y="40" width="78" height="43" rx="3" fill="rgba(52,211,153,0.22)" stroke="rgba(52,211,153,0.5)" stroke-width="0.8"/>
+        <text x="421" y="65" text-anchor="middle" fill="var(--green)" font-size="9" font-family="IBM Plex Mono">在SRAM计算</text>
+        <rect x="462" y="40" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="542" y="40" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="622" y="40" width="76" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <!-- Row 1 -->
+        <rect x="382" y="85" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="462" y="85" width="78" height="43" rx="3" fill="rgba(52,211,153,0.22)" stroke="rgba(52,211,153,0.5)" stroke-width="0.8"/>
+        <text x="501" y="110" text-anchor="middle" fill="var(--green)" font-size="9" font-family="IBM Plex Mono">在SRAM计算</text>
+        <rect x="542" y="85" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="622" y="85" width="76" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <!-- Row 2 -->
+        <rect x="382" y="130" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="462" y="130" width="78" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="542" y="130" width="78" height="43" rx="3" fill="rgba(52,211,153,0.22)" stroke="rgba(52,211,153,0.5)" stroke-width="0.8"/>
+        <text x="581" y="155" text-anchor="middle" fill="var(--green)" font-size="9" font-family="IBM Plex Mono">在SRAM计算</text>
+        <rect x="622" y="130" width="76" height="43" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <!-- Row 3 -->
+        <rect x="382" y="175" width="78" height="41" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="462" y="175" width="78" height="41" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="542" y="175" width="78" height="41" rx="3" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.2)" stroke-width="0.5"/>
+        <rect x="622" y="175" width="76" height="41" rx="3" fill="rgba(52,211,153,0.22)" stroke="rgba(52,211,153,0.5)" stroke-width="0.8"/>
+        <text x="660" y="199" text-anchor="middle" fill="var(--green)" font-size="9" font-family="IBM Plex Mono">在SRAM</text>
+      </g>
+
+      <text x="380" y="238" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">① 分块加载 Q/K/V 到 SRAM</text>
+      <text x="380" y="253" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">② 在 SRAM 内完成该块的计算</text>
+      <text x="380" y="268" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">③ 只把结果写回 HBM</text>
+      <text x="380" y="283" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">④ 用 online softmax 合并各块</text>
+      <text x="380" y="300" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">HBM 读写: O(n) 次 ↓ 大幅减少</text>
+    </svg>
+  </div>
+
+  <p class="prose">
+    Flash Attention 用了一个叫 <em>online softmax</em> 的技巧，可以在不存下完整矩阵的情况下，用分块的方式得到完全相同的计算结果。这是一个数值等价的重新推导，不是近似。
+  </p>
+
+  <div class="callout" style="border-color:var(--green);background:var(--gd)">
+    <strong style="color:var(--green)">效果</strong>：Flash Attention 2 让长序列训练速度提升 2～4×，显存占用从 O(n²) 降到 O(n)。这是使得 128K+ 上下文从"理论可行"变成"实际可跑"的最关键一步。Flash Attention 3（2024）针对 H100 架构进一步优化，速度再提升约 75%。
+  </div>
+</section>
+
+<!-- ═══ 02. RoPE ═══ -->
+<section class="section" id="rope">
+  <div class="section-badge" style="color:var(--purple);border-color:rgba(167,139,250,0.3);background:var(--pd)">
+    <span>02</span><span>RoPE 位置编码</span>
+  </div>
+  <h2 class="section-title">RoPE：旋转式位置编码</h2>
+  <p class="section-sub">把位置信息编进旋转角度，让模型自然感知"相对距离"</p>
+
+  <p class="prose">
+    Transformer 的自注意力本身不区分顺序——"猫吃鱼"和"鱼吃猫"的词向量输入是一样的，必须额外注入位置信息。不同的位置编码方案直接影响模型能否扩展到更长序列。
+  </p>
+
+  <p class="prose">传统方案对比：</p>
+
+  <table class="cmp-table">
+    <tr>
+      <th>方案</th><th>做法</th><th>长度外推能力</th><th>代表模型</th>
+    </tr>
+    <tr>
+      <td><strong>绝对正弦位置编码</strong></td>
+      <td>预先计算每个位置的固定向量，直接加到词嵌入上</td>
+      <td style="color:var(--coral)">差，训练长度即上限</td>
+      <td>原始 BERT, GPT-2</td>
+    </tr>
+    <tr>
+      <td><strong>可学习绝对位置</strong></td>
+      <td>训练一组可学习的位置 embedding</td>
+      <td style="color:var(--coral)">差，位置数量在训练时固定</td>
+      <td>GPT-3</td>
+    </tr>
+    <tr>
+      <td><strong>ALiBi</strong></td>
+      <td>不加位置向量，在注意力分数上直接加线性惩罚项</td>
+      <td style="color:var(--amber)">一般，可外推但质量下降</td>
+      <td>BLOOM</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--purple)">RoPE</strong></td>
+      <td>把位置编进 Q/K 向量的旋转角度，通过相对角度差来感知位置</td>
+      <td style="color:var(--green)">好，相对位置自然编码</td>
+      <td>LLaMA, Mistral, Qwen, GPT-NeoX</td>
+    </tr>
+  </table>
+
+  <p class="prose" style="margin-top:20px">
+    <strong>RoPE 的核心思想</strong>：如果我们把每两个维度视作一个二维平面上的点，那么"位置 m 处的向量"就是"位置 0 处的向量"<em>旋转了 mθ 角度</em>。这样，位置 m 的 Query 和位置 n 的 Key 做点积时，结果只取决于它们的<em>相对距离 (m−n)</em>，和绝对位置无关。
+  </p>
+
+  <!-- RoPE rotation diagram -->
+  <div class="diagram">
+    <div class="diagram-title">RoPE 旋转原理（以 2D 为例）</div>
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="rope-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+
+      <!-- Left: position 0 -->
+      <text x="140" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">位置 m=0</text>
+      <circle cx="140" cy="140" r="80" fill="none" stroke="var(--line2)" stroke-width="1"/>
+      <!-- axes -->
+      <line x1="60" y1="140" x2="220" y2="140" stroke="var(--line2)" stroke-width="0.8"/>
+      <line x1="140" y1="60" x2="140" y2="220" stroke="var(--line2)" stroke-width="0.8"/>
+      <!-- original vector -->
+      <line x1="140" y1="140" x2="210" y2="100" stroke="var(--blue)" stroke-width="2" marker-end="url(#rope-arr)" style="color:var(--blue)"/>
+      <text x="218" y="96" fill="var(--blue)" font-size="11" font-family="IBM Plex Mono">x</text>
+      <text x="140" y="248" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">原始向量</text>
+
+      <!-- Middle: position m -->
+      <text x="380" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">位置 m（旋转 mθ）</text>
+      <circle cx="380" cy="140" r="80" fill="none" stroke="var(--line2)" stroke-width="1"/>
+      <line x1="300" y1="140" x2="460" y2="140" stroke="var(--line2)" stroke-width="0.8"/>
+      <line x1="380" y1="60" x2="380" y2="220" stroke="var(--line2)" stroke-width="0.8"/>
+      <!-- original (faded) -->
+      <line x1="380" y1="140" x2="450" y2="100" stroke="var(--blue)" stroke-width="1" stroke-dasharray="4 3" opacity="0.3"/>
+      <!-- rotated vector -->
+      <line x1="380" y1="140" x2="430" y2="68" stroke="var(--purple)" stroke-width="2" marker-end="url(#rope-arr)" style="color:var(--purple)"/>
+      <!-- arc showing rotation angle -->
+      <path d="M420 100 A50 50 0 0 1 430 68" fill="none" stroke="var(--amber)" stroke-width="1" stroke-dasharray="3 2"/>
+      <text x="446" y="86" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">mθ</text>
+      <text x="440" y="62" fill="var(--purple)" font-size="11" font-family="IBM Plex Mono">R(mθ)x</text>
+      <text x="380" y="248" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">旋转后的 Query/Key</text>
+
+      <!-- Right: dot product = relative -->
+      <text x="600" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">点积结果</text>
+      <rect x="500" y="60" width="200" height="160" rx="8" fill="rgba(52,211,153,0.06)" stroke="rgba(52,211,153,0.2)" stroke-width="1"/>
+      <text x="600" y="100" text-anchor="middle" fill="var(--green)" font-size="12" font-family="IBM Plex Mono" font-weight="600">Q_m · K_n</text>
+      <line x1="530" y1="115" x2="670" y2="115" stroke="var(--line)" stroke-width="0.8"/>
+      <text x="600" y="136" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">= f(x_q, x_k,</text>
+      <text x="600" y="154" text-anchor="middle" fill="var(--green)" font-size="12" font-family="IBM Plex Mono" font-weight="600"> m − n )</text>
+      <text x="600" y="178" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">只依赖相对距离！</text>
+      <text x="600" y="196" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">不依赖绝对位置</text>
+      <text x="600" y="248" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">→ 外推时相对关系依然稳定</text>
+    </svg>
+  </div>
+
+  <div class="formula">
+    q_m = R(mθ) · W_q · x_m<br>
+    k_n = R(nθ) · W_k · x_n<br>
+    q_m · k_n = xᵀ_q W_q R((m−n)θ) W_k x_n
+    <span class="comment">R 是旋转矩阵；每对维度 (2i, 2i+1) 用不同的基础频率 θᵢ = 10000^(−2i/d)</span>
+  </div>
+
+  <p class="prose">
+    <strong>为什么外推好？</strong> 绝对位置编码需要在训练时"见过"第 n 个位置的 embedding；而 RoPE 只关心相对距离，即使推理时遇到训练时没见过的超长位置，相对关系的计算方式不变——只是角度更大而已。但超出训练长度后，角度可能进入没有训练过的范围，精度仍会下降，这是 YaRN 要解决的问题。
+  </p>
+</section>
+
+<!-- ═══ 03. YaRN / LongRoPE ═══ -->
+<section class="section" id="yarn">
+  <div class="section-badge" style="color:var(--blue);border-color:rgba(96,165,250,0.3);background:var(--bd)">
+    <span>03</span><span>YaRN / LongRoPE</span>
+  </div>
+  <h2 class="section-title">YaRN & LongRoPE：让 RoPE 优雅地外推</h2>
+  <p class="section-sub">训练 4K，推理用 128K——让旋转角度平滑地"缩放"到更长范围</p>
+
+  <p class="prose">
+    RoPE 在超出训练长度后会退化，原因是：高频维度（小 θ）的旋转角在长距离时变化太快，进入了训练时从未见过的角度范围，模型不知道如何处理。
+  </p>
+
+  <p class="prose">
+    最朴素的解决方案是<em>位置插值（PI, Position Interpolation）</em>：把所有位置编号等比例压缩，让 0～max_len 的位置映射回 0～train_len。但这会压缩近距离的精度。
+  </p>
+
+  <!-- YaRN frequency division diagram -->
+  <div class="diagram">
+    <div class="diagram-title">YaRN：按频率分区处理（NTK-aware interpolation）</div>
+    <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+      <!-- Frequency axis -->
+      <text x="60" y="30" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">维度频率</text>
+      <line x1="60" y1="40" x2="660" y2="40" stroke="var(--line2)" stroke-width="1.5"/>
+      <text x="60" y="58" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">高频（近距离敏感）</text>
+      <text x="540" y="58" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">低频（长距离感知）</text>
+      <!-- Arrow left-right -->
+      <line x1="60" y1="50" x2="660" y2="50" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+      <!-- Zone 1: no interpolation -->
+      <rect x="60" y="70" width="160" height="120" rx="8" fill="rgba(248,113,113,0.1)" stroke="rgba(248,113,113,0.3)" stroke-width="1"/>
+      <text x="140" y="96" text-anchor="middle" fill="var(--coral)" font-size="11" font-weight="600" font-family="IBM Plex Mono">不插值</text>
+      <text x="140" y="112" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">维持原始旋转频率</text>
+      <text x="140" y="128" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">保留近距离精度</text>
+      <text x="140" y="148" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">θ' = θ</text>
+      <text x="140" y="174" text-anchor="middle" fill="var(--dim)" font-size="10" font-family="IBM Plex Mono">高频维度</text>
+
+      <!-- Zone 2: partial interpolation -->
+      <rect x="240" y="70" width="200" height="120" rx="8" fill="rgba(251,191,36,0.08)" stroke="rgba(251,191,36,0.3)" stroke-width="1"/>
+      <text x="340" y="96" text-anchor="middle" fill="var(--amber)" font-size="11" font-weight="600" font-family="IBM Plex Mono">线性混合插值</text>
+      <text x="340" y="112" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">平滑过渡，兼顾</text>
+      <text x="340" y="128" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">近距离和远距离</text>
+      <text x="340" y="148" text-anchor="middle" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">θ' = lerp(θ, θ/s)</text>
+      <text x="340" y="174" text-anchor="middle" fill="var(--dim)" font-size="10" font-family="IBM Plex Mono">中频维度</text>
+
+      <!-- Zone 3: full interpolation -->
+      <rect x="460" y="70" width="200" height="120" rx="8" fill="rgba(52,211,153,0.08)" stroke="rgba(52,211,153,0.3)" stroke-width="1"/>
+      <text x="560" y="96" text-anchor="middle" fill="var(--green)" font-size="11" font-weight="600" font-family="IBM Plex Mono">全量插值</text>
+      <text x="560" y="112" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">大幅拉伸旋转频率</text>
+      <text x="560" y="128" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">覆盖超长距离</text>
+      <text x="560" y="148" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">θ' = θ / s</text>
+      <text x="560" y="174" text-anchor="middle" fill="var(--dim)" font-size="10" font-family="IBM Plex Mono">低频维度</text>
+
+      <!-- Bottom summary -->
+      <text x="360" y="220" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">s = 目标长度 / 训练长度（如 128K / 4K = 32）</text>
+      <text x="360" y="240" text-anchor="middle" fill="var(--green)" font-size="11" font-family="IBM Plex Mono">只需少量微调（约 400 steps），模型即可适应新的上下文长度</text>
+    </svg>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="color:var(--blue)">①</div>
+      <div class="step-body">
+        <div class="title">确定缩放比例 s</div>
+        <div class="desc">s = 目标长度 ÷ 训练长度。例如训练用 4K、目标 128K，则 s = 32</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--blue)">②</div>
+      <div class="step-body">
+        <div class="title">按维度的频率特性分区</div>
+        <div class="desc">高频维度（θ 小）保持不变，低频维度（θ 大）整体除以 s，中间做线性插值</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--blue)">③</div>
+      <div class="step-body">
+        <div class="title">少量微调</div>
+        <div class="desc">用少量长文本数据（约几百步）微调，让模型适应新的角度分布。不需要从头训练</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--green)">④</div>
+      <div class="step-body">
+        <div class="title">推理时的长度扩展</div>
+        <div class="desc">LongRoPE（2024）更进一步：在推理时动态调整每一层的缩放比例，实现无需微调的 2M token 外推</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="border-color:var(--blue);background:var(--bd)">
+    <strong style="color:var(--blue)">实际效果</strong>：LLaMA 3.1 用 YaRN 变种将上下文从 8K 扩展到 128K，仅用了约 0.1% 的训练计算量做长上下文微调。Phi-3 用类似方法从 4K 扩展到 128K。这使得"长上下文"不再需要昂贵的从头训练。
+  </div>
+</section>
+
+<!-- ═══ 04. GQA/MQA ═══ -->
+<section class="section" id="gqa">
+  <div class="section-badge" style="color:var(--amber);border-color:rgba(251,191,36,0.3);background:var(--ad)">
+    <span>04</span><span>GQA / MQA</span>
+  </div>
+  <h2 class="section-title">GQA 与 MQA：精简注意力头</h2>
+  <p class="section-sub">多个 Query 头共享一组 K/V，大幅削减推理时的 KV Cache 显存</p>
+
+  <p class="prose">
+    标准多头注意力（MHA）中，每个注意力头都有<em>独立的</em> Q、K、V 投影矩阵。假设有 32 个头，那就有 32 组 K 和 32 组 V，推理时每个 Token 都要缓存这 64 组向量——这是 KV Cache 显存爆炸的直接原因。
+  </p>
+
+  <!-- MHA vs MQA vs GQA -->
+  <div class="diagram">
+    <div class="diagram-title">三种注意力结构对比</div>
+    <svg viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- ── MHA ── -->
+      <text x="120" y="22" text-anchor="middle" fill="var(--coral)" font-size="12" font-weight="600" font-family="IBM Plex Mono">MHA（标准多头）</text>
+      <!-- 4 heads -->
+      <g>
+        <rect x="20" y="36" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="45" y="54" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₁</text>
+        <rect x="80" y="36" width="50" height="28" rx="4" fill="rgba(248,113,113,0.2)" stroke="rgba(248,113,113,0.4)" stroke-width="0.8"/>
+        <text x="105" y="54" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₁</text>
+        <rect x="140" y="36" width="50" height="28" rx="4" fill="rgba(52,211,153,0.2)" stroke="rgba(52,211,153,0.4)" stroke-width="0.8"/>
+        <text x="165" y="54" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₁</text>
+      </g>
+      <g>
+        <rect x="20" y="76" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="45" y="94" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₂</text>
+        <rect x="80" y="76" width="50" height="28" rx="4" fill="rgba(248,113,113,0.2)" stroke="rgba(248,113,113,0.4)" stroke-width="0.8"/>
+        <text x="105" y="94" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₂</text>
+        <rect x="140" y="76" width="50" height="28" rx="4" fill="rgba(52,211,153,0.2)" stroke="rgba(52,211,153,0.4)" stroke-width="0.8"/>
+        <text x="165" y="94" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₂</text>
+      </g>
+      <g>
+        <rect x="20" y="116" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="45" y="134" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₃</text>
+        <rect x="80" y="116" width="50" height="28" rx="4" fill="rgba(248,113,113,0.2)" stroke="rgba(248,113,113,0.4)" stroke-width="0.8"/>
+        <text x="105" y="134" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₃</text>
+        <rect x="140" y="116" width="50" height="28" rx="4" fill="rgba(52,211,153,0.2)" stroke="rgba(52,211,153,0.4)" stroke-width="0.8"/>
+        <text x="165" y="134" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₃</text>
+      </g>
+      <g>
+        <rect x="20" y="156" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="45" y="174" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₄</text>
+        <rect x="80" y="156" width="50" height="28" rx="4" fill="rgba(248,113,113,0.2)" stroke="rgba(248,113,113,0.4)" stroke-width="0.8"/>
+        <text x="105" y="174" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₄</text>
+        <rect x="140" y="156" width="50" height="28" rx="4" fill="rgba(52,211,153,0.2)" stroke="rgba(52,211,153,0.4)" stroke-width="0.8"/>
+        <text x="165" y="174" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₄</text>
+      </g>
+      <text x="120" y="210" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">KV heads = 4 × Q heads</text>
+      <text x="120" y="224" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">KV Cache: 100%</text>
+
+      <!-- ── MQA ── -->
+      <text x="400" y="22" text-anchor="middle" fill="var(--amber)" font-size="12" font-weight="600" font-family="IBM Plex Mono">MQA（多查询注意力）</text>
+      <g>
+        <rect x="300" y="36" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="325" y="54" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₁</text>
+      </g>
+      <g>
+        <rect x="300" y="76" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="325" y="94" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₂</text>
+      </g>
+      <g>
+        <rect x="300" y="116" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="325" y="134" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₃</text>
+      </g>
+      <g>
+        <rect x="300" y="156" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="325" y="174" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₄</text>
+      </g>
+      <!-- Single K/V shared -->
+      <rect x="420" y="96" width="50" height="28" rx="4" fill="rgba(248,113,113,0.35)" stroke="rgba(248,113,113,0.7)" stroke-width="1.2"/>
+      <text x="445" y="114" text-anchor="middle" fill="var(--coral)" font-size="10" font-weight="600" font-family="IBM Plex Mono">K</text>
+      <rect x="420" y="136" width="50" height="28" rx="4" fill="rgba(52,211,153,0.35)" stroke="rgba(52,211,153,0.7)" stroke-width="1.2"/>
+      <text x="445" y="154" text-anchor="middle" fill="var(--green)" font-size="10" font-weight="600" font-family="IBM Plex Mono">V</text>
+      <!-- Arrows from Qs to single K/V -->
+      <line x1="350" y1="50" x2="418" y2="110" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+      <line x1="350" y1="90" x2="418" y2="110" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+      <line x1="350" y1="130" x2="418" y2="148" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+      <line x1="350" y1="170" x2="418" y2="148" stroke="rgba(255,255,255,0.1)" stroke-width="0.8"/>
+      <text x="400" y="210" text-anchor="middle" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">KV heads = 1，速度最快</text>
+      <text x="400" y="224" text-anchor="middle" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">KV Cache: 25% ▼ 质量略降</text>
+
+      <!-- ── GQA ── -->
+      <text x="620" y="22" text-anchor="middle" fill="var(--green)" font-size="12" font-weight="600" font-family="IBM Plex Mono">GQA（分组查询）</text>
+      <g>
+        <rect x="560" y="36" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="585" y="54" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₁</text>
+      </g>
+      <g>
+        <rect x="560" y="76" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="585" y="94" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₂</text>
+      </g>
+      <!-- shared KV group 1 -->
+      <rect x="624" y="46" width="50" height="24" rx="4" fill="rgba(248,113,113,0.25)" stroke="rgba(248,113,113,0.5)" stroke-width="1"/>
+      <text x="649" y="62" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₁, V₁</text>
+      <line x1="610" y1="50" x2="622" y2="58" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+      <line x1="610" y1="90" x2="622" y2="62" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+      <g>
+        <rect x="560" y="116" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="585" y="134" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₃</text>
+      </g>
+      <g>
+        <rect x="560" y="156" width="50" height="28" rx="4" fill="rgba(96,165,250,0.2)" stroke="rgba(96,165,250,0.4)" stroke-width="0.8"/>
+        <text x="585" y="174" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Q₄</text>
+      </g>
+      <!-- shared KV group 2 -->
+      <rect x="624" y="126" width="50" height="24" rx="4" fill="rgba(52,211,153,0.25)" stroke="rgba(52,211,153,0.5)" stroke-width="1"/>
+      <text x="649" y="142" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">K₂, V₂</text>
+      <line x1="610" y1="130" x2="622" y2="138" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+      <line x1="610" y1="170" x2="622" y2="142" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+      <text x="620" y="210" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">KV heads = 2，平衡方案</text>
+      <text x="620" y="224" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">KV Cache: 50% ▼ 质量接近MHA</text>
+
+      <!-- Bottom comparison -->
+      <text x="360" y="270" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">LLaMA 3 使用 GQA：Q heads=32, KV heads=8，显存节省 4×</text>
+      <text x="360" y="288" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">Mistral 7B 使用 GQA：Q heads=32, KV heads=8</text>
+    </svg>
+  </div>
+
+  <div class="callout" style="border-color:var(--amber);background:var(--ad)">
+    <strong style="color:var(--amber)">为什么对长上下文特别重要？</strong> 长上下文推理时，KV Cache 的显存占用随序列长度线性增长。128K token + 70B 参数模型的 KV Cache 可能需要 100GB+。GQA 将 KV heads 从 64 减到 8，显存占用直接砍掉 8×，这是长上下文可以在单机运行的关键。
+  </div>
+</section>
+
+<!-- ═══ 05. 稀疏注意力 ═══ -->
+<section class="section" id="sparse">
+  <div class="section-badge" style="color:var(--pink);border-color:rgba(244,114,182,0.3);background:rgba(244,114,182,0.06)">
+    <span>05</span><span>稀疏 & 滑动窗口注意力</span>
+  </div>
+  <h2 class="section-title">稀疏注意力 & 滑动窗口</h2>
+  <p class="section-sub">不是每个词都需要看所有词——有选择地计算注意力</p>
+
+  <p class="prose">
+    前面的技术都是在"同样计算全量注意力"的前提下优化。稀疏注意力走了另一条路：<em>根本就不计算所有的 n×n 注意力对</em>，只计算"有意义"的那些，把复杂度从 O(n²) 降到 O(n·k)。
+  </p>
+
+  <!-- Sparse attention patterns -->
+  <div class="diagram">
+    <div class="diagram-title">四种注意力模式（黑色 = 计算，白色 = 跳过）</div>
+    <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- ① Full Attention -->
+      <text x="80" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">全量注意力</text>
+      <g id="full">
+        <rect x="20" y="30" width="120" height="120" rx="4" fill="rgba(255,255,255,0.02)" stroke="var(--line2)" stroke-width="0.8"/>
+        <!-- fill all cells -->
+        <rect x="22" y="32" width="116" height="116" rx="2" fill="rgba(248,113,113,0.35)"/>
+        <text x="80" y="93" text-anchor="middle" fill="rgba(248,113,113,0.9)" font-size="18" font-family="IBM Plex Mono">■■■</text>
+        <text x="80" y="112" text-anchor="middle" fill="rgba(248,113,113,0.9)" font-size="18" font-family="IBM Plex Mono">■■■</text>
+        <text x="80" y="131" text-anchor="middle" fill="rgba(248,113,113,0.9)" font-size="18" font-family="IBM Plex Mono">■■■</text>
+      </g>
+      <text x="80" y="168" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">O(n²)</text>
+      <text x="80" y="182" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">每个看所有</text>
+
+      <!-- ② Sliding Window -->
+      <text x="260" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">滑动窗口（Mistral）</text>
+      <rect x="200" y="30" width="120" height="120" rx="4" fill="rgba(255,255,255,0.02)" stroke="var(--line2)" stroke-width="0.8"/>
+      <!-- Draw diagonal band -->
+      <rect x="202" y="32" width="30" height="30" rx="1" fill="rgba(34,211,238,0.4)"/>
+      <rect x="232" y="32" width="30" height="30" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="202" y="62" width="30" height="30" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="232" y="62" width="30" height="30" rx="1" fill="rgba(34,211,238,0.4)"/>
+      <rect x="262" y="62" width="30" height="30" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="232" y="92" width="30" height="30" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="262" y="92" width="30" height="30" rx="1" fill="rgba(34,211,238,0.4)"/>
+      <rect x="292" y="92" width="26" height="30" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="262" y="122" width="30" height="26" rx="1" fill="rgba(34,211,238,0.15)"/>
+      <rect x="292" y="122" width="26" height="26" rx="1" fill="rgba(34,211,238,0.4)"/>
+      <text x="260" y="168" text-anchor="middle" fill="var(--teal)" font-size="10" font-family="IBM Plex Mono">O(n·w)</text>
+      <text x="260" y="182" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">只看附近 w 个</text>
+
+      <!-- ③ Global + Local (Longformer) -->
+      <text x="450" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">全局+局部（Longformer）</text>
+      <rect x="390" y="30" width="120" height="120" rx="4" fill="rgba(255,255,255,0.02)" stroke="var(--line2)" stroke-width="0.8"/>
+      <!-- First row/col: global -->
+      <rect x="392" y="32" width="116" height="26" rx="1" fill="rgba(167,139,250,0.3)"/>
+      <rect x="392" y="32" width="26" height="116" rx="1" fill="rgba(167,139,250,0.2)"/>
+      <!-- diagonal local -->
+      <rect x="420" y="60" width="26" height="26" rx="1" fill="rgba(251,191,36,0.3)"/>
+      <rect x="446" y="86" width="26" height="26" rx="1" fill="rgba(251,191,36,0.3)"/>
+      <rect x="472" y="112" width="36" height="26" rx="1" fill="rgba(251,191,36,0.3)"/>
+      <text x="450" y="168" text-anchor="middle" fill="var(--purple)" font-size="10" font-family="IBM Plex Mono">O(n·(g+w))</text>
+      <text x="450" y="182" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">特殊 token 看全局</text>
+
+      <!-- ④ Flash Decoding (chunked) -->
+      <text x="640" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">分块因果（GPT类）</text>
+      <rect x="580" y="30" width="120" height="120" rx="4" fill="rgba(255,255,255,0.02)" stroke="var(--line2)" stroke-width="0.8"/>
+      <!-- lower triangle only -->
+      <rect x="582" y="32" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="582" y="62" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="608" y="62" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="582" y="92" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="608" y="92" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="634" y="92" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="582" y="122" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="608" y="122" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="634" y="122" width="26" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <rect x="660" y="122" width="38" height="26" rx="1" fill="rgba(96,165,250,0.4)"/>
+      <text x="640" y="168" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">O(n²/2)</text>
+      <text x="640" y="182" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">因果遮蔽（标准）</text>
+
+      <!-- Bottom note -->
+      <text x="360" y="230" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">■ 深色 = 计算注意力 · 空白 = 跳过（直接置为 −∞）</text>
+      <text x="360" y="250" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">Mistral 7B 的滑动窗口大小 w = 4096，配合滚动 KV Cache 使用</text>
+      <text x="360" y="270" text-anchor="middle" fill="var(--amber)" font-size="11" font-family="IBM Plex Mono">代价：远距离信息只能逐层"接力传递"，可能丢失精度</text>
+    </svg>
+  </div>
+
+  <p class="prose">
+    滑动窗口注意力的<strong>关键局限</strong>：位置 1000 的 Token 无法直接"看到"位置 1 的信息，必须依靠中间层的激活值逐层传递。在实践中，Mistral 通过叠加 32 层，每层窗口 4K，理论感受野约 4K×32 = 128K——但实验表明远距离信息的质量不如全量注意力。
+  </p>
+
+  <div class="callout" style="border-color:var(--pink);background:rgba(244,114,182,0.06)">
+    <strong style="color:var(--pink)">最新趋势</strong>：2024 年后，大部分前沿模型（GPT-4o, Claude 3, Gemini 1.5）转向了"全量注意力 + Flash Attention + GQA"的组合，而不是用稀疏注意力——因为全量注意力质量更好，而 Flash Attention + GQA 已经把开销控制在可接受范围内。
+  </div>
+</section>
+
+<!-- ═══ 06. KV Cache ═══ -->
+<section class="section" id="kvcache">
+  <div class="section-badge" style="color:var(--orange);border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.07)">
+    <span>06</span><span>KV Cache 原理与优化</span>
+  </div>
+  <h2 class="section-title">KV Cache：推理时最大的显存杀手</h2>
+  <p class="section-sub">自回归生成为什么必须缓存？又如何在长上下文下把它压下去？</p>
+
+  <p class="prose">
+    大语言模型生成文本时，每生成一个新 Token，就要把整个上下文重新跑一遍注意力——这代价太大。<em>KV Cache</em> 的思想是：把历史 Token 的 Key 和 Value 向量<strong>缓存起来</strong>，生成新 Token 时只需计算新 Token 的 Q，然后和缓存的 K/V 做注意力即可。
+  </p>
+
+  <!-- KV Cache diagram -->
+  <div class="diagram">
+    <div class="diagram-title">KV Cache 工作原理：第 t 步生成新 token</div>
+    <svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="kv-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M2 2L8 5L2 8" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+
+      <!-- Previous tokens -->
+      <text x="200" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">KV Cache（已缓存，不重复计算）</text>
+      <rect x="20" y="34" width="360" height="180" rx="8" fill="rgba(96,165,250,0.06)" stroke="rgba(96,165,250,0.2)" stroke-width="1"/>
+
+      <!-- Token slots in cache -->
+      <g>
+        <rect x="36" y="50" width="60" height="148" rx="4" fill="rgba(96,165,250,0.1)" stroke="rgba(96,165,250,0.25)" stroke-width="0.8"/>
+        <text x="66" y="72" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Token₁</text>
+        <text x="66" y="100" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₁</text>
+        <text x="66" y="116" text-anchor="middle" fill="var(--coral)" font-size="9" font-family="IBM Plex Mono">[d×1]</text>
+        <text x="66" y="144" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₁</text>
+        <text x="66" y="160" text-anchor="middle" fill="var(--green)" font-size="9" font-family="IBM Plex Mono">[d×1]</text>
+      </g>
+      <g>
+        <rect x="108" y="50" width="60" height="148" rx="4" fill="rgba(96,165,250,0.1)" stroke="rgba(96,165,250,0.25)" stroke-width="0.8"/>
+        <text x="138" y="72" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Token₂</text>
+        <text x="138" y="100" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K₂</text>
+        <text x="138" y="144" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V₂</text>
+      </g>
+      <text x="230" y="130" text-anchor="middle" fill="var(--dim)" font-size="16" font-family="IBM Plex Mono">· · ·</text>
+      <g>
+        <rect x="300" y="50" width="64" height="148" rx="4" fill="rgba(96,165,250,0.1)" stroke="rgba(96,165,250,0.25)" stroke-width="0.8"/>
+        <text x="332" y="72" text-anchor="middle" fill="var(--blue)" font-size="10" font-family="IBM Plex Mono">Token_{t-1}</text>
+        <text x="332" y="100" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K_{t-1}</text>
+        <text x="332" y="144" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V_{t-1}</text>
+      </g>
+
+      <!-- New token -->
+      <text x="530" y="22" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">新 Token_t（只计算这个）</text>
+      <rect x="454" y="34" width="100" height="180" rx="8" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.4)" stroke-width="1.2"/>
+      <text x="504" y="68" text-anchor="middle" fill="var(--amber)" font-size="11" font-weight="600" font-family="IBM Plex Mono">Token_t</text>
+      <text x="504" y="96" text-anchor="middle" fill="var(--blue)" font-size="11" font-weight="600" font-family="IBM Plex Mono">Q_t</text>
+      <text x="504" y="112" text-anchor="middle" fill="var(--sub)" font-size="9" font-family="IBM Plex Mono">只有 Q</text>
+      <text x="504" y="140" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">K_t → 存入Cache</text>
+      <text x="504" y="172" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">V_t → 存入Cache</text>
+
+      <!-- Arrow: Q_t attends to all cached K/V -->
+      <line x1="452" y1="96" x2="392" y2="124" stroke="rgba(251,191,36,0.5)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#kv-arr)"/>
+      <text x="420" y="108" text-anchor="middle" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">Q_t 与所有缓存 K 做注意力</text>
+
+      <!-- Memory cost annotation -->
+      <rect x="20" y="232" width="640" height="56" rx="8" fill="rgba(255,255,255,0.02)" stroke="var(--line)" stroke-width="0.8"/>
+      <text x="340" y="254" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">KV Cache 显存 = 2 × n_layers × n_kv_heads × d_head × seq_len × bytes_per_elem</text>
+      <text x="340" y="274" text-anchor="middle" fill="var(--coral)" font-size="11" font-family="IBM Plex Mono">例：70B 模型，128K context → KV Cache ≈ 160 GB（FP16）；INT4 量化后 ≈ 40 GB</text>
+    </svg>
+  </div>
+
+  <p class="prose">KV Cache 的显存优化策略：</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="color:var(--orange)">①</div>
+      <div class="step-body">
+        <div class="title">KV Cache 量化（INT8 / INT4）</div>
+        <div class="desc">把缓存的 K/V 向量从 FP16（2 字节/元素）压缩到 INT8（1 字节）或 INT4（0.5 字节）。精度略微损失，但显存减半/减四倍。GPTQ-KV、KVQuant 等方案可以做到几乎无损的 INT4。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--orange)">②</div>
+      <div class="step-body">
+        <div class="title">PagedAttention（vLLM）</div>
+        <div class="desc">借鉴操作系统"内存分页"思想。把 KV Cache 切成固定大小的"页"，不连续存储，按需分配，避免内存碎片。让服务器同时处理数百并发请求成为可能。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--orange)">③</div>
+      <div class="step-body">
+        <div class="title">Token 淘汰 / 稀疏 KV Cache</div>
+        <div class="desc">动态丢弃"不重要"的历史 Token 的 KV。StreamingLLM 保留所有"Sink Tokens"（开头）+ 滑动窗口尾部，实现无限长上下文（但真正理解受限）。H2O 算法根据注意力得分保留重要 Token。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="color:var(--orange)">④</div>
+      <div class="step-body">
+        <div class="title">Prefix Caching / Prompt Caching</div>
+        <div class="desc">多次请求共享同一个"系统提示"时，只计算一次其 KV Cache，后续请求复用。Anthropic 的 Claude、OpenAI API 均支持此功能。可将重复长提示的成本降低 90%。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 07. 长文本训练 ═══ -->
+<section class="section" id="longdata">
+  <div class="section-badge" style="color:var(--green);border-color:rgba(52,211,153,0.3);background:var(--gd)">
+    <span>07</span><span>长文本训练策略</span>
+  </div>
+  <h2 class="section-title">有窗口，不等于会用</h2>
+  <p class="section-sub">工程解决了容量，训练解决了能力——让模型真正"善用"长上下文</p>
+
+  <p class="prose">
+    一个常见误区：认为只要技术上支持了 128K 上下文，模型就能"真正理解"128K 的内容。实际上，<em>草堆中找针（Needle-in-a-Haystack）</em>测试表明，很多号称支持长上下文的模型，在上下文超过 32K 后，提取中间段信息的能力就急剧下降——这不是窗口大小的问题，而是训练问题。
+  </p>
+
+  <!-- Lost in the middle illustration -->
+  <div class="diagram">
+    <div class="diagram-title">"Lost in the Middle" 现象：模型对上下文位置的注意力分布</div>
+    <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- Axes -->
+      <line x1="60" y1="170" x2="680" y2="170" stroke="var(--line2)" stroke-width="1.2"/>
+      <line x1="60" y1="40" x2="60" y2="170" stroke="var(--line2)" stroke-width="1.2"/>
+      <text x="370" y="200" text-anchor="middle" fill="var(--sub)" font-size="11" font-family="IBM Plex Mono">信息在上下文中的位置（开始 → 结尾）</text>
+      <text x="370" y="218" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono">（Liu et al. 2023, "Lost in the Middle"）</text>
+      <text x="30" y="110" text-anchor="middle" fill="var(--sub)" font-size="10" font-family="IBM Plex Mono" transform="rotate(-90 30 110)">检索准确率</text>
+
+      <!-- Y-axis ticks -->
+      <text x="54" y="50" text-anchor="end" fill="var(--dim)" font-size="10" font-family="IBM Plex Mono">高</text>
+      <text x="54" y="170" text-anchor="end" fill="var(--dim)" font-size="10" font-family="IBM Plex Mono">低</text>
+
+      <!-- U-shaped curve: high at start, low in middle, medium-high at end -->
+      <path d="M70 60 C100 55, 140 58, 180 80 C220 108, 280 145, 370 148 C450 148, 520 115, 570 88 C610 68, 650 55, 680 50"
+        fill="none" stroke="var(--coral)" stroke-width="2.5"/>
+      <!-- Shade under curve -->
+      <path d="M70 60 C100 55, 140 58, 180 80 C220 108, 280 145, 370 148 C450 148, 520 115, 570 88 C610 68, 650 55, 680 50 L680 170 L70 170 Z"
+        fill="rgba(248,113,113,0.06)"/>
+
+      <!-- Annotations -->
+      <text x="120" y="46" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono">开头信息记得好</text>
+      <text x="370" y="140" text-anchor="middle" fill="var(--coral)" font-size="10" font-family="IBM Plex Mono">中间段容易"遗忘"</text>
+      <text x="620" y="46" text-anchor="middle" fill="var(--amber)" font-size="10" font-family="IBM Plex Mono">结尾信息还行</text>
+
+      <!-- After long-context training: flatter curve -->
+      <path d="M70 65 C200 62, 370 66, 550 64 C620 63, 660 62, 680 60"
+        fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="400" y="88" text-anchor="middle" fill="var(--green)" font-size="10" font-family="IBM Plex Mono" opacity="0.8">---- 长文本专项训练后（更均匀）</text>
+    </svg>
+  </div>
+
+  <p class="prose">针对这个问题，现代训练策略包括：</p>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">长文本数据配比</div>
+      <div class="tc-val" style="color:var(--green);font-size:0.95rem">专项数据混合</div>
+      <div class="tc-desc">在预训练后期或微调阶段，专门加入长文档数据（书籍、代码仓库、长对话），占比约 5–20%</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">渐进式长度课程</div>
+      <div class="tc-val" style="color:var(--teal);font-size:0.95rem">Curriculum Learning</div>
+      <div class="tc-desc">先用短序列训练，逐步增大序列长度。让模型先学会短距离推理，再学长距离，避免训练初期损失爆炸</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">RLHF 长上下文对齐</div>
+      <div class="tc-val" style="color:var(--purple);font-size:0.95rem">针对性强化学习</div>
+      <div class="tc-desc">专门构造需要从长文本中提取、综合信息的问题，通过人类反馈或 AI 反馈强化模型的"深度阅读"能力</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">长文本合成数据</div>
+      <div class="tc-val" style="color:var(--amber);font-size:0.95rem">数据增强</div>
+      <div class="tc-desc">自动生成"把答案藏在文档中间"的 QA 对，强制模型练习检索中段信息，对抗 Lost in the Middle</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08. Summary ═══ -->
+<section class="section" id="summary">
+  <div class="section-badge" style="color:var(--amber);border-color:rgba(251,191,36,0.3);background:var(--ad)">
+    <span>08</span><span>技术对比总结</span>
+  </div>
+  <h2 class="section-title">各技术综合对比</h2>
+  <p class="section-sub">解决的问题、代价、现状</p>
+
+  <table class="cmp-table">
+    <tr>
+      <th>技术</th>
+      <th>解决什么问题</th>
+      <th>复杂度改善</th>
+      <th>代价 / 局限</th>
+      <th>主流应用</th>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--teal)">Flash Attention 2/3</strong></td>
+      <td>HBM 带宽瓶颈，显存 O(n²)</td>
+      <td>IO: O(n²)→O(n)<br>速度 2–4×</td>
+      <td>算法复杂，需与硬件强绑定</td>
+      <td>几乎所有现代模型训练</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--purple)">RoPE + YaRN</strong></td>
+      <td>位置编码无法外推</td>
+      <td>无计算量变化，仅改变位置编码</td>
+      <td>极远距离仍有精度下降；需少量微调</td>
+      <td>LLaMA 3, Qwen2, Mistral, Phi-3</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--amber)">GQA / MQA</strong></td>
+      <td>KV Cache 显存占用</td>
+      <td>KV Cache：减少 4–8×</td>
+      <td>质量略低于 MHA；需重新训练</td>
+      <td>LLaMA 3, Gemma, Mistral, Falcon</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--pink)">滑动窗口注意力</strong></td>
+      <td>注意力计算 O(n²)</td>
+      <td>O(n²)→O(n·w)</td>
+      <td>远距离信息靠层间传递，质量下降</td>
+      <td>Mistral 7B（早期版本）</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--orange)">KV Cache 量化</strong></td>
+      <td>推理显存峰值</td>
+      <td>显存：减少 2–4×</td>
+      <td>量化误差；需专门的量化感知训练</td>
+      <td>vLLM, TensorRT-LLM, llama.cpp</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--orange)">PagedAttention</strong></td>
+      <td>显存碎片，并发吞吐</td>
+      <td>并发量提升 2–4×</td>
+      <td>实现复杂，主要是推理服务层优化</td>
+      <td>vLLM, SGLang</td>
+    </tr>
+    <tr>
+      <td><strong style="color:var(--green)">长文本训练数据</strong></td>
+      <td>有窗口但不会用</td>
+      <td>无复杂度改变，提升质量</td>
+      <td>数据稀缺；训练成本高</td>
+      <td>Claude 3, GPT-4, Gemini 1.5</td>
+    </tr>
+  </table>
+
+  <div class="callout" style="border-color:var(--teal);background:var(--td);margin-top:28px">
+    <strong style="color:var(--teal)">现代长上下文模型的标准"配方"</strong>（以 Gemini 1.5 Pro 1M / Claude 3 200K 为例）：<br>
+    Flash Attention 3（IO 优化）+ RoPE + YaRN 外推 + GQA（减少 KV 显存）+ 专项长文本训练数据 + 长上下文 RLHF 对齐 + 推理端 KV Cache 量化 + PagedAttention 服务部署<br><br>
+    <strong>没有单一银弹——是多个技术协同叠加的结果。</strong>
+  </div>
+
+  <div style="margin-top:28px;background:var(--bg3);border-radius:12px;padding:22px;border:1px solid var(--line2)">
+    <div style="font-weight:600;color:var(--text);margin-bottom:14px">未来方向</div>
+    <div class="pill-grid">
+      <span class="pill" style="color:var(--purple);border-color:rgba(167,139,250,0.3);background:var(--pd)">Mamba / SSM 线性复杂度架构</span>
+      <span class="pill" style="color:var(--teal);border-color:rgba(34,211,238,0.3);background:var(--td)">Linear Attention 近似</span>
+      <span class="pill" style="color:var(--green);border-color:rgba(52,211,153,0.3);background:var(--gd)">外部记忆 (Memory Augmented)</span>
+      <span class="pill" style="color:var(--amber);border-color:rgba(251,191,36,0.3);background:var(--ad)">RAG + 长上下文混合</span>
+      <span class="pill" style="color:var(--blue);border-color:rgba(96,165,250,0.3);background:var(--bd)">Speculative Decoding 加速</span>
+      <span class="pill" style="color:var(--coral);border-color:rgba(248,113,113,0.3);background:var(--cd)">MoE × 长上下文</span>
+    </div>
+  </div>
+</section>
+
+</div><!-- /main -->
+
+<script>
+// Active nav highlight
+var sections = document.querySelectorAll('section[id]');
+var navLinks = document.querySelectorAll('.sidenav a');
+function onScroll(){
+  var scroll = window.scrollY + 120;
+  var current = '';
+  sections.forEach(function(s){
+    if(s.offsetTop <= scroll) current = s.id;
+  });
+  navLinks.forEach(function(a){
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll();
+</script>
+</body>
+</html>

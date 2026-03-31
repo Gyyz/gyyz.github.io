@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG 与工具使用 | AI 技术演进</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">AI 技术演进</a>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="transformer.html">Transformer</a>
+                <a href="llm.html">大语言模型</a>
+                <a href="alignment.html">对齐与RLHF</a>
+                <a href="prompting.html">提示工程</a>
+                <a href="rag.html" class="active">RAG与工具</a>
+                <a href="agents.html">AI Agent</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <section class="page-header">
+            <span class="chapter-num">Chapter 05</span>
+            <h1>RAG 与工具使用</h1>
+            <p class="subtitle">从向量检索到 MCP — 让 LLM 接入真实世界的完整技术栈</p>
+        </section>
+
+        <!-- Main Content -->
+        <main class="content">
+
+            <!-- Section 1: RAG 的动机 -->
+            <section class="section" id="rag-motivation">
+                <h2>1. RAG 的动机</h2>
+
+                <div class="subsection">
+                    <h3>LLM 的核心局限</h3>
+                    <div class="problem-grid">
+                        <div class="problem-card">
+                            <h4>知识截止 (Knowledge Cutoff)</h4>
+                            <p>预训练数据有明确的时间边界。GPT-4 的知识截止于 2023 年 4 月，对于最新信息、实时股价、最近发表的论文等无法准确回答。这限制了模型在时效性要求高的领域的应用。</p>
+                        </div>
+                        <div class="problem-card">
+                            <h4>幻觉问题 (Hallucination)</h4>
+                            <p>模型会生成看似合理但完全虚构的信息。因为模型本质是一个统计文本预测器，没有真实的知识库或事实检查机制。在知识库外的话题上，模型倾向于编造答案而不是表示不知道。</p>
+                        </div>
+                        <div class="problem-card">
+                            <h4>无法访问私有数据 (No Private Data Access)</h4>
+                            <p>企业的内部文档、数据库、CRM 系统、专有知识库等都不在模型的训练数据中。模型无法直接查询或检索这些私有信息，限制了在企业应用中的可用性。</p>
+                        </div>
+                        <div class="problem-card">
+                            <h4>上下文窗口限制 (Context Window Limit)</h4>
+                            <p>虽然现代 LLM 的上下文窗口在扩大 (例如 GPT-4 Turbo 128K)，但仍有上限。处理超大规模文本库时，需要智能检索而非直接注入全部数据。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>RAG 的核心思想</h3>
+                    <div class="concept-box">
+                        <p><strong>RAG (Retrieval-Augmented Generation)</strong> 的核心思想：</p>
+                        <div class="concept-flow">
+                            <span class="flow-step">用户查询</span>
+                            <span class="flow-arrow">→</span>
+                            <span class="flow-step">检索相关文档</span>
+                            <span class="flow-arrow">→</span>
+                            <span class="flow-step">注入 Context</span>
+                            <span class="flow-arrow">→</span>
+                            <span class="flow-step">LLM 生成答案</span>
+                        </div>
+                        <p style="margin-top: 15px;">不依赖模型的参数知识，而是动态检索外部知识库中的相关信息，让模型基于真实、最新的上下文生成答案。</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>RAG 的三个演进阶段</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>演进阶段</th>
+                                <th>核心特点</th>
+                                <th>优点</th>
+                                <th>缺点</th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Naive RAG</strong></td>
+                                <td>分块 → 嵌入 → 相似度搜索 → LLM</td>
+                                <td>实现简单，流程清晰</td>
+                                <td>检索精度低，易丢失上下文</td>
+                                <td>快速原型，小规模场景</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Advanced RAG</strong></td>
+                                <td>查询优化 + 精排 + 重排 + 上下文压缩</td>
+                                <td>检索和生成质量显著提升</td>
+                                <td>系统复杂度增加，计算成本提高</td>
+                                <td>生产环境，对质量要求高</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Modular RAG</strong></td>
+                                <td>模块化设计，支持条件路由和动态组装</td>
+                                <td>灵活性强，可针对性优化每个模块</td>
+                                <td>需要大量标注数据和实验</td>
+                                <td>超大规模应用，特殊业务需求</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 2: RAG 完整架构 -->
+            <section class="section" id="rag-architecture">
+                <h2>2. RAG 完整架构</h2>
+
+                <div class="subsection">
+                    <h3>两大阶段：索引 + 查询</h3>
+
+                    <div class="architecture-diagram">
+                        <svg viewBox="0 0 1400 600" class="rag-arch-svg">
+                            <!-- Title -->
+                            <text x="700" y="30" text-anchor="middle" class="svg-title">RAG 系统架构：索引阶段 + 查询阶段</text>
+
+                            <!-- ===== INDEXING PHASE (TOP) ===== -->
+                            <text x="50" y="70" class="phase-label">索引阶段 (Offline)</text>
+
+                            <!-- Documents -->
+                            <rect x="50" y="90" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="110" y="125" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Documents</text>
+
+                            <!-- Arrow -->
+                            <line x1="170" y1="120" x2="210" y2="120" stroke="#718096" stroke-width="2"/>
+                            <polygon points="210,120 200,115 200,125" fill="#718096"/>
+
+                            <!-- Splitter/Chunker -->
+                            <rect x="210" y="90" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="270" y="115" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Chunking</text>
+                            <text x="270" y="135" text-anchor="middle" fill="#cbd5e0" font-size="12">(分块策略)</text>
+
+                            <!-- Arrow -->
+                            <line x1="330" y1="120" x2="370" y2="120" stroke="#718096" stroke-width="2"/>
+                            <polygon points="370,120 360,115 360,125" fill="#718096"/>
+
+                            <!-- Embedding Model -->
+                            <rect x="370" y="90" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="430" y="115" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Embedding</text>
+                            <text x="430" y="135" text-anchor="middle" fill="#cbd5e0" font-size="12">(向量化)</text>
+
+                            <!-- Arrow -->
+                            <line x1="490" y1="120" x2="530" y2="120" stroke="#718096" stroke-width="2"/>
+                            <polygon points="530,120 520,115 520,125" fill="#718096"/>
+
+                            <!-- Vector Store -->
+                            <rect x="530" y="90" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="600" y="120" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Vector Store</text>
+                            <text x="600" y="140" text-anchor="middle" fill="#cbd5e0" font-size="12">(HNSW, IVF, ...)</text>
+
+                            <!-- Arrow down to metadata store -->
+                            <line x1="600" y1="150" x2="600" y2="200" stroke="#718096" stroke-width="2" stroke-dasharray="5,5"/>
+                            <polygon points="600,200 595,190 605,190" fill="#718096"/>
+
+                            <!-- Metadata Store -->
+                            <rect x="530" y="200" width="140" height="50" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="600" y="230" text-anchor="middle" fill="#e2e8f0" font-size="13">元数据存储</text>
+
+                            <!-- ===== QUERY PHASE (BOTTOM) ===== -->
+                            <text x="50" y="320" class="phase-label">查询阶段 (Online)</text>
+
+                            <!-- User Query -->
+                            <rect x="50" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="110" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">User Query</text>
+
+                            <!-- Arrow -->
+                            <line x1="170" y1="370" x2="210" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="210,370 200,365 200,375" fill="#718096"/>
+
+                            <!-- Query Embedding -->
+                            <rect x="210" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="270" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Query Embed</text>
+
+                            <!-- Arrow -->
+                            <line x1="330" y1="370" x2="370" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="370,370 360,365 360,375" fill="#718096"/>
+
+                            <!-- Retriever (searches vector store) -->
+                            <rect x="370" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="430" y="370" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Retriever</text>
+                            <text x="430" y="385" text-anchor="middle" fill="#cbd5e0" font-size="12">(ANN Search)</text>
+
+                            <!-- Arrow -->
+                            <line x1="490" y1="370" x2="530" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="530,370 520,365 520,375" fill="#718096"/>
+
+                            <!-- Retrieved Documents -->
+                            <rect x="530" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="590" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Top-K Docs</text>
+
+                            <!-- Arrow -->
+                            <line x1="650" y1="370" x2="690" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="690,370 680,365 680,375" fill="#718096"/>
+
+                            <!-- Reranker -->
+                            <rect x="690" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="750" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Reranker</text>
+                            <text x="750" y="385" text-anchor="middle" fill="#cbd5e0" font-size="12">(精排)</text>
+
+                            <!-- Arrow -->
+                            <line x1="810" y1="370" x2="850" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="850,370 840,365 840,375" fill="#718096"/>
+
+                            <!-- Context Builder -->
+                            <rect x="850" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="910" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Context Build</text>
+
+                            <!-- Arrow -->
+                            <line x1="970" y1="370" x2="1010" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="1010,370 1000,365 1000,375" fill="#718096"/>
+
+                            <!-- LLM -->
+                            <rect x="1010" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="1070" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">LLM</text>
+                            <text x="1070" y="385" text-anchor="middle" fill="#cbd5e0" font-size="12">(生成)</text>
+
+                            <!-- Arrow -->
+                            <line x1="1130" y1="370" x2="1170" y2="370" stroke="#718096" stroke-width="2"/>
+                            <polygon points="1170,370 1160,365 1160,375" fill="#718096"/>
+
+                            <!-- Final Answer -->
+                            <rect x="1170" y="340" width="120" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                            <text x="1230" y="375" text-anchor="middle" fill="#e2e8f0" class="svg-box-text">Answer</text>
+
+                            <!-- Feedback arrows showing cycle -->
+                            <path d="M 1230 400 Q 1230 470 600 470 Q 200 470 200 400" stroke="#718096" stroke-width="2" fill="none" stroke-dasharray="5,5"/>
+                            <polygon points="200,400 195,410 205,410" fill="#718096"/>
+                            <text x="700" y="490" text-anchor="middle" fill="#cbd5e0" font-size="12">迭代反馈与评估</text>
+                        </svg>
+                    </div>
+
+                    <div class="architecture-notes">
+                        <p><strong>索引阶段 (Indexing)：</strong> 离线预处理，一次性执行。将原始文档分块、向量化，存储到向量数据库中以支持快速检索。</p>
+                        <p><strong>查询阶段 (Query)：</strong> 在线执行，每次用户查询时触发。将用户查询转化为向量，检索相关文档，重排精排，构建提示词，调用 LLM 生成最终答案。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: 文本嵌入 -->
+            <section class="section" id="embedding">
+                <h2>3. 文本嵌入 (Embedding) 详解</h2>
+
+                <div class="subsection">
+                    <h3>嵌入模型的演进</h3>
+                    <div class="timeline-vertical">
+                        <div class="timeline-item">
+                            <span class="timeline-year">2013</span>
+                            <div class="timeline-content">
+                                <strong>Word2Vec</strong><br/>
+                                Skip-gram 和 CBOW 模型。每个词映射到固定维度的向量空间，能捕捉基本的词义关系。局限：单词级别，不能处理词序和长距离语义。
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="timeline-year">2018</span>
+                            <div class="timeline-content">
+                                <strong>ELMo / BERT 嵌入</strong><br/>
+                                上下文化的词嵌入。BERT 能捕捉句子和文档级别的语义，但需要微调。ELMo 基于 LSTM，计算复杂度较高。
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="timeline-year">2019</span>
+                            <div class="timeline-content">
+                                <strong>Sentence-BERT (SBERT)</strong><br/>
+                                引入句子级对比学习损失函数，直接训练产生可比较的句子向量。大幅降低计算成本，成为 RAG 的标准选择。
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="timeline-year">2021-现在</span>
+                            <div class="timeline-content">
+                                <strong>现代嵌入模型</strong><br/>
+                                OpenAI text-embedding-3, BGE (BAAI), E5-mistral, Cohere, GTE, Jina Embeddings 等。在各种下游任务上优化，多语言支持，不同维度选项，特殊用途（长文本、多粒度等）。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>对比学习训练原理</h3>
+                    <p>现代嵌入模型大多基于<strong>对比学习 (Contrastive Learning)</strong>：</p>
+
+                    <div class="formula-box">
+                        <p><strong>InfoNCE Loss 函数：</strong></p>
+                        <code>L = -log(exp(sim(q, p+) / τ) / Σ exp(sim(q, p_i) / τ))</code>
+                        <p style="margin-top: 10px; font-size: 14px;">其中：</p>
+                        <ul style="font-size: 14px;">
+                            <li><code>q</code> - 查询句子的嵌入向量</li>
+                            <li><code>p+</code> - 正样本（相关文本）的嵌入向量</li>
+                            <li><code>p_i</code> - 负样本（无关文本）的嵌入向量</li>
+                            <li><code>sim(·,·)</code> - 相似度函数（通常是余弦相似度）</li>
+                            <li><code>τ</code> - 温度参数，控制相似度分布的锐度</li>
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 15px;"><strong>训练目标：</strong> 最小化正样本与查询的距离，最大化负样本与查询的距离。通过大量正负样本对的对比，模型学会了在向量空间中捕捉语义相似性。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>主流嵌入模型对比</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>模型</th>
+                                <th>维度</th>
+                                <th>训练数据规模</th>
+                                <th>特点</th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>OpenAI text-embedding-3-small</strong></td>
+                                <td>1536</td>
+                                <td>大规模多语言数据</td>
+                                <td>商业模型，性能稳定，降维友好</td>
+                                <td>通用 RAG，企业应用</td>
+                            </tr>
+                            <tr>
+                                <td><strong>OpenAI text-embedding-3-large</strong></td>
+                                <td>3072</td>
+                                <td>大规模多语言数据</td>
+                                <td>更强的表达力，成本更高</td>
+                                <td>高精度需求，知识密集任务</td>
+                            </tr>
+                            <tr>
+                                <td><strong>BGE-M3-Embedding</strong></td>
+                                <td>1024</td>
+                                <td>多语言（包括中文）</td>
+                                <td>开源，多粒度（token, chunk, doc），混合搜索</td>
+                                <td>中文 RAG，多粒度检索</td>
+                            </tr>
+                            <tr>
+                                <td><strong>E5-mistral-7b-instruct</strong></td>
+                                <td>1024</td>
+                                <td>大规模英文数据</td>
+                                <td>基于 Mistral，指令可微调，开源可部署</td>
+                                <td>私有部署，特定领域微调</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cohere embed-v3</strong></td>
+                                <td>可配置 (64-4096)</td>
+                                <td>专有数据集</td>
+                                <td>动态维度，支持短文本和长文本</td>
+                                <td>灵活的成本控制，多任务</td>
+                            </tr>
+                            <tr>
+                                <td><strong>GTE (Alibaba)</strong></td>
+                                <td>1024</td>
+                                <td>中文优化</td>
+                                <td>面向中文优化，开源</td>
+                                <td>中文文档检索</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jina Embeddings v3</strong></td>
+                                <td>可变 (可达 8192)</td>
+                                <td>长文本优化</td>
+                                <td>支持超长上下文 (8K tokens)，云原生</td>
+                                <td>长文档检索，法律文书等</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="subsection">
+                    <h3>高级嵌入技术</h3>
+
+                    <div class="technique-card">
+                        <h4>Hard Negative Mining（难负样本挖掘）</h4>
+                        <p>在对比学习中，不是所有的负样本都同等重要。"难负样本"是那些与查询在语义上相似但标签不同的样本。通过优先使用难负样本，模型的区分能力显著提升。</p>
+                        <p><strong>实现：</strong> 在训练中，使用 BM25 或之前模型的检索结果识别难负样本，优先在批次中包含它们。</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>Matryoshka Representation Learning（俄罗斯套娃表示）</h4>
+                        <p>模型在训练时，同时优化多个不同维度的表示。允许在推理时根据需求选择向量维度，权衡精度与成本。例如，text-embedding-3-small 在全 1536 维度和截断后的 256 维度上都能表现良好。</p>
+                        <p><strong>优势：</strong> 灵活的性能-成本权衡，降低存储和计算成本而几乎不损失精度。</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>相似度计算：余弦相似度</h4>
+                        <p>在高维向量空间中，余弦相似度是检索最常用的相似度度量：</p>
+                        <div class="formula-box" style="margin-top: 8px;">
+                            <code>cos(A, B) = (A · B) / (||A|| × ||B||)</code>
+                            <p style="margin-top: 8px; font-size: 13px;">计算两个向量的夹角的余弦值。结果在 [-1, 1] 之间，值越大表示越相似。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>对比学习中 InfoNCE loss 的直观理解</li>
+                        <li>什么是硬负样本挖掘？为什么重要？</li>
+                        <li>不同嵌入模型的选择标准是什么？</li>
+                        <li>Matryoshka Representation 如何实现成本优化？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 4: 向量数据库 -->
+            <section class="section" id="vector-db">
+                <h2>4. 向量数据库</h2>
+
+                <div class="subsection">
+                    <h3>核心问题：高维近似最近邻搜索 (ANN)</h3>
+                    <p>向量数据库的根本问题：给定一个查询向量 q，从数百万个向量中快速找到最相似的 K 个向量。<strong>精确最近邻搜索</strong>的时间复杂度是 O(N)，这对于大规模数据不可接受。因此需要 <strong>近似最近邻搜索 (ANN)</strong>，在精度和速度之间找到平衡。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>主流 ANN 算法详解</h3>
+
+                    <div class="algorithm-card">
+                        <h4>HNSW (Hierarchical Navigable Small World)</h4>
+                        <p><strong>思路：</strong> 受复杂网络理论启发，构建一个多层的小世界网络结构，在高层稀疏导航，逐层到达目标区域。</p>
+                        <div class="algorithm-details">
+                            <p><strong>构建过程：</strong></p>
+                            <ul>
+                                <li>为每个新插入的向量随机选择一个层级 (layer)</li>
+                                <li>在该层级及更高层级上，找到最近的 M 个向量作为邻接点</li>
+                                <li>连接新向量与这些邻接点，形成图的边</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>查询过程：</strong></p>
+                            <ul>
+                                <li>从最高层的任意点开始（通常是入口点）</li>
+                                <li>在该层贪心搜索，找到最近邻</li>
+                                <li>下降到下一层，从上层找到的最近邻继续贪心搜索</li>
+                                <li>重复直到到达第 0 层，返回 K-NN</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>性能：</strong> 查询时间复杂度 O(log N)，构建复杂度 O(N log N)</p>
+                        </div>
+                    </div>
+
+                    <div class="algorithm-card">
+                        <h4>IVF (Inverted File Index)</h4>
+                        <p><strong>思路：</strong> 先用 K-means 将向量空间分成 K 个聚类簇，每个簇由其聚类中心代表。查询时，找最近的聚类中心，然后只在相关簇内搜索。</p>
+                        <div class="algorithm-details">
+                            <p><strong>构建过程：</strong></p>
+                            <ul>
+                                <li>使用 K-means 算法将全部向量分成 K 个簇</li>
+                                <li>为每个簇维护一个倒排表 (inverted list)，记录属于该簇的向量</li>
+                                <li>保存每个簇的聚类中心向量</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>查询过程：</strong></p>
+                            <ul>
+                                <li>计算查询向量到所有聚类中心的距离</li>
+                                <li>选择最近的 nprobe 个簇（通常 nprobe = 1 到 10）</li>
+                                <li>在这些簇内的向量中进行线性搜索或进一步优化</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>性能：</strong> 当 nprobe 较小时速度快，但精度依赖于簇质量</p>
+                        </div>
+                    </div>
+
+                    <div class="algorithm-card">
+                        <h4>Product Quantization (PQ)</h4>
+                        <p><strong>思路：</strong> 将高维向量分成多个子段，每个子段独立量化。大幅减小存储空间同时保留相似度计算能力。</p>
+                        <div class="algorithm-details">
+                            <p><strong>工作原理：</strong></p>
+                            <ul>
+                                <li>将 D 维向量分成 m 段，每段 d 维</li>
+                                <li>对每段独立进行 K-means 量化，产生 256 个聚类中心</li>
+                                <li>原向量用 m 个字节表示 (每字节是段的聚类索引)</li>
+                                <li>查询时，用段级距离近似计算完整距离</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>优势：</strong> 存储减少 100-1000 倍，距离计算仍然快速</p>
+                        </div>
+                    </div>
+
+                    <div class="algorithm-card">
+                        <h4>ScaNN (Scalable Nearest Neighbors) - Google</h4>
+                        <p><strong>创新点：</strong> 各向异性向量量化 (Anisotropic Vector Quantization)。在量化时考虑各个方向的不同重要性，比等向量化的 PQ 更精确。</p>
+                        <p><strong>特点：</strong> Google 内部使用，在 TIMIT 等标准数据集上性能最优</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>主流向量数据库对比</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>数据库</th>
+                                <th>架构</th>
+                                <th>ANN 算法</th>
+                                <th>部署方式</th>
+                                <th>特点</th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Pinecone</strong></td>
+                                <td>托管云服务</td>
+                                <td>HNSW + 优化</td>
+                                <td>Serverless</td>
+                                <td>完全托管，开箱即用，支持元数据过滤</td>
+                                <td>快速原型，小中型企业</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Weaviate</strong></td>
+                                <td>分布式，模块化</td>
+                                <td>HNSW</td>
+                                <td>自托管 + 云</td>
+                                <td>开源，混合搜索 (dense + sparse)，GraphQL API</td>
+                                <td>混合搜索需求，自有基础设施</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Qdrant</strong></td>
+                                <td>Rust 实现，高性能</td>
+                                <td>HNSW</td>
+                                <td>自托管 + Qdrant Cloud</td>
+                                <td>低延迟，高吞吐，成熟的 API</td>
+                                <td>高性能需求，大规模检索</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Milvus</strong></td>
+                                <td>分布式，可扩展</td>
+                                <td>HNSW, IVF, DiskANN</td>
+                                <td>Kubernetes 友好</td>
+                                <td>开源，支持多种 ANN，GPU 加速</td>
+                                <td>超大规模企业，云原生</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ChromaDB</strong></td>
+                                <td>嵌入式 + 服务器</td>
+                                <td>HNSW</td>
+                                <td>Python 库或服务</td>
+                                <td>轻量级，零配置，内置嵌入模型</td>
+                                <td>快速原型，学习项目</td>
+                            </tr>
+                            <tr>
+                                <td><strong>pgvector</strong></td>
+                                <td>PostgreSQL 扩展</td>
+                                <td>IVFFlat, HNSW</td>
+                                <td>PostgreSQL 插件</td>
+                                <td>与关系数据库无缝集成，SQL 查询</td>
+                                <td>已有 PostgreSQL，混合业务</td>
+                            </tr>
+                            <tr>
+                                <td><strong>FAISS</strong></td>
+                                <td>库（非数据库）</td>
+                                <td>IVF, PQ, HNSW 等</td>
+                                <td>本地库</td>
+                                <td>Facebook 开源，多 GPU 支持，研究友好</td>
+                                <td>研究，离线批处理</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>HNSW 的基本原理和查询复杂度？</li>
+                        <li>IVF 和 HNSW 的区别与权衡？</li>
+                        <li>Product Quantization 如何减小内存占用？</li>
+                        <li>如何为不同场景选择合适的向量数据库？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 5: 分块策略 -->
+            <section class="section" id="chunking">
+                <h2>5. 分块策略 (Chunking)</h2>
+
+                <div class="subsection">
+                    <h3>为什么需要分块？</h3>
+                    <div class="reason-list">
+                        <div class="reason-item">
+                            <span class="reason-icon">●</span>
+                            <div>
+                                <strong>嵌入模型的长度限制：</strong> 大多数嵌入模型有最大输入长度限制（如 BERT 的 512 tokens，text-embedding-3 的 8191 tokens）。超过长度的文本需要被切分。
+                            </div>
+                        </div>
+                        <div class="reason-item">
+                            <span class="reason-icon">●</span>
+                            <div>
+                                <strong>小块的语义精度：</strong> 较小的文本块 (如 256-512 tokens) 相比长文本有更明确的语义中心，检索精度更高。长文本可能包含多个不相关的话题。
+                            </div>
+                        </div>
+                        <div class="reason-item">
+                            <span class="reason-icon">●</span>
+                            <div>
+                                <strong>降低存储和计算成本：</strong> 小块可以更高效地索引和检索，减少向量数据库的存储占用和查询时间。
+                            </div>
+                        </div>
+                        <div class="reason-item">
+                            <span class="reason-icon">●</span>
+                            <div>
+                                <strong>提示词窗口管理：</strong> LLM 的输入长度有限，需要选择最相关的文本块放入提示词中，而不是整个文档。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>常见分块策略</h3>
+
+                    <div class="chunking-method">
+                        <h4>1. 固定大小分块 (Fixed Size)</h4>
+                        <p>最简单的方法：按固定字符数或 token 数切分文本。</p>
+                        <div class="code-snippet">
+                            <code>chunk_size = 512, overlap = 50</code>
+                        </div>
+                        <p><strong>优点：</strong> 实现简单，计算快</p>
+                        <p><strong>缺点：</strong> 可能在句子中间或语义边界处切断，降低检索质量</p>
+                    </div>
+
+                    <div class="chunking-method">
+                        <h4>2. 递归字符分块 (Recursive Character Split)</h4>
+                        <p>LangChain 默认方法。按照层级分隔符 (如 "\n\n", "\n", " ", "") 递归切分，尽量保持语义完整性。</p>
+                        <div class="code-snippet">
+                            <code>separators = ["\n\n", "\n", " ", ""]<br/>递归选择分隔符直到块大小合适</code>
+                        </div>
+                        <p><strong>优点：</strong> 保持段落和句子的完整性</p>
+                        <p><strong>缺点：</strong> 对格式不规范的文本效果差，仍需要调参</p>
+                    </div>
+
+                    <div class="chunking-method">
+                        <h4>3. 语义分块 (Semantic Chunking)</h4>
+                        <p>基于嵌入相似度检测语义边界。计算相邻句子的嵌入相似度，当相似度下降到阈值以下时，认为找到了语义边界。</p>
+                        <p><strong>优点：</strong> 语义感知，分块质量最高</p>
+                        <p><strong>缺点：</strong> 计算成本高（需要嵌入每个句子），推理时间长</p>
+                        <p><strong>工具：</strong> llamaindex, langchain 都有语义分块的实现</p>
+                    </div>
+
+                    <div class="chunking-method">
+                        <h4>4. 文档结构感知分块 (Document-Aware Chunking)</h4>
+                        <p>利用文档的结构信息（标题、段落、章节、表格等）进行分块，保留层级关系。</p>
+                        <p><strong>实现：</strong> 先解析 Markdown 或 HTML，按标题层级组织，然后在叶子章节级别做分块</p>
+                        <p><strong>优点：</strong> 保留文档上下文，支持层级查询</p>
+                        <p><strong>缺点：</strong> 需要针对特定格式的解析器</p>
+                    </div>
+
+                    <div class="chunking-method">
+                        <h4>5. 父子分块 (Parent-Child Chunking)</h4>
+                        <p>创建两个层级的块：小块用于向量检索，大块作为最终的上下文注入。检索时返回小块ID，但将对应的大块注入提示词。</p>
+                        <p><strong>优点：</strong> 兼顾检索精度（小块） 和上下文丰富度（大块）</p>
+                        <p><strong>缺点：</strong> 需要额外的映射管理</p>
+                    </div>
+
+                    <div class="chunking-method">
+                        <h4>6. Late Chunking (Jina AI)</h4>
+                        <p>先对整个长文档进行嵌入，然后基于已计算的嵌入进行分块，而非先分块再嵌入。</p>
+                        <p><strong>优点：</strong> 充分利用嵌入模型的长上下文能力，避免分块导致的信息丢失</p>
+                        <p><strong>缺点：</strong> 嵌入成本高，需要支持长上下文的模型</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>分块参数选择</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>参数</th>
+                                <th>典型值</th>
+                                <th>影响因素</th>
+                                <th>调优方向</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Chunk Size</strong></td>
+                                <td>256-1024 tokens</td>
+                                <td>嵌入模型限制，文本粒度需求</td>
+                                <td>更小 → 精度高但覆盖面小；更大 → 上下文丰富但语义分散</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chunk Overlap</strong></td>
+                                <td>10-20% (of chunk size)</td>
+                                <td>文本连贯性需求，上下文边界问题</td>
+                                <td>更大 → 减少边界截断问题但增加冗余；更小 → 节省成本</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Strategy</strong></td>
+                                <td>Recursive / Semantic</td>
+                                <td>文本特性，质量要求，计算预算</td>
+                                <td>快速原型用 Recursive；关键应用用 Semantic</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>为什么需要分块？</li>
+                        <li>如何选择分块大小和重叠？</li>
+                        <li>什么是语义分块？优缺点？</li>
+                        <li>父子分块模式的优势？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 6: 检索策略 -->
+            <section class="section" id="retrieval">
+                <h2>6. 检索策略</h2>
+
+                <div class="subsection">
+                    <h3>检索方式对比</h3>
+                    <div class="retrieval-comparison">
+                        <div class="retrieval-method">
+                            <h4>稠密检索 (Dense Retrieval)</h4>
+                            <p>使用向量相似度搜索。查询和文档都转化为向量，计算向量相似度，返回最相似的 K 个文档。</p>
+                            <p><strong>优点：</strong> 捕捉语义相似性，跨语言检索</p>
+                            <p><strong>缺点：</strong> 需要额外的嵌入计算和向量存储</p>
+                        </div>
+
+                        <div class="retrieval-method">
+                            <h4>稀疏检索 (Sparse Retrieval) - BM25</h4>
+                            <p>经典的<strong>信息检索</strong>方法，基于 TF-IDF 和词的统计特性。计算查询词和文档词的加权匹配分数。</p>
+                            <div class="formula-box" style="margin-top: 8px;">
+                                <p><strong>BM25 公式：</strong></p>
+                                <code>score(q, d) = Σ IDF(q_i) * (f(q_i, d) * (k1 + 1)) / (f(q_i, d) + k1 * (1 - b + b * |d| / avgdl))</code>
+                                <p style="margin-top: 8px; font-size: 13px;">其中 f(q_i, d) 是词 q_i 在文档 d 中的频率，|d| 是文档长度</p>
+                            </div>
+                            <p style="margin-top: 10px;"><strong>优点：</strong> 快速、可解释、精确匹配，不需要嵌入</p>
+                            <p><strong>缺点：</strong> 无法理解语义，依赖关键词匹配</p>
+                        </div>
+
+                        <div class="retrieval-method">
+                            <h4>混合搜索 (Hybrid Search)</h4>
+                            <p>结合稠密和稀疏检索的优势。同时执行向量搜索和 BM25 搜索，然后融合结果。</p>
+                            <p><strong>融合方法：</strong></p>
+                            <ul>
+                                <li><strong>加权组合：</strong> <code>score = w * dense_score + (1-w) * sparse_score</code></li>
+                                <li><strong>倒数排名融合 (RRF)：</strong> <code>score = Σ 1/(k + rank_i)</code> 其中 k 通常为 60</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>优点：</strong> 综合了精确匹配和语义匹配，性能最优</p>
+                        </div>
+
+                        <div class="retrieval-method">
+                            <h4>多向量检索 (Multi-Vector) - ColBERT</h4>
+                            <p>不是为整个文本生成单个向量，而是为每个词生成一个向量。查询的每个词与文档的所有词向量进行匹配。</p>
+                            <div class="formula-box" style="margin-top: 8px;">
+                                <code>sim(q, d) = Σ_i max_j (q_i · d_j)</code>
+                                <p style="margin-top: 8px; font-size: 13px;">MaxSim：对于每个查询词，找到与文档中最相似的词，求和</p>
+                            </div>
+                            <p style="margin-top: 10px;"><strong>优点：</strong> 介于词级和文档级之间，精度高</p>
+                            <p><strong>缺点：</strong> 计算和存储成本高</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>BM25 算法的原理和参数含义？</li>
+                        <li>密集检索 vs 稀疏检索的权衡？</li>
+                        <li>混合搜索如何实现和融合结果？</li>
+                        <li>ColBERT 的多向量方法有什么优势？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 7: 高级 RAG 技术 -->
+            <section class="section" id="advanced-rag">
+                <h2>7. 高级 RAG 技术</h2>
+
+                <div class="subsection">
+                    <h3>查询优化</h3>
+
+                    <div class="technique-card">
+                        <h4>查询改写 (Query Rewriting)</h4>
+                        <p>用 LLM 改进用户的原始查询，使其更容易被检索系统理解。例如，将 "我怎样才能..." 改写为 "方法：..."。</p>
+                        <p><strong>实现：</strong> 一个简单的 LLM 调用，给定用户查询和一些示例，返回改写后的查询</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>假设性文档嵌入 (HyDE)</h4>
+                        <p>不直接用用户查询检索，而是先让 LLM 生成一份<strong>假设性的相关文档</strong>，然后用这个假设文档的嵌入进行检索。</p>
+                        <p><strong>直观理解：</strong> 假设性文档通常包含查询中暗示的关键信息和上下文，比用户简短的查询更容易匹配真实文档。</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>多查询 (Multi-Query)</h4>
+                        <p>LLM 生成用户查询的多个语言变体或相关查询，然后分别进行检索，最后合并结果。</p>
+                        <p><strong>优点：</strong> 覆盖多个角度的表述方式，提高召回率</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>Step-Back Query</h4>
+                        <p>将用户的具体查询抽象化为更高层次的问题。例如，从 "COVID-19 对中国经济的影响" 抽象到 "大规模传染病对经济的影响"，以检索更相关的背景信息。</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>检索后处理</h3>
+
+                    <div class="technique-card">
+                        <h4>重排 (Reranking)</h4>
+                        <p>初步检索返回 Top-K 文档后，使用<strong>交叉编码器 (Cross-Encoder)</strong> 对这些文档进行精排。</p>
+                        <p><strong>方法对比：</strong></p>
+                        <ul>
+                            <li><strong>Bi-encoder (检索用)：</strong> 分别编码查询和文档，计算向量相似度。快但精度有限。</li>
+                            <li><strong>Cross-encoder (重排用)：</strong> 联合编码 (query, document) 对，直接预测相关性分数。精确但计算成本高。</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>流程：</strong> 密集检索 (Fast, 快速返回候选) → 交叉编码器重排 (Slow, 精确排序)</p>
+                        <p><strong>工具：</strong> Cohere Rerank, BGE-reranker, ColBERT 等</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>上下文压缩 (Contextual Compression)</h4>
+                        <p>从检索到的文档中<strong>提取最相关的片段</strong>，而不是返回整个文档。减少输入给 LLM 的文本量，降低成本同时提高相关性。</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>Lost in the Middle Problem</h4>
+                        <p>研究表明，当多个文档被拼接到 LLM 的提示词中时，中间的文档往往被忽视。LLM 倾向于关注开头和结尾的文档。</p>
+                        <p><strong>解决方案：</strong> 将最重要的相关文档放在提示词的开头或结尾，而不是中间。</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>高级架构模式</h3>
+
+                    <div class="technique-card">
+                        <h4>递归检索 (Recursive Retrieval)</h4>
+                        <p>多轮检索，逐步细化。初次检索返回粗粒度结果后，基于中间生成的内容，进行更精细的第二轮检索。</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>纠正性 RAG (Corrective RAG, CRAG)</h4>
+                        <p>检索后评估检索文档的相关性：</p>
+                        <ul>
+                            <li>如果相关性高 → 直接用于生成</li>
+                            <li>如果相关性低 → 降级到 web 搜索或其他知识源</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>优点：</strong> 自适应地处理检索失败的情况</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>自适应 RAG (Self-RAG)</h4>
+                        <p>模型在生成过程中<strong>自己决定是否需要检索</strong>。对于能从参数知识中回答的问题，跳过检索；对于需要外部知识的问题，触发检索。</p>
+                        <p><strong>实现：</strong> 使用特殊 token (如 [RETRIEVE]) 标记检索点，模型学会何时生成这个 token</p>
+                    </div>
+
+                    <div class="technique-card">
+                        <h4>适应性 RAG (Adaptive RAG)</h4>
+                        <p>根据<strong>查询复杂度或类型</strong>选择不同的检索策略：</p>
+                        <ul>
+                            <li>简单查询 → Naive RAG (快速)</li>
+                            <li>复杂查询 → Advanced RAG + 多轮检索</li>
+                            <li>事实性查询 → 混合搜索</li>
+                            <li>推理性查询 → 知识图谱 + 检索</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="advanced-rag-diagram">
+                    <svg viewBox="0 0 1200 400" class="advanced-svg">
+                        <text x="600" y="30" text-anchor="middle" class="svg-title">高级 RAG 流程示例：CRAG</text>
+
+                        <rect x="50" y="80" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="120" y="115" text-anchor="middle" fill="#e2e8f0">User Query</text>
+
+                        <line x1="190" y1="110" x2="230" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="230,110 220,105 220,115" fill="#718096"/>
+
+                        <rect x="230" y="80" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="300" y="115" text-anchor="middle" fill="#e2e8f0">Query Rewrite</text>
+
+                        <line x1="370" y1="110" x2="410" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="410,110 400,105 400,115" fill="#718096"/>
+
+                        <rect x="410" y="80" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="480" y="110" text-anchor="middle" fill="#e2e8f0">Retrieval</text>
+                        <text x="480" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">(初步检索)</text>
+
+                        <line x1="550" y1="110" x2="590" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="590,110 580,105 580,115" fill="#718096"/>
+
+                        <rect x="590" y="80" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="660" y="110" text-anchor="middle" fill="#e2e8f0">Relevance Check</text>
+                        <text x="660" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">(评估相关性)</text>
+
+                        <!-- Diamond for decision -->
+                        <polygon points="800,110 850,80 900,110 850,140" fill="#2d3748" stroke="#718096" stroke-width="2"/>
+                        <text x="850" y="115" text-anchor="middle" fill="#e2e8f0" font-size="13">相关?</text>
+
+                        <!-- YES path -->
+                        <line x1="850" y1="150" x2="850" y2="200" stroke="#718096" stroke-width="2"/>
+                        <text x="865" y="175" fill="#cbd5e0" font-size="12">YES</text>
+                        <polygon points="850,200 845,190 855,190" fill="#718096"/>
+
+                        <rect x="770" y="200" width="160" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="850" y="235" text-anchor="middle" fill="#e2e8f0">Generate Answer</text>
+
+                        <!-- NO path -->
+                        <line x1="900" y1="110" x2="950" y2="110" stroke="#718096" stroke-width="2"/>
+                        <text x="920" y="100" fill="#cbd5e0" font-size="12">NO</text>
+                        <polygon points="950,110 940,105 940,115" fill="#718096"/>
+
+                        <rect x="950" y="80" width="140" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="1020" y="110" text-anchor="middle" fill="#e2e8f0">Web Search</text>
+                        <text x="1020" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">(降级处理)</text>
+
+                        <line x1="1020" y1="140" x2="1020" y2="170" stroke="#718096" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="1020" y1="170" x2="850" y2="170" stroke="#718096" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="850" y1="170" x2="850" y2="200" stroke="#718096" stroke-width="2" stroke-dasharray="5,5"/>
+
+                        <rect x="770" y="300" width="160" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="850" y="335" text-anchor="middle" fill="#e2e8f0">Final Answer</text>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- Section 8: GraphRAG -->
+            <section class="section" id="graphrag">
+                <h2>8. GraphRAG (Microsoft)</h2>
+
+                <div class="subsection">
+                    <h3>核心思想</h3>
+                    <p>GraphRAG 不仅检索相关文档，而是从文档中<strong>构建知识图谱 (Knowledge Graph)</strong>，利用图结构的全局视角来回答问题。特别适合需要综合多个信息源的复杂问题。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>工作流程</h3>
+                    <div class="graphrag-steps">
+                        <div class="step-card">
+                            <span class="step-number">1</span>
+                            <h4>实体和关系提取</h4>
+                            <p>使用 LLM (如 GPT-4) 从文本中提取实体和它们之间的关系。例如，从 "张三是阿里巴巴的 CTO" 中提取实体 (张三, 阿里巴巴) 和关系 (任职)。</p>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">2</span>
+                            <h4>知识图谱构建</h4>
+                            <p>将提取的实体和关系组织成有向图。每个实体是节点，每个关系是边，包含关系的类型和属性。</p>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">3</span>
+                            <h4>社区检测</h4>
+                            <p>使用 <strong>Leiden 算法</strong>（比 Louvain 更优）对图进行社区检测，找到紧密相关的实体簇。每个社区代表一个领域或话题。</p>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">4</span>
+                            <h4>自底向上的社区摘要</h4>
+                            <p>对每个社区及其子社区，使用 LLM 生成摘要。形成多层次的摘要树，从叶子社区的详细摘要到根社区的高层概括。</p>
+                        </div>
+                        <div class="step-card">
+                            <span class="step-number">5</span>
+                            <h4>查询路由与搜索</h4>
+                            <p><strong>全局查询 (Global)：</strong> 并行查询所有社区摘要，获得数据集的全局视角。<br/>
+                            <strong>本地查询 (Local)：</strong> 基于查询内容精准定位相关社区，返回详细信息。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>全局查询 vs 本地查询</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>查询类型</th>
+                                <th>处理方式</th>
+                                <th>特点</th>
+                                <th>适用问题类型</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>全局查询 (Global)</strong></td>
+                                <td>Map: 并行查询所有社区<br/>Reduce: 汇总聚合结果</td>
+                                <td>综合整个数据集，获得全景视图</td>
+                                <td>宏观分析，趋势总结，跨领域综合</td>
+                            </tr>
+                            <tr>
+                                <td><strong>本地查询 (Local)</strong></td>
+                                <td>定位相关社区，深入探索细节</td>
+                                <td>精确到特定话题，信息密集</td>
+                                <td>微观分析，特定实体追踪，关系探索</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="subsection">
+                    <h3>GraphRAG 的优势与局限</h3>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>全局视角：能综合多个信息源的关键观点</li>
+                                <li>关系理解：显式建模实体和关系，支持复杂推理</li>
+                                <li>可解释性：知识图谱提供清晰的推理链</li>
+                                <li>长文档处理：通过社区分解，能处理很长的文档集合</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>局限</h4>
+                            <ul>
+                                <li>构建成本高：需要 LLM 多次调用进行提取和摘要</li>
+                                <li>提取准确性：LLM 提取的实体和关系可能不完整或有误</li>
+                                <li>复杂性：系统复杂，难以调试和优化</li>
+                                <li>适应性：对于高度动态的数据或特定领域知识，效果可能一般</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>LightRAG</h3>
+                    <p>LightRAG 是 GraphRAG 的轻量级替代方案，降低了构建和查询的成本，同时保持了图结构的优势。相比 GraphRAG 的多层社区和复杂摘要，LightRAG 使用更简化的图结构和查询策略。</p>
+                </div>
+            </section>
+
+            <!-- Section 9: Function Calling / Tool Use -->
+            <section class="section" id="function-calling">
+                <h2>9. Function Calling / Tool Use</h2>
+
+                <div class="subsection">
+                    <h3>什么是 Function Calling？</h3>
+                    <p>Function Calling 让 LLM 有能力<strong>调用外部函数或工具</strong>，而不仅仅生成文本。模型能理解何时需要调用工具、调用哪个工具、传递什么参数，然后应用程序执行函数并将结果返回给模型。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>OpenAI Function Calling</h3>
+
+                    <div class="code-example">
+                        <h4>定义函数模式</h4>
+                        <pre><code class="language-json">{
+  "type": "function",
+  "function": {
+    "name": "get_weather",
+    "description": "Get the current weather for a location",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string",
+          "description": "The city and state, e.g. San Francisco, CA"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["celsius", "fahrenheit"],
+          "description": "Temperature unit"
+        }
+      },
+      "required": ["location"]
+    }
+  }
+}
+</code></pre>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>模型返回 tool_calls</h4>
+                        <pre><code class="language-json">{
+  "id": "chatcmpl-xxx",
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_xyz",
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "arguments": "{\"location\": \"San Francisco, CA\", \"unit\": \"celsius\"}"
+          }
+        }
+      ]
+    }
+  }]
+}
+</code></pre>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>并行函数调用</h4>
+                        <pre><code class="language-python"># 一个 API 调用可以同时调用多个函数
+# 模型返回多个 tool_calls，应用程序并行执行
+tool_calls = response.choices[0].message.tool_calls
+results = [execute_function(tc.function.name, tc.function.arguments) for tc in tool_calls]
+</code></pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>Anthropic Tool Use (Claude)</h3>
+
+                    <div class="code-example">
+                        <h4>工具定义</h4>
+                        <pre><code class="language-python">tools = [
+    {
+        "name": "get_weather",
+        "description": "Get weather for a location",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"},
+                "unit": {"enum": ["celsius", "fahrenheit"]}
+            },
+            "required": ["location"]
+        }
+    }
+]
+
+response = client.messages.create(
+    model="claude-opus",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{"role": "user", "content": "What's the weather in NYC?"}]
+)
+</code></pre>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>处理工具使用</h4>
+                        <pre><code class="language-python"># 检查响应中是否有工具调用
+for block in response.content:
+    if block.type == "tool_use":
+        tool_name = block.name
+        tool_input = block.input
+        tool_use_id = block.id
+
+        # 执行工具
+        result = execute_tool(tool_name, tool_input)
+
+        # 将结果返回模型
+        messages.append({
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": str(result)
+                }
+            ]
+        })
+</code></pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>执行流程</h3>
+                    <svg viewBox="0 0 1000 450" class="function-calling-svg">
+                        <text x="500" y="30" text-anchor="middle" class="svg-title">Function Calling 执行流程</text>
+
+                        <rect x="50" y="80" width="150" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="125" y="115" text-anchor="middle" fill="#e2e8f0">User Query</text>
+
+                        <line x1="200" y1="110" x2="250" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="250,110 240,105 240,115" fill="#718096"/>
+
+                        <rect x="250" y="80" width="150" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="325" y="105" text-anchor="middle" fill="#e2e8f0">LLM 分析</text>
+                        <text x="325" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">需要工具?</text>
+
+                        <line x1="400" y1="110" x2="450" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="450,110 440,105 440,115" fill="#718096"/>
+
+                        <rect x="450" y="80" width="150" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="525" y="105" text-anchor="middle" fill="#e2e8f0">返回 tool_calls</text>
+                        <text x="525" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">(函数+参数)</text>
+
+                        <line x1="600" y1="110" x2="650" y2="110" stroke="#718096" stroke-width="2"/>
+                        <polygon points="650,110 640,105 640,115" fill="#718096"/>
+
+                        <rect x="650" y="80" width="150" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="725" y="105" text-anchor="middle" fill="#e2e8f0">应用执行</text>
+                        <text x="725" y="125" text-anchor="middle" fill="#cbd5e0" font-size="12">函数调用</text>
+
+                        <!-- Execution details -->
+                        <text x="50" y="200" class="phase-label">执行细节</text>
+
+                        <rect x="50" y="220" width="200" height="80" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="150" y="245" text-anchor="middle" fill="#e2e8f0" font-weight="bold">序列执行 (Serial)</text>
+                        <text x="150" y="270" text-anchor="middle" fill="#cbd5e0" font-size="12">一个接一个调用函数</text>
+                        <text x="150" y="285" text-anchor="middle" fill="#cbd5e0" font-size="12">适合有依赖关系的操作</text>
+
+                        <rect x="300" y="220" width="200" height="80" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="400" y="245" text-anchor="middle" fill="#e2e8f0" font-weight="bold">并行执行 (Parallel)</text>
+                        <text x="400" y="270" text-anchor="middle" fill="#cbd5e0" font-size="12">同时调用多个独立函数</text>
+                        <text x="400" y="285" text-anchor="middle" fill="#cbd5e0" font-size="12">提高效率，降低延迟</text>
+
+                        <!-- Return path -->
+                        <line x1="150" y1="300" x2="150" y2="340" stroke="#718096" stroke-width="2"/>
+                        <line x1="150" y1="340" x2="525" y2="340" stroke="#718096" stroke-width="2"/>
+                        <line x1="525" y1="340" x2="525" y2="140" stroke="#718096" stroke-width="2"/>
+                        <polygon points="525,140 520,150 530,150" fill="#718096"/>
+
+                        <text x="340" y="360" fill="#cbd5e0" font-size="12">将函数结果返回 LLM</text>
+
+                        <!-- Final response -->
+                        <rect x="450" y="360" width="150" height="60" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="525" y="390" text-anchor="middle" fill="#e2e8f0">LLM 生成</text>
+                        <text x="525" y="410" text-anchor="middle" fill="#cbd5e0" font-size="12">最终答案</text>
+                    </svg>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>Function Calling 的工作原理？</li>
+                        <li>OpenAI 和 Anthropic 的工具定义格式区别？</li>
+                        <li>如何设计好的函数模式？</li>
+                        <li>并行函数调用的优势和应用场景？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 10: MCP (Model Context Protocol) -->
+            <section class="section" id="mcp">
+                <h2>10. MCP (Model Context Protocol)</h2>
+
+                <div class="subsection">
+                    <h3>什么是 MCP？</h3>
+                    <p>MCP 是 Anthropic 在 2024 年 11 月推出的<strong>开放标准</strong>，用于统一 LLM 与外部工具、数据源、应用的连接方式。类似于"LLM 应用的 USB 标准"，使得工具开发者和应用开发者可以独立工作，通过 MCP 标准进行集成。</p>
+                </div>
+
+                <div class="subsection">
+                    <h3>MCP 的三大能力</h3>
+                    <div class="mcp-capabilities">
+                        <div class="capability-card">
+                            <h4>Tools (工具/函数)</h4>
+                            <p>让 LLM 可以调用的函数。类似 Function Calling，但以标准化的方式定义和执行。</p>
+                            <p><strong>示例：</strong> 查询数据库、调用 API、执行计算、文件操作</p>
+                        </div>
+
+                        <div class="capability-card">
+                            <h4>Resources (资源/数据)</h4>
+                            <p>LLM 可以访问的数据源或上下文。允许应用向 LLM 提供动态的、上下文相关的信息。</p>
+                            <p><strong>示例：</strong> 文件内容、数据库查询结果、用户会话数据、实时数据流</p>
+                        </div>
+
+                        <div class="capability-card">
+                            <h4>Prompts (提示模板)</h4>
+                            <p>可复用的提示词模板，可以包含参数和动态内容。允许统一管理和版本控制提示词。</p>
+                            <p><strong>示例：</strong> 代码审查提示、内容生成模板、问题分类提示</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>MCP 架构</h3>
+                    <svg viewBox="0 0 1000 500" class="mcp-arch-svg">
+                        <text x="500" y="30" text-anchor="middle" class="svg-title">MCP 架构：Client - Server 模式</text>
+
+                        <!-- Client side -->
+                        <rect x="50" y="80" width="200" height="100" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="150" y="110" text-anchor="middle" fill="#e2e8f0" font-weight="bold">Client</text>
+                        <text x="150" y="135" text-anchor="middle" fill="#cbd5e0" font-size="13">(LLM Application)</text>
+                        <text x="150" y="160" text-anchor="middle" fill="#cbd5e0" font-size="12">• Claude</text>
+                        <text x="150" y="175" text-anchor="middle" fill="#cbd5e0" font-size="12">• 应用逻辑</text>
+
+                        <!-- Connection label -->
+                        <text x="500" y="160" text-anchor="middle" fill="#cbd5e0" font-size="12">JSON-RPC</text>
+                        <text x="500" y="180" text-anchor="middle" fill="#cbd5e0" font-size="12">over stdio/HTTP</text>
+
+                        <!-- Arrow -->
+                        <line x1="250" y1="130" x2="650" y2="130" stroke="#718096" stroke-width="2"/>
+                        <polygon points="650,130 640,125 640,135" fill="#718096"/>
+
+                        <!-- Server side -->
+                        <rect x="650" y="80" width="300" height="100" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="800" y="110" text-anchor="middle" fill="#e2e8f0" font-weight="bold">MCP Server</text>
+                        <text x="800" y="135" text-anchor="middle" fill="#cbd5e0" font-size="13">(Tool/Data Provider)</text>
+                        <text x="800" y="155" text-anchor="middle" fill="#cbd5e0" font-size="12">Tools | Resources | Prompts</text>
+
+                        <!-- Transport Layer -->
+                        <text x="50" y="250" class="phase-label">传输方式</text>
+
+                        <rect x="50" y="270" width="180" height="80" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="140" y="295" text-anchor="middle" fill="#e2e8f0" font-weight="bold">stdio</text>
+                        <text x="140" y="320" text-anchor="middle" fill="#cbd5e0" font-size="12">本地进程通信</text>
+                        <text x="140" y="335" text-anchor="middle" fill="#cbd5e0" font-size="11">低延迟，同机器</text>
+
+                        <rect x="260" y="270" width="180" height="80" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="350" y="295" text-anchor="middle" fill="#e2e8f0" font-weight="bold">SSE</text>
+                        <text x="350" y="320" text-anchor="middle" fill="#cbd5e0" font-size="12">Server-Sent Events</text>
+                        <text x="350" y="335" text-anchor="middle" fill="#cbd5e0" font-size="11">单向推送，事件流</text>
+
+                        <rect x="470" y="270" width="180" height="80" fill="#2d3748" stroke="#718096" stroke-width="2" rx="4"/>
+                        <text x="560" y="295" text-anchor="middle" fill="#e2e8f0" font-weight="bold">HTTP</text>
+                        <text x="560" y="320" text-anchor="middle" fill="#cbd5e0" font-size="12">REST API</text>
+                        <text x="560" y="335" text-anchor="middle" fill="#cbd5e0" font-size="11">远程服务器，标准协议</text>
+
+                        <!-- Ecosystem -->
+                        <text x="50" y="420" class="phase-label">生态示例</text>
+                        <text x="50" y="450" fill="#cbd5e0" font-size="12">GitHub (代码审查) | PostgreSQL (数据库查询) | Slack (消息发送) | Linear (任务管理) | 1000+ MCP servers</text>
+                    </svg>
+                </div>
+
+                <div class="subsection">
+                    <h3>MCP vs Function Calling</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>特性</th>
+                                <th>MCP</th>
+                                <th>Function Calling (OpenAI/Anthropic)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>定位</strong></td>
+                                <td>开放标准协议</td>
+                                <td>模型 API 功能</td>
+                            </tr>
+                            <tr>
+                                <td><strong>范围</strong></td>
+                                <td>Tools + Resources + Prompts</td>
+                                <td>仅 Tools</td>
+                            </tr>
+                            <tr>
+                                <td><strong>传输</strong></td>
+                                <td>stdio/HTTP/SSE</td>
+                                <td>HTTP (API 调用)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>适用</strong></td>
+                                <td>复杂的多工具系统，需要数据上下文</td>
+                                <td>简单函数调用，单个 API 调用</td>
+                            </tr>
+                            <tr>
+                                <td><strong>学习曲线</strong></td>
+                                <td>较陡，需要理解协议</td>
+                                <td>较平，易于上手</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="subsection">
+                    <h3>MCP 的发展潜力</h3>
+                    <ul>
+                        <li><strong>生态扩展：</strong> Anthropic 宣布超过 1000 个开源 MCP servers 已经上线</li>
+                        <li><strong>跨平台支持：</strong> 不仅支持 Claude，也在与其他 LLM 厂商合作</li>
+                        <li><strong>统一接口：</strong> 将成为 LLM 应用与外部系统连接的事实标准</li>
+                        <li><strong>企业应用：</strong> 为企业安全地集成 LLM 提供了标准化的方式</li>
+                    </ul>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>MCP 是什么？与 Function Calling 的区别？</li>
+                        <li>MCP 的三大能力（Tools, Resources, Prompts）分别是什么？</li>
+                        <li>MCP 的传输方式有哪些？各自适用场景？</li>
+                        <li>如何开发一个 MCP Server？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 11: RAG 评估 -->
+            <section class="section" id="rag-evaluation">
+                <h2>11. RAG 评估</h2>
+
+                <div class="subsection">
+                    <h3>评估的多个层级</h3>
+                    <div class="evaluation-pyramid">
+                        <svg viewBox="0 0 800 600" class="pyramid-svg">
+                            <text x="400" y="30" text-anchor="middle" class="svg-title">RAG 系统评估金字塔</text>
+
+                            <!-- Pyramid levels -->
+                            <polygon points="400,100 150,250 650,250" fill="#2d3748" stroke="#718096" stroke-width="2"/>
+                            <text x="400" y="180" text-anchor="middle" fill="#e2e8f0" font-weight="bold">端到端评估</text>
+                            <text x="400" y="200" text-anchor="middle" fill="#cbd5e0" font-size="12">Answer Correctness</text>
+
+                            <polygon points="150,250 250,380 550,380" fill="#2d3748" stroke="#718096" stroke-width="2"/>
+                            <text x="400" y="295" text-anchor="middle" fill="#e2e8f0" font-weight="bold">生成阶段评估</text>
+                            <text x="400" y="315" text-anchor="middle" fill="#cbd5e0" font-size="12">Faithfulness, Answer Relevancy</text>
+
+                            <polygon points="250,380 300,500 500,500" fill="#2d3748" stroke="#718096" stroke-width="2"/>
+                            <text x="400" y="425" text-anchor="middle" fill="#e2e8f0" font-weight="bold">检索阶段评估</text>
+                            <text x="400" y="445" text-anchor="middle" fill="#cbd5e0" font-size="12">Precision@K, Recall@K, MRR</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>组件级评估指标</h3>
+
+                    <div class="metric-group">
+                        <h4>检索 (Retrieval) 指标</h4>
+                        <table class="metric-table">
+                            <tr>
+                                <td><strong>Precision@K</strong></td>
+                                <td>前 K 个检索结果中，有多少是相关的</td>
+                                <td>Precision@5 = 相关文档数 / 5</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Recall@K</strong></td>
+                                <td>所有相关文档中，前 K 个结果覆盖了多少</td>
+                                <td>Recall@5 = 检索到的相关数 / 总相关数</td>
+                            </tr>
+                            <tr>
+                                <td><strong>MRR (Mean Reciprocal Rank)</strong></td>
+                                <td>第一个相关结果的位置倒数的平均</td>
+                                <td>MRR = 平均(1/rank_of_first_relevant)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>NDCG (Normalized Discounted Cumulative Gain)</strong></td>
+                                <td>考虑结果排序和相关程度的加权指标</td>
+                                <td>评估排序质量，范围 [0,1]</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="metric-group">
+                        <h4>生成 (Generation) 指标</h4>
+                        <table class="metric-table">
+                            <tr>
+                                <td><strong>Faithfulness</strong></td>
+                                <td>生成的答案是否忠实于检索到的文档内容</td>
+                                <td>评估幻觉程度，通常用 LLM 自动评估</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Answer Relevancy</strong></td>
+                                <td>生成的答案是否回答了用户的问题</td>
+                                <td>衡量答案与查询的相关性</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Hallucination Rate</strong></td>
+                                <td>答案中完全虚构（无根据）的内容比例</td>
+                                <td>越低越好，理想值接近 0</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>RAGAS 框架</h3>
+                    <p>RAGAS (Retrieval-Augmented Generation Assessment) 是一个开源框架，专门用于<strong>自动化 RAG 系统评估</strong>。它提供了一套无需人工标注的自动化指标。</p>
+
+                    <div class="ragas-metrics">
+                        <div class="metric-card">
+                            <h4>Faithfulness</h4>
+                            <p>衡量生成答案中有多少内容可以从检索的上下文中推导出来。使用 LLM 检测答案中的声称，并验证其是否能从上下文支持。</p>
+                            <p><strong>计算：</strong> 可被上下文支持的声称比例</p>
+                            <p><strong>范围：</strong> [0, 1]，越高越好</p>
+                        </div>
+
+                        <div class="metric-card">
+                            <h4>Context Relevancy (Context Precision)</h4>
+                            <p>检索到的上下文中，有多少句子对回答问题是必要的。低相关性表示检索中有许多噪声。</p>
+                            <p><strong>计算：</strong> 必要上下文的比例</p>
+                            <p><strong>范围：</strong> [0, 1]，越高越好</p>
+                        </div>
+
+                        <div class="metric-card">
+                            <h4>Answer Relevancy</h4>
+                            <p>生成答案与用户问题的相关程度。使用 LLM 将答案改写成问题，比较改写问题与原问题的相似度。</p>
+                            <p><strong>计算：</strong> 基于向量相似度的相关性评分</p>
+                            <p><strong>范围：</strong> [0, 1]，越高越好</p>
+                        </div>
+
+                        <div class="metric-card">
+                            <h4>Context Recall</h4>
+                            <p>检索到的所有上下文中，回答问题所需的信息占比。评估检索的完整性。</p>
+                            <p><strong>计算：</strong> 支持性证据的覆盖比例</p>
+                            <p><strong>范围：</strong> [0, 1]，越高越好</p>
+                        </div>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>RAGAS 使用示例</h4>
+                        <pre><code class="language-python">from ragas.metrics import (
+    answer_relevancy, faithfulness, context_precision, context_recall
+)
+from ragas import evaluate
+
+# 定义数据集：[(question, answer, contexts), ...]
+dataset = [
+    {
+        "question": "What is AI?",
+        "answer": "AI is artificial intelligence...",
+        "contexts": ["AI stands for Artificial Intelligence..."]
+    }
+]
+
+# 评估
+results = evaluate(
+    dataset=dataset,
+    metrics=[answer_relevancy, faithfulness, context_precision, context_recall]
+)
+print(results)
+</code></pre>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3>评估的实践建议</h3>
+                    <ul>
+                        <li><strong>不依赖单一指标：</strong> 综合考虑检索、生成、端到端的多个指标</li>
+                        <li><strong>建立基准数据集：</strong> 针对应用领域创建金标数据集，进行对标评估</li>
+                        <li><strong>定期监控：</strong> 在生产环境中持续收集样本，定期评估系统性能</li>
+                        <li><strong>人工评估：</strong> 虽然自动评估方便，但人工评估仍然是最可靠的方式</li>
+                        <li><strong>A/B 测试：</strong> 比较不同配置的 RAG 系统性能</li>
+                    </ul>
+                </div>
+
+                <div class="interview-tip">
+                    <p><strong>面试考点：</strong></p>
+                    <ul>
+                        <li>如何评估 RAG 系统？主要指标有哪些？</li>
+                        <li>RAGAS 框架的四个核心指标分别衡量什么？</li>
+                        <li>检索精度和生成质量的权衡？</li>
+                        <li>如何在生产环境中持续评估和优化 RAG 系统？</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 12: 面试高频问题 -->
+            <section class="section" id="interview-qa">
+                <h2>12. 面试高频问题</h2>
+
+                <div class="interview-questions">
+                    <div class="qa-item">
+                        <h4>Q1: 什么是 RAG？RAG 解决了什么问题？</h4>
+                        <p><strong>核心要点：</strong> RAG = Retrieval-Augmented Generation，通过检索外部知识库的相关文档，将其作为上下文注入给 LLM，让模型基于真实、最新的信息生成答案。解决知识截止、幻觉、私有数据访问问题。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q2: Naive RAG vs Advanced RAG 有什么区别？</h4>
+                        <p><strong>核心要点：</strong> Naive RAG 流程简单（分块 → 嵌入 → 检索 → 生成），但检索精度低。Advanced RAG 添加了查询优化、重排、上下文压缩等技术，显著提升了质量。Modular RAG 进一步支持模块化和条件路由，允许对不同类型查询采用不同策略。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q3: 如何选择嵌入模型？</h4>
+                        <p><strong>核心要点：</strong> 考虑维度 (成本/精度权衡)、训练数据 (语言和领域覆盖)、微调能力、成本预算。通用场景用 text-embedding-3-small，中文优化用 BGE-M3，需要长文本支持用 Jina。优先考虑开源模型便于私有部署和微调。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q4: HNSW 和 IVF 算法的区别？各自何时使用？</h4>
+                        <p><strong>核心要点：</strong> HNSW 是多层图结构，查询复杂度 O(log N)，精度高但内存占用大。IVF 是聚类+倒排表，查询速度受 nprobe 影响，内存占用小。大规模、对精度要求高用 HNSW；成本敏感、接受精度略微下降用 IVF；超大规模考虑 PQ 量化。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q5: 分块大小和重叠应该如何选择？</h4>
+                        <p><strong>核心要点：</strong> chunk_size 通常 256-1024 tokens（更小 → 精度高但上下文少；更大 → 上下文丰富但语义分散）。overlap 通常 10-20%（保持连贯性，减少边界截断）。最好通过 RAGAS 等框架在真实数据上实验，而不是凭经验选择。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q6: 什么是混合搜索？为什么它比单一方法更好？</h4>
+                        <p><strong>核心要点：</strong> 混合搜索结合了稠密检索（语义相似）和 BM25（精确词匹配）。稠密检索容易漏掉关键词精确匹配，BM25 无法理解语义。混合搜索通过 RRF 或加权融合两者，兼顾精确性和语义理解，通常比单一方法性能更优。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q7: 重排 (Reranking) 的作用和成本权衡？</h4>
+                        <p><strong>核心要点：</strong> 重排使用交叉编码器对候选文档精排，显著提高相关性。但计算成本高 (对每个候选计算相关性)。实践中常用两阶段：bi-encoder 快速检索返回 Top-K，cross-encoder 重排 Top-K。为成本考虑，只对 Top-K 做重排，而不是整个文档库。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q8: GraphRAG 相比传统 RAG 的优势和劣势？</h4>
+                        <p><strong>核心要点：</strong> GraphRAG 通过知识图谱+社区检测，提供全局视角，特别适合综合多源信息的复杂问题。优势：全局视角、关系建模、可解释性。劣势：构建成本高、提取准确性依赖 LLM、系统复杂、调试困难。适合知识密集、需要关系理解的场景。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q9: 什么是 MCP？与 Function Calling 有什么区别？</h4>
+                        <p><strong>核心要点：</strong> MCP (Model Context Protocol) 是 Anthropic 推出的开放标准，统一 LLM 与外部工具、数据的连接方式。范围比 Function Calling 更广（Tools + Resources + Prompts）。Function Calling 仅限工具调用，MCP 还能提供动态上下文和提示模板。MCP 是协议标准，Function Calling 是模型 API 功能。</p>
+                    </div>
+
+                    <div class="qa-item">
+                        <h4>Q10: 如何评估一个 RAG 系统的质量？</h4>
+                        <p><strong>核心要点：</strong> 多层级评估：(1) 检索评估 - Precision@K, Recall@K, NDCG；(2) 生成评估 - Faithfulness, Answer Relevancy；(3) 端到端 - Answer Correctness。使用 RAGAS 框架自动化评估。建立基准数据集，定期人工抽样审核，A/B 对比不同配置。优先追求 Faithfulness（减少幻觉），再追求 Answer Relevancy（回答准确度）。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Navigation -->
+            <section class="section-nav">
+                <a href="prompting.html" class="nav-prev">← 提示工程</a>
+                <a href="agents.html" class="nav-next">AI Agent →</a>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 AI 技术演进 | 深度学习与大语言模型的完整技术栈</p>
+            <p>持续更新中... 最后更新：2025 年 3 月</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微调与分布式训练深度解析</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --bg:#07080f; --bg2:#0d0f1a; --bg3:#131520; --bg4:#191c2a; --card:#1b1e2d;
+      --line:rgba(255,255,255,0.06); --line2:rgba(255,255,255,0.11);
+      --text:#dde0ef; --sub:#7a7d94; --dim:#4a4d62;
+      --green:#34d399; --teal:#22d3ee; --blue:#60a5fa; --purple:#a78bfa;
+      --pink:#f472b6; --amber:#fbbf24; --coral:#f87171; --orange:#fb923c;
+      --gd:rgba(52,211,153,0.08); --td:rgba(34,211,238,0.08); --bd:rgba(96,165,250,0.08);
+      --pd:rgba(167,139,250,0.08); --ad:rgba(251,191,36,0.08); --cd:rgba(248,113,113,0.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+    .hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(52,211,153,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(167,139,250,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+    .hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+    .hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+    .hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px}
+    .hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px}
+    .sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+    .sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+    .sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+    .sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--green);background:rgba(52,211,153,0.05)}
+    .sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+    .sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--green);text-decoration:none;border-bottom:1px solid var(--line)}
+    .main{margin-left:220px;max-width:900px}
+    .section{padding:56px 48px;border-bottom:1px solid var(--line)}
+    .section:last-child{border-bottom:none}
+    .section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+    .section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+    .section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+    .prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}
+    .prose strong{color:var(--text)} .prose em{color:var(--teal);font-style:normal}
+    .prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}
+    .prose ul,.prose ol{margin:8px 0 16px 20px} .prose li{margin-bottom:6px}
+    .callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+    .diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+    .diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+    .diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+    .formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+    .formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+    .cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+    .cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+    .cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}
+    .cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+    .steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+    .step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+    .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px}
+    .step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}
+    .step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+    .tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+    @media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+    .tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}
+    .tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+    .tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+    .tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+    .interview-box{background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:18px 20px;margin:24px 0}
+    .interview-box .ib-tag{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+    .interview-box p{color:var(--sub);font-size:0.88rem;margin-bottom:6px;line-height:1.7}
+    .code-block{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 22px;margin:16px 0;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;line-height:1.7;color:#c9d1d9;overflow-x:auto;white-space:pre;word-break:break-all;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+  <aside class="sidenav">
+    <a href="llm.html" class="back-link">← 返回 LLM</a>
+    <div class="sidenav-title">Sections</div>
+    <a href="#sec00"><span class="nav-num">00</span>训练的内存挑战</a>
+    <a href="#sec01"><span class="nav-num">01</span>Full Fine-tuning</a>
+    <a href="#sec02"><span class="nav-num">02</span>LoRA 原理与实现</a>
+    <a href="#sec03"><span class="nav-num">03</span>QLoRA & DoRA</a>
+    <a href="#sec04"><span class="nav-num">04</span>Data Parallel</a>
+    <a href="#sec05"><span class="nav-num">05</span>FSDP / ZeRO</a>
+    <a href="#sec06"><span class="nav-num">06</span>Tensor Parallelism</a>
+    <a href="#sec07"><span class="nav-num">07</span>Pipeline Parallelism</a>
+    <a href="#sec08"><span class="nav-num">08</span>3D 并行与实战</a>
+    <a href="#sec09"><span class="nav-num">09</span>混合精度训练</a>
+    <a href="#sec10"><span class="nav-num">10</span>DeepSpeed 生态</a>
+    <a href="#sec11"><span class="nav-num">11</span>总结与面试题</a>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <div class="hero-tag">Deep Dive · 训练工程</div>
+      <h1>微调与分布式训练<em>深度解析</em></h1>
+      <p class="hero-sub">从 LoRA 到 3D 并行 — 训练和微调大模型的每一个工程细节</p>
+    </div>
+
+    <!-- 00: 训练的内存挑战 -->
+    <section class="section" id="sec00">
+      <div class="section-badge" style="border-color:var(--green);background:var(--gd)"><span style="color:var(--green)">●</span> Memory</div>
+      <h2 class="section-title">训练的内存挑战</h2>
+      <p class="section-sub">理解 GPU 内存的真实开销，这是优化的第一步</p>
+
+      <div class="prose">
+        <p>当我们训练一个神经网络时，GPU 内存不仅要存储 <strong>模型参数</strong>，还要存储 <strong>优化器状态</strong>、<strong>梯度</strong> 和 <strong>激活值</strong>。这些开销往往出乎意料地大。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">内存成本细分</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>组件</th>
+            <th>大小（每参数）</th>
+            <th>7B 模型</th>
+            <th>13B 模型</th>
+            <th>70B 模型</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>模型参数 (FP32)</strong></td>
+            <td>4 字节</td>
+            <td>28 GB</td>
+            <td>52 GB</td>
+            <td>280 GB</td>
+          </tr>
+          <tr>
+            <td>优化器状态 (Adam)</td>
+            <td>8 字节 (m, v)</td>
+            <td>56 GB</td>
+            <td>104 GB</td>
+            <td>560 GB</td>
+          </tr>
+          <tr>
+            <td>梯度</td>
+            <td>4 字节</td>
+            <td>28 GB</td>
+            <td>52 GB</td>
+            <td>280 GB</td>
+          </tr>
+          <tr>
+            <td>激活值*</td>
+            <td>取决于 BS×seq_len</td>
+            <td>10-30 GB</td>
+            <td>15-50 GB</td>
+            <td>100-200 GB</td>
+          </tr>
+          <tr style="background:rgba(248,113,113,0.1)">
+            <td><strong>总计 (FP32)</strong></td>
+            <td></td>
+            <td><strong>122-152 GB</strong></td>
+            <td><strong>223-258 GB</strong></td>
+            <td><strong>1220-1320 GB</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout" style="border-left-color:var(--orange);background:rgba(251,191,36,0.08)">
+        <strong>激活值的来源：</strong> 在反向传播时，我们需要保存前向过程中的所有中间激活值。对于一个 7B 参数的模型，在 batch_size=4, seq_len=2048 的设置下，激活值占用 10-30 GB。
+      </div>
+
+      <div class="diagram">
+        <div class="diagram-title">内存占用分布 (7B 模型, FP32)</div>
+        <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+          <!-- Y axis labels -->
+          <text x="40" y="280" font-size="12" fill="var(--dim)" font-family="monospace">0</text>
+          <text x="25" y="220" font-size="12" fill="var(--dim)" font-family="monospace">50GB</text>
+          <text x="20" y="160" font-size="12" fill="var(--dim)" font-family="monospace">100GB</text>
+          <text x="20" y="100" font-size="12" fill="var(--dim)" font-family="monospace">150GB</text>
+          <!-- Axes -->
+          <line x1="50" y1="280" x2="50" y2="40" stroke="var(--line2)" stroke-width="1"/>
+          <line x1="50" y1="280" x2="680" y2="280" stroke="var(--line2)" stroke-width="1"/>
+          <!-- Grid -->
+          <line x1="50" y1="200" x2="680" y2="200" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/>
+          <line x1="50" y1="120" x2="680" y2="120" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/>
+
+          <!-- Stacked bars -->
+          <!-- Bar 1: FP32 Full -->
+          <rect x="70" y="160" width="40" height="120" fill="var(--blue)" opacity="0.8"/>
+          <rect x="70" y="90" width="40" height="70" fill="var(--green)" opacity="0.8"/>
+          <rect x="70" y="40" width="40" height="50" fill="var(--orange)" opacity="0.8"/>
+          <text x="70" y="295" font-size="11" fill="var(--sub)" text-anchor="middle">FP32</text>
+
+          <!-- Bar 2: FP16 -->
+          <rect x="140" y="180" width="40" height="100" fill="var(--blue)" opacity="0.8"/>
+          <rect x="140" y="130" width="40" height="50" fill="var(--green)" opacity="0.8"/>
+          <rect x="140" y="80" width="40" height="50" fill="var(--orange)" opacity="0.8"/>
+          <text x="140" y="295" font-size="11" fill="var(--sub)" text-anchor="middle">FP16+AMP</text>
+
+          <!-- Bar 3: LoRA -->
+          <rect x="210" y="270" width="40" height="10" fill="var(--teal)" opacity="0.8"/>
+          <rect x="210" y="240" width="40" height="30" fill="var(--green)" opacity="0.8"/>
+          <rect x="210" y="80" width="40" height="160" fill="var(--blue)" opacity="0.5" stroke="var(--line)" stroke-width="2" stroke-dasharray="4,4"/>
+          <text x="210" y="295" font-size="11" fill="var(--sub)" text-anchor="middle">LoRA</text>
+          <text x="210" y="65" font-size="9" fill="var(--dim)" text-anchor="middle">(frozen)</text>
+
+          <!-- Bar 4: QLoRA -->
+          <rect x="280" y="270" width="40" height="10" fill="var(--teal)" opacity="0.8"/>
+          <rect x="280" y="240" width="40" height="30" fill="var(--green)" opacity="0.8"/>
+          <rect x="280" y="200" width="40" height="40" fill="var(--blue)" opacity="0.3" stroke="var(--line)" stroke-width="2" stroke-dasharray="4,4"/>
+          <text x="280" y="295" font-size="11" fill="var(--sub)" text-anchor="middle">QLoRA</text>
+          <text x="280" y="185" font-size="9" fill="var(--dim)" text-anchor="middle">(4-bit)</text>
+
+          <!-- Legend -->
+          <g transform="translate(380, 60)">
+            <rect width="8" height="8" fill="var(--blue)" opacity="0.8"/>
+            <text x="14" y="7" font-size="11" fill="var(--sub)">模型参数</text>
+
+            <rect y="20" width="8" height="8" fill="var(--green)" opacity="0.8"/>
+            <text x="14" y="27" font-size="11" fill="var(--sub)">梯度</text>
+
+            <rect y="40" width="8" height="8" fill="var(--orange)" opacity="0.8"/>
+            <text x="14" y="47" font-size="11" fill="var(--sub)">优化器状态</text>
+
+            <rect y="60" width="8" height="8" fill="var(--teal)" opacity="0.8"/>
+            <text x="14" y="67" font-size="11" fill="var(--sub)">LoRA 参数</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 为什么 Adam 优化器需要 8 字节？</strong></p>
+        <p>A: Adam 为每个参数维护两个一阶和二阶矩估计 (m 和 v)，各 4 字节 FP32，共 8 字节。这就是为什么 SGD (1×param size) 比 Adam (3×param size) 内存效率更高。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">推论：为什么需要优化技术</h3>
+      <div class="prose">
+        <ul>
+          <li>70B 模型 + Adam = 需要 <strong>1.5+ TB GPU 内存</strong> (全精度)</li>
+          <li>单块 H100 (80GB) 无法存放 70B 模型的完整训练状态</li>
+          <li>必须采用：分布式训练、参数高效微调 (LoRA)、量化、混合精度等技术</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 01: Full Fine-tuning -->
+    <section class="section" id="sec01">
+      <div class="section-badge" style="border-color:var(--teal);background:var(--td)"><span style="color:var(--teal)">●</span> Fine-tune</div>
+      <h2 class="section-title">Full Fine-tuning</h2>
+      <p class="section-sub">更新模型的所有参数，传统的微调方法</p>
+
+      <div class="prose">
+        <p><em>Full Fine-tuning</em> 是最直接的微调方式：<strong>更新模型中的每一个参数</strong>。这意味着所有权重矩阵都参与梯度计算和优化过程。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">工作流程</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="title">加载预训练模型</div>
+            <div class="desc">从 checkpoint 加载已训练的权重，所有参数 requires_grad=True</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="title">前向传播</div>
+            <div class="desc">在新的下游任务数据上计算损失函数</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="title">反向传播</div>
+            <div class="desc">计算所有参数的梯度 ∂L/∂W，保存所有中间激活值用于反向</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="title">参数更新</div>
+            <div class="desc">用 Adam/SGD 等优化器更新所有 W: W ← W - lr·∇L</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">内存和计算成本</h3>
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">参数更新</div>
+          <div class="tc-val">100%</div>
+          <div class="tc-desc">所有权重都会被优化，适应新任务最充分</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">内存占用</div>
+          <div class="tc-val">3-4×</div>
+          <div class="tc-desc">模型 + 梯度 + 优化器状态，激活值取决于 BS</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">训练时间</div>
+          <div class="tc-val">最长</div>
+          <div class="tc-desc">需要计算每个参数的梯度，通信量最大</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">推理延迟</div>
+          <div class="tc-val">无增加</div>
+          <div class="tc-desc">训练后部署的模型大小不变</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">何时使用 Full Fine-tuning</h3>
+      <div class="prose">
+        <ul>
+          <li><strong>数据充足：</strong> 有大量 (>100K) 标注样本</li>
+          <li><strong>领域差异大：</strong> 下游任务与预训练数据分布相差很远</li>
+          <li><strong>资源充足：</strong> 有足够的 GPU 内存和计算资源</li>
+          <li><strong>精度要求高：</strong> 需要最高的模型性能和适应度</li>
+        </ul>
+      </div>
+
+      <div class="callout" style="border-left-color:var(--coral);background:rgba(248,113,113,0.08)">
+        <strong>实践建议：</strong> 在 8×H100 或更大的集群上训练 70B+ 模型。对于 13B 以下的模型且有 GPU，使用 ZeRO-2 或 FSDP-Stage-2 分布式训练更经济。
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">代码示例</h3>
+      <div class="code-block">import torch
+from torch import nn
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# 加载预训练模型
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b")
+
+# 所有参数都可以训练
+for param in model.parameters():
+    param.requires_grad = True
+
+# 标准训练循环
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+for epoch in range(3):
+    for batch in train_dataloader:
+        input_ids = batch['input_ids']
+        labels = batch['labels']
+
+        # 前向
+        outputs = model(input_ids=input_ids, labels=labels)
+        loss = outputs.loss
+
+        # 反向
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()</div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: Full Fine-tuning 和 LoRA 的最大区别是什么？</strong></p>
+        <p>A: Full Fine-tuning 更新所有参数，导致内存占用大（需要存储梯度和优化器状态）；LoRA 只训练低秩适配器，参数量减少 1000 倍以上。对于同一个模型，LoRA 在单块 GPU 上可行，Full Fine-tuning 则需要分布式训练。</p>
+      </div>
+    </section>
+
+    <!-- 02: LoRA 核心部分 -->
+    <section class="section" id="sec02">
+      <div class="section-badge" style="border-color:var(--green);background:var(--gd)"><span style="color:var(--green)">●</span> LoRA</div>
+      <h2 class="section-title">LoRA 原理与实现</h2>
+      <p class="section-sub">参数高效微调的核心方法，面试重点</p>
+
+      <div class="prose">
+        <p>LoRA (Low-Rank Adaptation) 是微调大模型时最重要的技术之一。核心思想是：<strong>权重的更新 ΔW 具有低秩结构</strong>，我们可以用两个小矩阵的乘积来近似它，而不是更新整个权重矩阵。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">数学基础</h3>
+      <div class="formula">
+        W' = W₀ + ΔW = W₀ + BA
+        <div class="comment">W₀ ∈ ℝ^(d_out × d_in) 冻结  |  B ∈ ℝ^(d_out × r), A ∈ ℝ^(r × d_in), r ≪ min(d_out, d_in)</div>
+      </div>
+
+      <div class="prose">
+        <p>在论文中，<strong>B 的初始化</strong>很关键：A 从高斯分布初始化，B 初始化为 0。这样一开始 ΔW = BA = 0，模型行为与原模型完全相同，避免了随机初始化可能带来的不稳定。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">关键参数</h3>
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">秩 (r)</div>
+          <div class="tc-val">8 ~ 64</div>
+          <div class="tc-desc">r 越大，表达能力越强，参数越多。典型值：r=8 或 r=16。复杂任务可用 r=32</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">缩放因子 (α)</div>
+          <div class="tc-val">16 ~ 256</div>
+          <div class="tc-desc">实际更新为 ΔW = (α/r) × BA，使得权重变化的幅度与 r 无关，便于超参数迁移</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">目标层</div>
+          <div class="tc-val">Q, V</div>
+          <div class="tc-desc">通常应用到 attention 的 Q 和 V 投影。K、输出投影可选。不通常用于 MLP</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">Dropout</div>
+          <div class="tc-val">0.05 ~ 0.1</div>
+          <div class="tc-desc">在 LoRA 层应用 dropout，防止过拟合，尤其重要当数据量小时</div>
+        </div>
+      </div>
+
+      <div class="diagram">
+        <div class="diagram-title">LoRA 权重分解示意</div>
+        <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- 输入向量 -->
+          <text x="20" y="25" font-size="13" font-weight="600" fill="var(--text)">输入: x</text>
+          <rect x="20" y="35" width="30" height="120" fill="var(--blue)" opacity="0.7"/>
+          <text x="35" y="100" font-size="11" fill="white" font-weight="600" text-anchor="middle">d_in</text>
+
+          <!-- 原始权重 (冻结) -->
+          <text x="100" y="25" font-size="13" font-weight="600" fill="var(--text)">W₀ (冻结)</text>
+          <rect x="80" y="35" width="80" height="120" fill="var(--blue)" opacity="0.4" stroke="var(--line)" stroke-width="2" stroke-dasharray="4,4"/>
+          <text x="120" y="100" font-size="11" fill="var(--dim)" text-anchor="middle" font-weight="600">d_in × d_out</text>
+
+          <!-- 加号 -->
+          <text x="175" y="100" font-size="28" fill="var(--green)" font-weight="600">+</text>
+
+          <!-- LoRA 分解 -->
+          <text x="210" y="25" font-size="13" font-weight="600" fill="var(--text)">B</text>
+          <rect x="210" y="35" width="50" height="120" fill="var(--green)" opacity="0.8"/>
+          <text x="235" y="100" font-size="11" fill="white" text-anchor="middle" font-weight="600">d_out × r</text>
+
+          <text x="280" y="100" font-size="18" fill="var(--teal)" font-weight="600">@</text>
+
+          <text x="310" y="25" font-size="13" font-weight="600" fill="var(--text)">A</text>
+          <rect x="310" y="35" width="40" height="120" fill="var(--orange)" opacity="0.8"/>
+          <text x="330" y="100" font-size="11" fill="white" text-anchor="middle" font-weight="600">r × d_in</text>
+
+          <!-- 输出 -->
+          <text x="480" y="25" font-size="13" font-weight="600" fill="var(--text)">输出</text>
+          <g transform="translate(470, 35)">
+            <text x="0" y="12" font-size="11" fill="var(--text)" font-weight="600">y = x·W₀ᵀ</text>
+            <text x="0" y="30" font-size="11" fill="var(--text)" font-weight="600">+ x·Aᵀ·Bᵀ</text>
+            <rect x="-10" y="45" width="60" height="120" fill="var(--teal)" opacity="0.7"/>
+            <text x="20" y="110" font-size="11" fill="white" text-anchor="middle" font-weight="600">d_out</text>
+          </g>
+
+          <!-- 参数数量对比 -->
+          <g transform="translate(20, 180)">
+            <text x="0" y="0" font-size="12" font-weight="600" fill="var(--green)">参数数量对比</text>
+
+            <text x="0" y="25" font-size="11" fill="var(--sub)">完整权重: d_in × d_out = 16,384 × 12,288 ≈ 200M</text>
+            <text x="0" y="45" font-size="11" fill="var(--green)" font-weight="600">LoRA: (d_out × r) + (r × d_in) = (12,288×8) + (8×16,384) ≈ 230K</text>
+            <text x="0" y="65" font-size="11" fill="var(--amber)">压缩比: 200M / 230K ≈ 870 倍</text>
+          </g>
+        </svg>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">为什么有效：低秩假设</h3>
+      <div class="prose">
+        <p>LoRA 的成功源于一个重要的观察：<strong>大模型在微调过程中的权重更新 ΔW 具有低秩结构</strong>。</p>
+        <ul>
+          <li>论文在多个任务上验证：有效秩 (intrinsic dimensionality) 远小于 min(d_out, d_in)</li>
+          <li>直观理解：预训练学到了通用特征，微调只需要小的适配性改动，这些改动集中在低维子空间内</li>
+          <li>与 Lottery Ticket Hypothesis 相关：只有网络的一部分对下游任务真正关键</li>
+        </ul>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">实现细节与代码</h3>
+      <div class="code-block">from peft import LoraConfig, get_peft_model
+
+# LoRA 配置
+lora_config = LoraConfig(
+    r=8,                          # 秩
+    lora_alpha=16,                # 缩放: α/r = 16/8 = 2
+    target_modules=["q_proj", "v_proj"],  # 目标层
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+# 包装模型
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-7b"
+)
+model = get_peft_model(model, lora_config)
+
+# 统计参数
+model.print_trainable_parameters()
+# trainable params: 4,194,304 ||
+# all params: 6,738,415,616 ||
+# trainable%: 0.06%
+
+# 训练
+optimizer = torch.optim.AdamW(
+    model.parameters(),
+    lr=1e-4
+)
+for batch in train_loader:
+    outputs = model(**batch)
+    loss = outputs.loss
+    loss.backward()
+    optimizer.step()</div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">推理时的合并</h3>
+      <div class="formula">
+        W_final = W₀ + (α/r) × B × A
+        <div class="comment">在推理前执行一次合并，之后推理无额外成本</div>
+      </div>
+
+      <div class="prose">
+        <p>这是 LoRA 的关键优势：训练时只存储 B 和 A，推理时可以将它们合并到 W₀ 中，<strong>零推理延迟和零额外内存成本</strong>。多个 LoRA 适配器甚至可以动态切换。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 为什么 LoRA 的 B 初始化为 0，A 初始化为随机值？</strong></p>
+        <p>A: 如果两者都随机初始化，ΔW 一开始就不为 0，会破坏预训练权重的初始效应。初始化 B=0, A~N(0,σ²) 保证 ΔW 从 0 开始，让模型在微调初期还是 "接近原模型"，训练更稳定。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 如何选择 LoRA 的秩 r？</strong></p>
+        <p>A: 通常 r=8 对大多数任务足够。如果任务复杂度高（例如复杂推理、代码生成），可尝试 r=16 或 r=32。较小的数据集用 r=8 避免过拟合；大数据集可适当增加。不建议 r>64，回报边际递减。</p>
+      </div>
+    </section>
+
+    <!-- 03: QLoRA & DoRA -->
+    <section class="section" id="sec03">
+      <div class="section-badge" style="border-color:var(--purple);background:var(--pd)"><span style="color:var(--purple)">●</span> Quantization</div>
+      <h2 class="section-title">QLoRA & DoRA</h2>
+      <p class="section-sub">更进一步的参数高效方法：4-bit 量化与方向分解</p>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">QLoRA：量化 + LoRA</h3>
+      <div class="prose">
+        <p>QLoRA 在 LoRA 的基础上，对<strong>基础模型参数进行 4-bit 量化</strong>，而 LoRA 适配器保持 FP16。这样做能在<strong>单块 48GB GPU 上微调 65B 模型</strong>。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">三个关键技术</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="title">NF4 量化 (NormalFloat4)</div>
+            <div class="desc">基于正态分布的 4-bit 量化。权重按分布分成 16 个等概率的 bucket，相比均匀量化信息损失更少</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="title">双重量化 (Double Quantization)</div>
+            <div class="desc">对量化常数本身也进行量化。NF4 后的每 32 个权重共享一个缩放因子，该缩放因子也被量化，进一步节省内存</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="title">分页优化器状态 (Paged Optimizer)</div>
+            <div class="desc">当 GPU 内存溢出时，自动将优化器状态 (Adam 的 m, v) 卸载到 CPU，需要时再加载，实现动态的 GPU↔CPU 内存交换</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="formula">
+        Model(4-bit) ≈ 70B / 8 = 8.75 GB  |  LoRA(FP16) ≈ 0.2 GB  |  Optimizer ≈ 2-4 GB
+        <div class="comment">总计 ≈ 15-20 GB，单块 GPU 可行</div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">代码示例</h3>
+      <div class="code-block">from transformers import AutoModelForCausalLM
+from peft import LoraConfig, get_peft_model
+from bitsandbytes.nn import Linear4bit
+
+# 4-bit 量化配置
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",        # NF4
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True    # 双重量化
+)
+
+# 加载量化模型
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-2-70b-hf",
+    quantization_config=bnb_config,
+    device_map="auto"
+)
+
+# LoRA 配置
+lora_config = LoraConfig(
+    r=64,
+    lora_alpha=128,
+    target_modules=["q_proj", "v_proj"],
+    lora_dropout=0.05
+)
+
+model = get_peft_model(model, lora_config)
+
+# 训练时设置 paged optimizer
+training_args = TrainingArguments(
+    optim="paged_adamw_32bit",  # 分页优化器
+    ...
+)</div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DoRA：方向分解的 LoRA</h3>
+      <div class="prose">
+        <p>DoRA (Weight-Decomposed LoRA) 进一步改进 LoRA。核心思想：将权重分解为<strong>幅度和方向</strong>，只对方向应用 LoRA 适配。</p>
+      </div>
+
+      <div class="formula">
+        W = m · (V / ||V||)
+        <div class="comment">m: 幅度 (标量)  |  V: 方向 (向量)  |  应用 LoRA 到 V，不改变 m</div>
+      </div>
+
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">优势</div>
+          <div class="tc-val">性能更好</div>
+          <div class="tc-desc">多个基准上，DoRA 超过 LoRA，特别是在较小秩时效果明显</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">额外成本</div>
+          <div class="tc-val">轻微</div>
+          <div class="tc-desc">多维护一个标量 m，计算上没有显著增加</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">推理合并</div>
+          <div class="tc-val">支持</div>
+          <div class="tc-desc">同样可以在推理前合并，无额外推理成本</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">适用场景</div>
+          <div class="tc-val">通用</div>
+          <div class="tc-desc">可替代 LoRA，尝试 DoRA 通常有收益</div>
+        </div>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: QLoRA 相比 LoRA 的优势和劣势？</strong></p>
+        <p>A: 优势：可在单块 GPU 上微调 70B 模型（LoRA 无法做到）。劣势：量化会引入信息损失，训练速度稍慢（量化/反量化开销），最终精度可能略低于全精度 LoRA。实践中，QLoRA 是资源受限情况下的最佳选择。</p>
+      </div>
+    </section>
+
+    <!-- 04: Data Parallel -->
+    <section class="section" id="sec04">
+      <div class="section-badge" style="border-color:var(--blue);background:var(--bd)"><span style="color:var(--blue)">●</span> Distributed</div>
+      <h2 class="section-title">Data Parallel (DP/DDP)</h2>
+      <p class="section-sub">最简单的分布式训练方法：多 GPU 上训练同一个模型</p>
+
+      <div class="prose">
+        <p>数据并行是分布式训练的基础。核心思想：<strong>每块 GPU 持有完整模型副本，处理不同的数据批次，然后同步梯度</strong>。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DP vs DDP</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>特性</th>
+            <th>DP (DataParallel)</th>
+            <th>DDP (DistributedDataParallel)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>结构</strong></td>
+            <td>单进程，多线程分发</td>
+            <td>多进程，独立数据装载和计算</td>
+          </tr>
+          <tr>
+            <td>模型位置</td>
+            <td>主要在 GPU 0</td>
+            <td>每个 GPU 独立副本</td>
+          </tr>
+          <tr>
+            <td>梯度同步</td>
+            <td>每个 batch 后，在 GPU 0 gather 梯度再分发</td>
+            <td>Ring AllReduce，全连接同步（高效）</td>
+          </tr>
+          <tr>
+            <td>扩展性</td>
+            <td>4-8 GPU 时勉强可用，多于 8 个性能下降</td>
+            <td>可扩展至数百 GPU，通信开销线性增长</td>
+          </tr>
+          <tr>
+            <td>易用性</td>
+            <td>代码改动最少，只需一行</td>
+            <td>需要修改启动方式和代码（略显复杂）</td>
+          </tr>
+          <tr>
+            <td>通信量</td>
+            <td>高，collect 和 scatter 开销大</td>
+            <td>低，AllReduce 优化充分</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="diagram">
+        <div class="diagram-title">DDP 训练流程 (AllReduce 同步梯度)</div>
+        <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- GPU 0 -->
+          <text x="50" y="25" font-size="12" font-weight="600" fill="var(--text)">GPU 0</text>
+          <rect x="20" y="40" width="60" height="180" fill="var(--blue)" opacity="0.6"/>
+          <text x="50" y="140" font-size="10" fill="white" font-weight="600" text-anchor="middle">Model</text>
+          <text x="50" y="160" font-size="10" fill="white" font-weight="600" text-anchor="middle">Batch 0</text>
+
+          <!-- GPU 1 -->
+          <text x="150" y="25" font-size="12" font-weight="600" fill="var(--text)">GPU 1</text>
+          <rect x="120" y="40" width="60" height="180" fill="var(--blue)" opacity="0.6"/>
+          <text x="150" y="140" font-size="10" fill="white" font-weight="600" text-anchor="middle">Model</text>
+          <text x="150" y="160" font-size="10" fill="white" font-weight="600" text-anchor="middle">Batch 1</text>
+
+          <!-- GPU 2 -->
+          <text x="250" y="25" font-size="12" font-weight="600" fill="var(--text)">GPU 2</text>
+          <rect x="220" y="40" width="60" height="180" fill="var(--blue)" opacity="0.6"/>
+          <text x="250" y="140" font-size="10" fill="white" font-weight="600" text-anchor="middle">Model</text>
+          <text x="250" y="160" font-size="10" fill="white" font-weight="600" text-anchor="middle">Batch 2</text>
+
+          <!-- Arrows -->
+          <path d="M 80 130 L 120 130" stroke="var(--green)" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+          <path d="M 180 130 L 220 130" stroke="var(--green)" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+          <path d="M 220 130 L 180 130" stroke="var(--green)" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+          <path d="M 120 130 L 80 130" stroke="var(--green)" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+
+          <text x="100" y="120" font-size="9" fill="var(--green)">∇ Sync</text>
+          <text x="200" y="120" font-size="9" fill="var(--green)">∇ Sync</text>
+
+          <!-- 说明 -->
+          <g transform="translate(30, 240)">
+            <text x="0" y="0" font-size="11" font-weight="600" fill="var(--text)">通信量</text>
+            <text x="0" y="18" font-size="10" fill="var(--sub)">每轮：2 × model_size (send + receive)</text>
+          </g>
+
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+              <polygon points="0 0, 10 3, 0 6" fill="var(--green)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DDP 代码实现</h3>
+      <div class="code-block">import torch
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader, DistributedSampler
+
+# 初始化进程组
+dist.init_process_group(backend="nccl")
+
+# 设置当前进程的 GPU
+rank = dist.get_rank()
+world_size = dist.get_world_size()
+torch.cuda.set_device(rank)
+
+# 创建模型并包装为 DDP
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b")
+model = model.cuda()
+model = DDP(model, device_ids=[rank])
+
+# DistributedSampler 确保不同 GPU 获得不同数据
+train_sampler = DistributedSampler(
+    dataset,
+    num_replicas=world_size,
+    rank=rank,
+    shuffle=True
+)
+train_loader = DataLoader(
+    dataset,
+    sampler=train_sampler,
+    batch_size=batch_size
+)
+
+# 标准训练循环
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+for epoch in range(num_epochs):
+    train_sampler.set_epoch(epoch)  # 重要！
+    for batch in train_loader:
+        outputs = model(input_ids=batch['input_ids'])
+        loss = outputs.loss
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+# 清理
+dist.destroy_process_group()
+
+# 启动命令：
+# torchrun --nproc_per_node=8 train.py
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">梯度分桶 (Gradient Bucketing)</h3>
+      <div class="prose">
+        <p>DDP 提供梯度分桶机制：<strong>将梯度分组，每组计算完后立即通信，而不是等所有梯度计算完再通信</strong>。这样能在计算和通信之间形成流水线，降低闲置时间。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 为什么 DDP 比 DataParallel 快这么多？</strong></p>
+        <p>A: DP 在每个 batch 后必须将梯度 gather 到 GPU 0，再分发回去，造成 GPU 0 成为瓶颈。DDP 使用 Ring AllReduce，每块 GPU 只和相邻两块通信，通信量均衡，不存在中心化瓶颈。对于 8 GPU，DDP 通常比 DP 快 3-5 倍。</p>
+      </div>
+    </section>
+
+    <!-- 05: FSDP / ZeRO -->
+    <section class="section" id="sec05">
+      <div class="section-badge" style="border-color:var(--teal);background:var(--td)"><span style="color:var(--teal)">●</span> FSDP</div>
+      <h2 class="section-title">FSDP / ZeRO (关键面试内容)</h2>
+      <p class="section-sub">超大模型训练的利器：在多 GPU 间分片所有参数</p>
+
+      <div class="prose">
+        <p>FSDP (Fully Sharded Data Parallel) 和 DeepSpeed 的 ZeRO 是同一思想的不同实现。核心：<strong>将模型参数、梯度和优化器状态分片到所有 GPU，每块 GPU 只存储 1/N 的数据</strong>。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">ZeRO 的三个阶段</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>阶段</th>
+            <th>分片对象</th>
+            <th>内存 / GPU (7B)</th>
+            <th>通信 / step</th>
+            <th>适用场景</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ZeRO-1</strong></td>
+            <td>优化器状态</td>
+            <td>84 GB / 8 = 10.5 GB</td>
+            <td>2×model</td>
+            <td>可用，8 GPU 最小需求</td>
+          </tr>
+          <tr>
+            <td><strong>ZeRO-2</strong></td>
+            <td>优化器 + 梯度</td>
+            <td>56 GB / 8 = 7 GB</td>
+            <td>2×model</td>
+            <td>推荐，大多数场景</td>
+          </tr>
+          <tr style="background:rgba(52,211,153,0.1)">
+            <td><strong>ZeRO-3 / FSDP</strong></td>
+            <td>所有（参数 + 梯度 + 优化器）</td>
+            <td>112 GB / 8 = 14 GB</td>
+            <td>3×model</td>
+            <td>极大模型 (70B+)，多节点</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="formula">
+        ZeRO-3 内存 = (参数 + 梯度 + 优化器) / num_gpus + 激活值
+        <div class="comment">激活值通常与 num_gpus 无关，是 BS×seq_len 的函数</div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">FSDP 工作流程 (最重要的图表)</h3>
+      <div class="diagram">
+        <div class="diagram-title">FSDP / ZeRO-3 训练一轮 (4 GPU 示例)</div>
+        <svg viewBox="0 0 720 520" xmlns="http://www.w3.org/2000/svg">
+          <!-- 标题 -->
+          <text x="360" y="20" font-size="13" font-weight="600" fill="var(--text)" text-anchor="middle">Forward Pass (1/4 参数分别被 AllGather)</text>
+
+          <!-- Forward Phase -->
+          <g transform="translate(20, 40)">
+            <rect x="0" y="0" width="150" height="70" fill="var(--blue)" opacity="0.5" stroke="var(--line)" stroke-width="1"/>
+            <text x="75" y="20" font-size="11" fill="var(--text)" text-anchor="middle" font-weight="600">GPU 0</text>
+            <text x="75" y="40" font-size="10" fill="var(--sub)" text-anchor="middle">Layer 0-7</text>
+            <text x="75" y="55" font-size="10" fill="var(--dim)" text-anchor="middle">AllGather</text>
+
+            <rect x="160" y="0" width="150" height="70" fill="var(--blue)" opacity="0.5" stroke="var(--line)" stroke-width="1"/>
+            <text x="235" y="20" font-size="11" fill="var(--text)" text-anchor="middle" font-weight="600">GPU 1</text>
+            <text x="235" y="40" font-size="10" fill="var(--sub)" text-anchor="middle">Layer 8-15</text>
+            <text x="235" y="55" font-size="10" fill="var(--dim)" text-anchor="middle">AllGather</text>
+
+            <rect x="320" y="0" width="150" height="70" fill="var(--blue)" opacity="0.5" stroke="var(--line)" stroke-width="1"/>
+            <text x="395" y="20" font-size="11" fill="var(--text)" text-anchor="middle" font-weight="600">GPU 2</text>
+            <text x="395" y="40" font-size="10" fill="var(--sub)" text-anchor="middle">Layer 16-23</text>
+            <text x="395" y="55" font-size="10" fill="var(--dim)" text-anchor="middle">AllGather</text>
+
+            <rect x="480" y="0" width="150" height="70" fill="var(--blue)" opacity="0.5" stroke="var(--line)" stroke-width="1"/>
+            <text x="555" y="20" font-size="11" fill="var(--text)" text-anchor="middle" font-weight="600">GPU 3</text>
+            <text x="555" y="40" font-size="10" fill="var(--sub)" text-anchor="middle">Layer 24-31</text>
+            <text x="555" y="55" font-size="10" fill="var(--dim)" text-anchor="middle">AllGather</text>
+          </g>
+
+          <!-- 说明 -->
+          <text x="20" y="150" font-size="11" fill="var(--green)" font-weight="600">第 1 步：AllGather 参数到 GPU 0</text>
+          <text x="20" y="170" font-size="9" fill="var(--sub)">所有参数被同步到所有 GPU，进行完整的前向计算</text>
+          <text x="20" y="185" font-size="9" fill="var(--sub)">激活值被保存用于反向传播</text>
+
+          <!-- Forward computation -->
+          <rect x="20" y="200" width="610" height="45" fill="rgba(52,211,153,0.15)" stroke="var(--green)" stroke-width="1" stroke-dasharray="2,2"/>
+          <text x="325" y="222" font-size="10" fill="var(--text)" text-anchor="middle" font-weight="600">前向计算完成</text>
+          <text x="325" y="237" font-size="9" fill="var(--sub)" text-anchor="middle">loss = model(input_ids)</text>
+
+          <!-- Discard Phase -->
+          <text x="20" y="280" font-size="11" fill="var(--orange)" font-weight="600">第 2 步：丢弃参数，释放内存</text>
+          <text x="20" y="300" font-size="9" fill="var(--sub)">AllGather 得到的参数立即丢弃（除了当前层），只保留梯度和激活值</text>
+
+          <!-- Backward Phase -->
+          <text x="20" y="330" font-size="11" fill="var(--coral)" font-weight="600">第 3 步：Backward (再次 AllGather + ReduceScatter 梯度)</text>
+          <g transform="translate(20, 345)">
+            <rect x="0" y="0" width="150" height="55" fill="var(--coral)" opacity="0.3" stroke="var(--line)" stroke-width="1"/>
+            <text x="75" y="18" font-size="10" fill="var(--text)" text-anchor="middle">GPU 0</text>
+            <text x="75" y="35" font-size="10" fill="var(--dim)" text-anchor="middle">ReduceScatter ∇</text>
+
+            <rect x="160" y="0" width="150" height="55" fill="var(--coral)" opacity="0.3" stroke="var(--line)" stroke-width="1"/>
+            <text x="235" y="18" font-size="10" fill="var(--text)" text-anchor="middle">GPU 1</text>
+            <text x="235" y="35" font-size="10" fill="var(--dim)" text-anchor="middle">ReduceScatter ∇</text>
+
+            <rect x="320" y="0" width="150" height="55" fill="var(--coral)" opacity="0.3" stroke="var(--line)" stroke-width="1"/>
+            <text x="395" y="18" font-size="10" fill="var(--text)" text-anchor="middle">GPU 2</text>
+            <text x="395" y="35" font-size="10" fill="var(--dim)" text-anchor="middle">ReduceScatter ∇</text>
+
+            <rect x="480" y="0" width="150" height="55" fill="var(--coral)" opacity="0.3" stroke="var(--line)" stroke-width="1"/>
+            <text x="555" y="18" font-size="10" fill="var(--text)" text-anchor="middle">GPU 3</text>
+            <text x="555" y="35" font-size="10" fill="var(--dim)" text-anchor="middle">ReduceScatter ∇</text>
+          </g>
+
+          <!-- Update phase -->
+          <text x="20" y="450" font-size="11" fill="var(--purple)" font-weight="600">第 4 步：各 GPU 独立更新其分片参数</text>
+          <text x="20" y="470" font-size="9" fill="var(--sub)">W ← W - lr·∇，每块 GPU 更新自己持有的 1/N 的参数</text>
+        </svg>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DDP vs FSDP 对比</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>特性</th>
+            <th>DDP</th>
+            <th>FSDP / ZeRO-3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>内存占用</strong></td>
+            <td>3-4× model_size</td>
+            <td>1-2× model_size (分布到多 GPU)</td>
+          </tr>
+          <tr>
+            <td>通信量</td>
+            <td>2× model_size / step</td>
+            <td>3× model_size / step (AllGather + ReduceScatter)</td>
+          </tr>
+          <tr>
+            <td>最大支持模型</td>
+            <td>~13B on 8×80GB GPU</td>
+            <td>~70B on 8×80GB GPU</td>
+          </tr>
+          <tr>
+            <td>节点间扩展</td>
+            <td>较好，但通信成为瓶颈</td>
+            <td>更优，已在 1000+ GPU 上验证</td>
+          </tr>
+          <tr>
+            <td>实现复杂度</td>
+            <td>简单</td>
+            <td>需要梯度累积、checkpointing 等技巧</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">FSDP 代码示例</h3>
+      <div class="code-block">from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import CPUOffload
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+
+# 初始化分布式
+dist.init_process_group("nccl")
+rank = dist.get_rank()
+torch.cuda.set_device(rank)
+
+# 加载模型
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-70b")
+
+# FSDP 包装
+model = FSDP(
+    model,
+    auto_wrap_policy=size_based_auto_wrap_policy,
+    cpu_offload=CPUOffload(offload_params=False),
+    device_id=torch.cuda.current_device()
+)
+
+# 训练
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+for batch in dataloader:
+    outputs = model(**batch)
+    loss = outputs.loss
+    loss.backward()
+    optimizer.step()
+
+dist.destroy_process_group()
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: FSDP 为什么要 AllGather 参数再丢弃？不能直接分布式计算吗？</strong></p>
+        <p>A: Transformer 中各层是顺序的，当前层需要完整的参数才能计算。AllGather 和 ReduceScatter 的"浪费"是必要的，因为模型的计算顺序决定了这一点。通过参数分片换来的是内存节省，权衡是通信增加 50% (3×vs 2×)。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 什么时候选 FSDP，什么时候选 DDP？</strong></p>
+        <p>A: 模型 <13B 且 GPU 充足 → DDP；模型 ≥13B → FSDP；跨节点训练大模型 → FSDP；GPU 少、内存紧张 → 配合 gradient checkpointing 和 activation checkpointing。FSDP 是现代大模型训练的标准选择。</p>
+      </div>
+    </section>
+
+    <!-- 06: Tensor Parallelism -->
+    <section class="section" id="sec06">
+      <div class="section-badge" style="border-color:var(--amber);background:var(--ad)"><span style="color:var(--amber)">●</span> Parallelism</div>
+      <h2 class="section-title">Tensor Parallelism (TP)</h2>
+      <p class="section-sub">在单个层内分片权重矩阵，适合节点内通信</p>
+
+      <div class="prose">
+        <p>Tensor Parallelism 将单个线性层的权重矩阵按行或列分割，分配到多块 GPU。和 Data Parallelism 不同的是，TP <strong>分割的是模型计算，不是数据</strong>。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">列并行 vs 行并行</h3>
+      <div class="formula">
+        Y = XA，A = [A₁, A₂]ᵀ  →  Y = [XA₁, XA₂] (列并行，无通信)
+        <div class="comment">vs</div>
+      </div>
+      <div class="formula">
+        Y = XA，A 按行分割  →  Y = AllReduce([XA₁, XA₂]) (行并行，需 AllReduce)
+      </div>
+
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">列并行</div>
+          <div class="tc-val">无通信</div>
+          <div class="tc-desc">输出分割，下一层直接使用，最高效</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">行并行</div>
+          <div class="tc-val">AllReduce</div>
+          <div class="tc-desc">输出合并需 AllReduce，通信一次</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">通信位置</div>
+          <div class="tc-val">同层间</div>
+          <div class="tc-desc">TP 通信在同一节点（NVLink），延迟低</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">与 DP 组合</div>
+          <div class="tc-val">兼容</div>
+          <div class="tc-desc">TP=8 within node, DP=8 across nodes</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">Megatron-LM 的列并行</h3>
+      <div class="diagram">
+        <div class="diagram-title">TP 在 Self-Attention 中的应用</div>
+        <svg viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg">
+          <!-- Input -->
+          <rect x="20" y="20" width="100" height="60" fill="var(--blue)" opacity="0.6"/>
+          <text x="70" y="55" font-size="10" fill="white" text-anchor="middle" font-weight="600">Input</text>
+
+          <!-- Q, K, V projections (before split) -->
+          <g transform="translate(150, 20)">
+            <rect x="0" y="0" width="90" height="60" fill="var(--blue)" opacity="0.4" stroke="var(--line2)" stroke-width="2"/>
+            <text x="45" y="20" font-size="9" fill="var(--sub)" text-anchor="middle">W_q (full)</text>
+            <text x="45" y="40" font-size="8" fill="var(--dim)" text-anchor="middle">冻结展示</text>
+          </g>
+
+          <!-- Split across GPUs -->
+          <g transform="translate(280, 20)">
+            <!-- GPU 0 -->
+            <rect x="0" y="0" width="80" height="20" fill="var(--green)" opacity="0.7"/>
+            <text x="40" y="14" font-size="8" fill="white" text-anchor="middle" font-weight="600">Q₀ (GPU 0)</text>
+
+            <!-- GPU 1 -->
+            <rect x="0" y="30" width="80" height="20" fill="var(--green)" opacity="0.7"/>
+            <text x="40" y="44" font-size="8" fill="white" text-anchor="middle" font-weight="600">Q₁ (GPU 1)</text>
+
+            <!-- GPU 2 -->
+            <rect x="0" y="60" width="80" height="20" fill="var(--green)" opacity="0.7"/>
+            <text x="40" y="74" font-size="8" fill="white" text-anchor="middle" font-weight="600">Q₂ (GPU 2)</text>
+          </g>
+
+          <!-- Attention and concat -->
+          <g transform="translate(400, 20)">
+            <rect x="0" y="0" width="120" height="60" fill="var(--teal)" opacity="0.5" stroke="var(--line)" stroke-width="1" stroke-dasharray="2,2"/>
+            <text x="60" y="25" font-size="9" fill="var(--text)" text-anchor="middle">Attention</text>
+            <text x="60" y="40" font-size="8" fill="var(--dim)" text-anchor="middle">本地计算，输出分割</text>
+          </g>
+
+          <!-- Output -->
+          <g transform="translate(550, 20)">
+            <!-- GPU 0 -->
+            <rect x="0" y="0" width="80" height="20" fill="var(--orange)" opacity="0.7"/>
+            <text x="40" y="14" font-size="8" fill="white" text-anchor="middle" font-weight="600">Out₀ (GPU 0)</text>
+
+            <!-- GPU 1 -->
+            <rect x="0" y="30" width="80" height="20" fill="var(--orange)" opacity="0.7"/>
+            <text x="40" y="44" font-size="8" fill="white" text-anchor="middle" font-weight="600">Out₁ (GPU 1)</text>
+
+            <!-- GPU 2 -->
+            <rect x="0" y="60" width="80" height="20" fill="var(--orange)" opacity="0.7"/>
+            <text x="40" y="74" font-size="8" fill="white" text-anchor="middle" font-weight="600">Out₂ (GPU 2)</text>
+          </g>
+
+          <!-- Timeline info -->
+          <g transform="translate(20, 120)">
+            <text x="0" y="0" font-size="11" fill="var(--text)" font-weight="600">通信模式</text>
+            <text x="0" y="20" font-size="9" fill="var(--sub)">列并行：W = [W₀, W₁, W₂] 按列分割，计算无通信</text>
+            <text x="0" y="37" font-size="9" fill="var(--sub)">行并行：计算后需 AllReduce 同步结果</text>
+            <text x="0" y="54" font-size="9" fill="var(--sub)">通常混合使用，Q/V 列并行，输出层行并行</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: TP 和 DP 的关键区别？何时用 TP？</strong></p>
+        <p>A: DP 分割数据，每块 GPU 有完整模型；TP 分割模型，每块 GPU 有模型的一部分。TP 用于单个节点内（通信延迟低），适合超大模型（70B+ 无法在单 GPU 放下）。节点间用 DP 或 PP 更合适。</p>
+      </div>
+    </section>
+
+    <!-- 07: Pipeline Parallelism -->
+    <section class="section" id="sec07">
+      <div class="section-badge" style="border-color:var(--pink);background:rgba(244,114,182,0.08)"><span style="color:var(--pink)">●</span> Pipeline</div>
+      <h2 class="section-title">Pipeline Parallelism (PP)</h2>
+      <p class="section-sub">按层分割模型，跨节点训练大型模型</p>
+
+      <div class="prose">
+        <p>Pipeline Parallelism 将模型的不同层分配到不同 GPU。GPU 0 执行前 16 层，GPU 1 执行后 16 层等。优点是通信量少，但引入<strong>气泡时间 (bubble time)</strong>问题。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">气泡问题与微批处理</h3>
+      <div class="formula">
+        Bubble Ratio = (p - 1) / (m + p - 1)
+        <div class="comment">p = stages (GPU 数), m = micro-batches (微批处理数)</div>
+      </div>
+
+      <div class="diagram">
+        <div class="diagram-title">Pipeline Schedule (不同策略的时间线)</div>
+        <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+          <!-- GPipe (Bubble, 垂直方向) -->
+          <text x="30" y="30" font-size="11" font-weight="600" fill="var(--text)">GPipe (m=4, p=4)</text>
+          <g transform="translate(30, 45)">
+            <!-- GPU 0 -->
+            <rect x="0" y="0" width="30" height="15" fill="var(--green)" opacity="0.8"/>
+            <rect x="30" y="0" width="30" height="15" fill="var(--green)" opacity="0.8"/>
+            <rect x="60" y="0" width="30" height="15" fill="var(--green)" opacity="0.8"/>
+            <rect x="90" y="0" width="30" height="15" fill="var(--green)" opacity="0.8"/>
+
+            <!-- GPU 1 -->
+            <rect x="0" y="20" width="15" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="15" y="20" width="30" height="15" fill="var(--blue)" opacity="0.8"/>
+            <rect x="45" y="20" width="30" height="15" fill="var(--blue)" opacity="0.8"/>
+            <rect x="75" y="20" width="30" height="15" fill="var(--blue)" opacity="0.8"/>
+
+            <!-- GPU 2 -->
+            <rect x="0" y="40" width="30" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="30" y="40" width="30" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="60" y="40" width="30" height="15" fill="var(--orange)" opacity="0.8"/>
+            <rect x="90" y="40" width="30" height="15" fill="var(--orange)" opacity="0.8"/>
+
+            <!-- GPU 3 -->
+            <rect x="0" y="60" width="60" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="60" y="60" width="30" height="15" fill="var(--teal)" opacity="0.8"/>
+            <rect x="90" y="60" width="30" height="15" fill="var(--teal)" opacity="0.8"/>
+
+            <text x="-25" y="8" font-size="8" fill="var(--sub)" text-anchor="end">GPU 0</text>
+            <text x="-25" y="28" font-size="8" fill="var(--sub)" text-anchor="end">GPU 1</text>
+            <text x="-25" y="48" font-size="8" fill="var(--sub)" text-anchor="end">GPU 2</text>
+            <text x="-25" y="68" font-size="8" fill="var(--sub)" text-anchor="end">GPU 3</text>
+
+            <text x="140" y="25" font-size="9" fill="var(--coral)">浪费时间</text>
+          </g>
+
+          <!-- 1F1B Schedule -->
+          <text x="30" y="160" font-size="11" font-weight="600" fill="var(--text)">1F1B Schedule (m=8, p=4) — 更优</text>
+          <g transform="translate(30, 175)">
+            <!-- GPU 0 -->
+            <rect x="0" y="0" width="20" height="15" fill="var(--green)" opacity="0.8"/>
+            <rect x="20" y="0" width="20" height="15" fill="var(--green)" opacity="0.8"/>
+            <rect x="40" y="0" width="20" height="15" fill="var(--coral)" opacity="0.8"/>
+            <rect x="60" y="0" width="20" height="15" fill="var(--coral)" opacity="0.8"/>
+            <rect x="80" y="0" width="20" height="15" fill="var(--green)" opacity="0.8"/>
+
+            <!-- GPU 1 -->
+            <rect x="0" y="20" width="10" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="10" y="20" width="20" height="15" fill="var(--blue)" opacity="0.8"/>
+            <rect x="30" y="20" width="20" height="15" fill="var(--blue)" opacity="0.8"/>
+            <rect x="50" y="20" width="20" height="15" fill="var(--blue)" opacity="0.8"/>
+            <rect x="70" y="20" width="20" height="15" fill="var(--blue)" opacity="0.8"/>
+
+            <!-- GPU 2 -->
+            <rect x="0" y="40" width="20" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="20" y="40" width="20" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="40" y="40" width="20" height="15" fill="var(--orange)" opacity="0.8"/>
+            <rect x="60" y="40" width="20" height="15" fill="var(--orange)" opacity="0.8"/>
+            <rect x="80" y="40" width="20" height="15" fill="var(--orange)" opacity="0.8"/>
+
+            <!-- GPU 3 -->
+            <rect x="0" y="60" width="30" height="15" fill="var(--dim)" opacity="0.5"/>
+            <rect x="30" y="60" width="20" height="15" fill="var(--teal)" opacity="0.8"/>
+            <rect x="50" y="60" width="20" height="15" fill="var(--teal)" opacity="0.8"/>
+            <rect x="70" y="60" width="20" height="15" fill="var(--teal)" opacity="0.8"/>
+
+            <text x="-25" y="8" font-size="8" fill="var(--sub)" text-anchor="end">GPU 0</text>
+            <text x="-25" y="28" font-size="8" fill="var(--sub)" text-anchor="end">GPU 1</text>
+            <text x="-25" y="48" font-size="8" fill="var(--sub)" text-anchor="end">GPU 2</text>
+            <text x="-25" y="68" font-size="8" fill="var(--sub)" text-anchor="end">GPU 3</text>
+
+            <rect x="120" y="0" width="8" height="15" fill="var(--green)" opacity="0.8"/>
+            <text x="132" y="10" font-size="10" fill="var(--sub)">Forward</text>
+
+            <rect x="120" y="20" width="8" height="15" fill="var(--coral)" opacity="0.8"/>
+            <text x="132" y="30" font-size="10" fill="var(--sub)">Backward</text>
+          </g>
+
+          <!-- 总结 -->
+          <g transform="translate(30, 280)">
+            <text x="0" y="0" font-size="10" font-weight="600" fill="var(--text)">对比</text>
+            <text x="0" y="16" font-size="9" fill="var(--sub)">GPipe: 简单但气泡多，多路径依赖</text>
+            <text x="0" y="30" font-size="9" fill="var(--sub)">1F1B: 交错前向和反向，气泡比 = (p-1)/(m+p-1)，推荐</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: PP 的气泡时间怎么理解，如何最小化？</strong></p>
+        <p>A: 气泡来自 GPU 闲置。GPipe 中，GPU 3 必须等待 GPU 0-2 完成才能计算，导致气泡。通过 1F1B (One Forward One Backward) 调度，交错前向和反向计算，可以减少闲置。气泡比 = (p-1)/(m+p-1)，增加 m (微批数) 可减少气泡。</p>
+      </div>
+    </section>
+
+    <!-- 08: 3D Parallelism -->
+    <section class="section" id="sec08">
+      <div class="section-badge" style="border-color:var(--green);background:var(--gd)"><span style="color:var(--green)">●</span> Advanced</div>
+      <h2 class="section-title">3D 并行与实战 (70B 模型训练)</h2>
+      <p class="section-sub">结合 TP、PP、DP 三种技术，实现最大的训练效率</p>
+
+      <div class="prose">
+        <p>单一的并行策略往往无法满足超大模型的训练需求。<strong>3D 并行</strong>结合了 Tensor Parallelism (TP)、Pipeline Parallelism (PP) 和 Data Parallelism (DP)，充分利用多节点 GPU 集群的计算和通信能力。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">3D 并行的设计原则</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">TP</div>
+          <div class="step-body">
+            <div class="title">节点内通信（NVLink 高带宽）</div>
+            <div class="desc">8 块 GPU 在同一节点内，通过 NVLink 通信，带宽最高（600 GB/s）</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">PP</div>
+          <div class="step-body">
+            <div class="title">跨节点通信（较低频率）</div>
+            <div class="desc">逐层传输激活值，通信量受管道深度和微批数影响</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">DP</div>
+          <div class="step-body">
+            <div class="title">模型副本同步（AllReduce）</div>
+            <div class="desc">AllReduce 梯度，分散到多个 TP-PP 组合</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">具体例子：训练 70B 模型</h3>
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">总 GPU 数</div>
+          <div class="tc-val">64</div>
+          <div class="tc-desc">8 节点 × 8 GPU/节点</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">TP 大小</div>
+          <div class="tc-val">8</div>
+          <div class="tc-desc">同节点内，整个节点的 8 块 GPU</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">PP 大小</div>
+          <div class="tc-val">2</div>
+          <div class="tc-desc">2 节点，35 层 / 节点</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">DP 大小</div>
+          <div class="tc-val">4</div>
+          <div class="tc-desc">4 个 (8×8 TP, 2 PP) 的分组</div>
+        </div>
+      </div>
+
+      <div class="formula">
+        TP × PP × DP = 8 × 2 × 4 = 64
+        <div class="comment">每个 GPU 的内存 = (参数 + 梯度 + 优化器) / TP + 激活 ≈ 10-15 GB (可行)</div>
+      </div>
+
+      <div class="diagram">
+        <div class="diagram-title">3D 并行的拓扑 (64 GPU, 8 节点示例)</div>
+        <svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg">
+          <!-- 节点 -->
+          <g transform="translate(20, 20)">
+            <!-- Node 0 -->
+            <rect x="0" y="0" width="80" height="260" fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="4,4"/>
+            <text x="40" y="280" font-size="10" fill="var(--text)" text-anchor="middle" font-weight="600">Node 0</text>
+
+            <!-- GPU 0-7 (TP)-->
+            <g transform="translate(5, 5)">
+              <rect x="0" y="0" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="14" y="0" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="28" y="0" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="42" y="0" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="0" y="14" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="14" y="14" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="28" y="14" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <rect x="42" y="14" width="12" height="12" fill="var(--green)" opacity="0.8"/>
+              <text x="27" y="50" font-size="8" fill="var(--green)">TP=8</text>
+            </g>
+
+            <!-- 多个 PP 阶段的标记 -->
+            <text x="40" y="100" font-size="9" fill="var(--sub)" text-anchor="middle">Stage 0</text>
+            <text x="40" y="200" font-size="9" fill="var(--sub)" text-anchor="middle">→ Node 1</text>
+            <text x="40" y="240" font-size="8" fill="var(--dim)" text-anchor="middle">(PP)</text>
+          </g>
+
+          <!-- 其他节点简化表示 -->
+          <g transform="translate(120, 20)">
+            <rect x="0" y="0" width="80" height="260" fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="4,4" opacity="0.5"/>
+            <text x="40" y="280" font-size="10" fill="var(--text)" text-anchor="middle" font-weight="600">Node 1-7</text>
+            <text x="40" y="140" font-size="9" fill="var(--dim)" text-anchor="middle">8 个节点</text>
+            <text x="40" y="160" font-size="9" fill="var(--dim)" text-anchor="middle">× 8 GPU</text>
+          </g>
+
+          <!-- 图例和说明 -->
+          <g transform="translate(20, 310)">
+            <text x="0" y="0" font-size="10" font-weight="600" fill="var(--text)">并行策略</text>
+            <text x="0" y="18" font-size="9" fill="var(--sub)">绿色 (TP=8): 同节点 NVLink 通信 | 蓝色 (PP=2): 节点间激活传输 | 黄色 (DP=4): AllReduce 梯度</text>
+          </g>
+        </svg>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">Megatron-LM 训练配置</h3>
+      <div class="code-block">torchrun --nproc_per_node=8 --nnodes=8 \
+  pretrain_gpt.py \
+  --tensor-model-parallel-size 8 \
+  --pipeline-model-parallel-size 2 \
+  --data-parallel-size 4 \
+  --global-batch-size 512 \
+  --micro-batch-size 2 \
+  --num-layers 80 \
+  --hidden-size 4096 \
+  --num-attention-heads 32 \
+  --seq-length 2048 \
+  --max-position-embeddings 2048 \
+  --train-iters 500000 \
+  --log-interval 100
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 为什么 3D 并行要选择 TP=8 (全节点)?</strong></p>
+        <p>A: NVLink 提供 600 GB/s 的带宽，而节点间网络 (Ethernet) 只有 100-400 GB/s。TP 通信在节点内，不受网络延迟影响。选择 TP=8 可最大化节点内高效通信；跨节点的 PP 和 DP 通信相对频率低，可接受较低的带宽。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 3D 并行中，哪个维度最容易成为瓶颈？</strong></p>
+        <p>A: PP 跨节点通信是最大瓶颈。TP 在节点内，DP AllReduce 虽然跨节点但可优化。PP 激活的传输量与序列长度成正比，且涉及多个微批处理的依赖关系。实践中，PP=2 相对安全；PP>4 需要精心优化。</p>
+      </div>
+    </section>
+
+    <!-- 09: 混合精度训练 -->
+    <section class="section" id="sec09">
+      <div class="section-badge" style="border-color:var(--teal);background:var(--td)"><span style="color:var(--teal)">●</span> Precision</div>
+      <h2 class="section-title">混合精度训练 (Mixed Precision)</h2>
+      <p class="section-sub">FP32 vs FP16 vs BF16，权衡速度、精度和内存</p>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">三种精度的对比</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>格式</th>
+            <th>位数</th>
+            <th>尾数</th>
+            <th>指数</th>
+            <th>动态范围</th>
+            <th>优点</th>
+            <th>缺点</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>FP32</strong></td>
+            <td>32</td>
+            <td>23</td>
+            <td>8</td>
+            <td>±10^±38</td>
+            <td>精度高，无数值溢出</td>
+            <td>内存多，计算慢</td>
+          </tr>
+          <tr>
+            <td><strong>FP16</strong></td>
+            <td>16</td>
+            <td>10</td>
+            <td>5</td>
+            <td>±10^±4</td>
+            <td>内存省，速度快 (Tensor Core)</td>
+            <td>范围小，梯度易下溢</td>
+          </tr>
+          <tr style="background:rgba(52,211,153,0.1)">
+            <td><strong>BF16</strong></td>
+            <td>16</td>
+            <td>7</td>
+            <td>8</td>
+            <td>±10^±38</td>
+            <td>范围宽（同 FP32），无需 loss scaling</td>
+            <td>精度较低，但实践中足够</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">AMP (Automatic Mixed Precision)</h3>
+      <div class="formula">
+        前向: FP16  |  主权重/优化器: FP32  |  梯度: FP16，缩放处理下溢
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="title">前向传播 (FP16)</div>
+            <div class="desc">使用 FP16 计算，减少内存占用和计算时间</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="title">损失缩放 (Loss Scaling)</div>
+            <div class="desc">loss × 2^k，防止 FP16 梯度下溢到 0；反向后除以 2^k 恢复</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="title">梯度计算 (FP16)</div>
+            <div class="desc">反向传播得到 FP16 梯度，然后转换为 FP32</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="title">参数更新 (FP32)</div>
+            <div class="desc">在 FP32 主权重上执行优化步骤，提高精度</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">代码示例</h3>
+      <div class="code-block">from torch.cuda.amp import autocast, GradScaler
+
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b")
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+scaler = GradScaler()
+
+for batch in train_loader:
+    # 前向: FP16
+    with autocast(dtype=torch.float16):
+        outputs = model(**batch)
+        loss = outputs.loss
+
+    # 梯度缩放
+    scaler.scale(loss).backward()
+
+    # 优化器步骤（损失缩放自动处理）
+    scaler.step(optimizer)
+    scaler.update()
+    optimizer.zero_grad()
+
+# BF16 (推荐)
+with autocast(dtype=torch.bfloat16):
+    outputs = model(**batch)
+    loss = outputs.loss
+# BF16 无需 loss scaling
+
+      <div class="tech-row">
+        <div class="tech-card">
+          <div class="tc-label">内存节省</div>
+          <div class="tc-val">~50%</div>
+          <div class="tc-desc">FP16 占 FP32 的 50%，激活值也减半</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">计算加速</div>
+          <div class="tc-val">2-3×</div>
+          <div class="tc-desc">Tensor Core 对 FP16 优化，特别是 NVIDIA GPU</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">精度损失</div>
+          <div class="tc-val">极小</div>
+          <div class="tc-desc">大多数任务上，FP16+AMP 与 FP32 结果相近甚至更好</div>
+        </div>
+        <div class="tech-card">
+          <div class="tc-label">推荐方案</div>
+          <div class="tc-val">BF16</div>
+          <div class="tc-desc">无需 loss scaling，更稳定，现代框架支持</div>
+        </div>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 为什么 FP16 需要 loss scaling，BF16 不需要？</strong></p>
+        <p>A: FP16 的动态范围只有 ±10^±4，梯度极小（如 10^-5）会下溢到 0，loss scaling 通过放大损失来防止这个问题。BF16 指数位有 8 位（同 FP32），范围达 ±10^±38，可直接表示微小梯度，无需 scaling。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: 什么时候应该用 FP32，什么时候用 FP16/BF16？</strong></p>
+        <p>A: FP32 用于精度要求极高的任务（如科学计算）或不支持混合精度的框架。FP16+AMP 用于追求速度和内存的场景。BF16 是最优选择，自动缩放，稳定性好，所有现代 GPU 都支持。</p>
+      </div>
+    </section>
+
+    <!-- 10: DeepSpeed 生态 -->
+    <section class="section" id="sec10">
+      <div class="section-badge" style="border-color:var(--purple);background:var(--pd)"><span style="color:var(--purple)">●</span> Framework</div>
+      <h2 class="section-title">DeepSpeed 生态与优化</h2>
+      <p class="section-sub">微软的分布式训练框架，大规模模型训练的实际工具</p>
+
+      <div class="prose">
+        <p>DeepSpeed 是微软提供的分布式训练框架，集成了 ZeRO、梯度累积、CPU 卸载等优化，大幅简化了大模型训练。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">核心功能</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>功能</th>
+            <th>说明</th>
+            <th>应用场景</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ZeRO 优化</strong></td>
+            <td>ZeRO-1/2/3 分片优化器、梯度、参数</td>
+            <td>大模型训练，内存瓶颈</td>
+          </tr>
+          <tr>
+            <td><strong>ZeRO-Offload</strong></td>
+            <td>优化器状态卸载到 CPU，CPU 执行参数更新</td>
+            <td>GPU 内存 <60GB，需要空闲 CPU 内存</td>
+          </tr>
+          <tr>
+            <td><strong>ZeRO-Infinity</strong></td>
+            <td>参数和优化器卸载到 NVMe SSD</td>
+            <td>极大模型 (1T+)，超大集群</td>
+          </tr>
+          <tr>
+            <td><strong>Gradient Checkpointing</strong></td>
+            <td>丢弃激活值，反向时重新计算</td>
+            <td>内存紧张，可接受 20-30% 速度下降</td>
+          </tr>
+          <tr>
+            <td><strong>Gradient Accumulation</strong></td>
+            <td>累积多个 batch 的梯度，减少通信</td>
+            <td>大 batch 无法放入 GPU，模拟更大 batch</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DeepSpeed 配置示例</h3>
+      <div class="code-block"># ds_config.json
+{
+  "train_batch_size": 512,
+  "train_micro_batch_size_per_gpu": 2,
+  "gradient_accumulation_steps": 8,
+  "optimizer": {
+    "type": "AdamW",
+    "params": {
+      "lr": 1e-5,
+      "betas": [0.9, 0.999],
+      "eps": 1e-8,
+      "weight_decay": 0.01
+    }
+  },
+  "scheduler": {
+    "type": "WarmupLR",
+    "params": {
+      "warmup_min_lr": 0,
+      "warmup_max_lr": 1e-5,
+      "warmup_num_steps": 1000
+    }
+  },
+  "zero_optimization": {
+    "stage": 3,
+    "offload_optimizer": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "overlap_comm": true,
+    "contiguous_gradients": true,
+    "sub_group_size": 1e9,
+    "reduce_bucket_size": 1e6,
+    "stage3_prefetch_bucket_size": 5e7,
+    "stage3_param_persistence_threshold": 1e6
+  },
+  "activation_checkpointing": {
+    "partition_activations": true,
+    "cpu_checkpointing": false,
+    "contiguous_memory_optimization": true,
+    "number_checkpoints": 4
+  },
+  "bf16": {
+    "enabled": true
+  },
+  "gradient_clipping": 1.0,
+  "wall_clock_breakdown": true
+}
+
+# 启动命令
+deepspeed --num_gpus=8 train.py \
+  --deepspeed ds_config.json
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">DeepSpeed 的关键优势</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="title">开箱即用</div>
+            <div class="desc">通过 JSON 配置，无需改动训练代码，适配所有主流框架</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="title">显式性能指标</div>
+            <div class="desc">wall_clock_breakdown 输出详细的计算、通信、数据加载时间，便于瓶颈分析</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="title">深度集成</div>
+            <div class="desc">与 Hugging Face Transformers、PEFT 深度集成，广泛应用于工业界</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试常问</div>
+        <p><strong>Q: ZeRO-Offload 和 ZeRO-Infinity 的区别？</strong></p>
+        <p>A: ZeRO-Offload 将优化器状态卸载到 CPU，利用 CPU 内存和闲置 CPU 算力进行参数更新。ZeRO-Infinity 进一步支持将模型参数卸载到 NVMe SSD，适合训练超大模型（1T+）。Infinity 更激进，通信更多，适合容忍较高延迟的场景。</p>
+      </div>
+    </section>
+
+    <!-- 11: 总结与面试题 -->
+    <section class="section" id="sec11">
+      <div class="section-badge" style="border-color:var(--amber);background:var(--ad)"><span style="color:var(--amber)">●</span> Summary</div>
+      <h2 class="section-title">总结与面试题精选</h2>
+      <p class="section-sub">微调和分布式训练的完整知识体系与高频面试题</p>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">方法对比表 (全景图)</h3>
+      <table class="cmp-table">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>参数量</th>
+            <th>内存占用</th>
+            <th>通信量</th>
+            <th>推理成本</th>
+            <th>适用场景</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Full FT</strong></td>
+            <td>100%</td>
+            <td>3-4× model</td>
+            <td>2×</td>
+            <td>无</td>
+            <td>充足数据，大任务</td>
+          </tr>
+          <tr>
+            <td><strong>LoRA</strong></td>
+            <td>0.06% (7B, r=8)</td>
+            <td>3-4×model + LoRA 很小</td>
+            <td>2×</td>
+            <td>无 (可合并)</td>
+            <td>小数据，多任务</td>
+          </tr>
+          <tr>
+            <td><strong>QLoRA</strong></td>
+            <td>0.06% + 4-bit model</td>
+            <td>model/8 + LoRA</td>
+            <td>2×</td>
+            <td>无</td>
+            <td>资源极限，65B+ on 48GB</td>
+          </tr>
+          <tr>
+            <td><strong>DP/DDP</strong></td>
+            <td>100%</td>
+            <td>3-4× model / num_gpu</td>
+            <td>2× × num_gpu</td>
+            <td>无</td>
+            <td>13B 以下，多 GPU</td>
+          </tr>
+          <tr>
+            <td><strong>FSDP</strong></td>
+            <td>100%</td>
+            <td>model/num_gpu + 激活</td>
+            <td>3× × num_gpu</td>
+            <td>无</td>
+            <td>70B+，多节点</td>
+          </tr>
+          <tr>
+            <td><strong>TP</strong></td>
+            <td>100% / TP_size</td>
+            <td>model/TP_size</td>
+            <td>少 (节点内)</td>
+            <td>无</td>
+            <td>超大模型，同节点</td>
+          </tr>
+          <tr>
+            <td><strong>3D</strong></td>
+            <td>100%</td>
+            <td>model/(TP × DP)</td>
+            <td>混合，优化最多</td>
+            <td>无</td>
+            <td>工业界标准，大规模</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">高频面试题 (12+)</h3>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 1</div>
+        <p><strong>Q: 简述 LoRA 的核心思想，为什么它有效？</strong></p>
+        <p>A: LoRA 假设权重更新 ΔW 具有低秩结构，用 BA 近似（B ∈ R^{d×r}, A ∈ R^{r×k}，r ≪ min(d,k)）。这是因为微调时的权重变化集中在低维子空间，不需要更新所有参数。初始化 A~N(0,σ²), B=0，保证训练初期 ΔW=0。推理时 W = W_0 + BA，无额外成本。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 2</div>
+        <p><strong>Q: LoRA 的秩 r 应该如何选择？</strong></p>
+        <p>A: 通常 r=8 对大多数任务足够。选择原则：(1) 数据小 (< 10K) 用 r=8，防过拟合；(2) 复杂任务 (推理、代码) 可用 r=16/32；(3) 不建议 r>64，回报边际递减。通常通过小规模实验或消融研究确定。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 3</div>
+        <p><strong>Q: 训练 7B 模型，如果只有 4 块 A100 GPU，应该用什么策略？</strong></p>
+        <p>A: (1) 首选 LoRA，单块 GPU 可训练，无需分布式；(2) 若需要 Full FT，用 DDP + Gradient Checkpointing + BF16；(3) 若内存仍紧张，考虑 QLoRA（虽然 7B 不必要）。推荐方案：DDP (4 GPU) + LoRA + BF16，batch_size 可达 32+。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 4</div>
+        <p><strong>Q: DDP 和 DP 的关键差别，为什么 DDP 快那么多？</strong></p>
+        <p>A: DP 在主 GPU 上 gather 梯度再 scatter，GPU 0 成为瓶颈，AllReduce 开销大。DDP 用 Ring AllReduce，每块 GPU 只和相邻两块通信，通信均衡分散，无中心化瓶颈。8 GPU 时，DDP 通常比 DP 快 3-5 倍。DDP 也支持多进程，每进程独立数据加载，效率更高。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 5</div>
+        <p><strong>Q: FSDP / ZeRO-3 的内存优势如何体现？为什么通信增加 50%？</strong></p>
+        <p>A: ZeRO-3 将参数分片到 N 块 GPU，每块持有 1/N 参数 + 1/N 梯度 + 1/N 优化器，内存直接除以 N。代价是 AllGather 前向时需完整参数，AllGather + ReduceScatter 通信变成 3×（DDP 是 2×）。这是空间-时间权衡：换更小的内存获得更多通信。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 6</div>
+        <p><strong>Q: Pipeline Parallelism 的气泡问题怎么理解，如何优化？</strong></p>
+        <p>A: 气泡指 GPU 闲置时间。GPipe 中，GPU 后面的处于等待前面 GPU 完成的状态。1F1B schedule 通过交错前向和反向，让后面的 GPU 在等待前向时进行反向，减少闲置。气泡比 = (p-1)/(m+p-1)，p=stages，m=micro-batches。增加 m 可减小气泡比，但激活值占用增加。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 7</div>
+        <p><strong>Q: 什么时候选 FSDP，什么时候选 DDP？</strong></p>
+        <p>A: 模型 <13B 且内存充足 → DDP；模型 ≥13B → FSDP；跨节点多卡 → FSDP。DDP 更简单，通信少，适合中等模型；FSDP 内存利用高，适合大模型。FSDP 是现代主流选择，被 Llama、GPT 等所采用。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 8</div>
+        <p><strong>Q: TP、PP、DP 三种并行方式各有什么通信特点？</strong></p>
+        <p>A: TP (Tensor)：同层内列/行并行，AllReduce 仅在 TP 组内，高频高带宽（NVLink）；PP (Pipeline)：逐层激活传输，跨节点，低频但批量大；DP (Data)：AllReduce 梯度，跨节点，每步都有。实际中，TP 在节点内（600GB/s），PP+DP 跨节点（100-400GB/s），需精心设计避免网络成为瓶颈。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 9</div>
+        <p><strong>Q: 训练 70B 模型，怎么分配 TP、PP、DP 大小？</strong></p>
+        <p>A: 原则：TP = 节点 GPU 数（8），PP = 节点间跳数（通常 2-4），DP = 剩余 (TP × PP × DP = 总 GPU)。例 64 GPU (8 节点)：TP=8, PP=2, DP=4。避免 PP>4（气泡严重）。最终内存 ≈ (参数+梯度+优化器)/TP + 激活值，应在 15-20GB/GPU 之内。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 10</div>
+        <p><strong>Q: FP16 为什么需要 loss scaling，BF16 不需要？</strong></p>
+        <p>A: FP16 动态范围仅 ±10^±4，极小梯度（如 10^-5）会下溢为 0，loss scaling 放大损失避免下溢，反向后缩放回来。BF16 指数位 8 位（同 FP32），范围 ±10^±38，可直接表示微小梯度。实际中，BF16 更稳定，不需特殊处理，是首选。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 11</div>
+        <p><strong>Q: Gradient Checkpointing 的取舍是什么？</strong></p>
+        <p>A: 优势：激活值只保存某些层，内存节省 30-40%；劣势：反向时需重算激活，速度下降 20-30%。用于内存紧张时，如 seq_len=4096 或 batch_size 无法再减。PyTorch 中 torch.utils.checkpoint 易集成。权衡：宁可速度慢也要能训完，比 OOM 强。</p>
+      </div>
+
+      <div class="interview-box">
+        <div class="ib-tag">面试题 12</div>
+        <p><strong>Q: DeepSpeed vs PyTorch Native 分布式，选哪个？</strong></p>
+        <p>A: PyTorch Native (DDP/FSDP)：轻量，无额外依赖，学习成本低；DeepSpeed：功能更全（ZeRO、Offload、优化器集成），JSON 配置灵活，生产环境常用。建议：学习 DDP，理解分布式概念；实际项目用 DeepSpeed，特别是大模型训练。两者可共存，FSDP 越来越强，Hugging Face Trainer 支持。</p>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">选择决策树</h3>
+      <div class="diagram">
+        <div class="diagram-title">微调 + 分布式训练方案选择</div>
+        <svg viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg">
+          <!-- 根节点 -->
+          <rect x="260" y="10" width="180" height="35" fill="var(--blue)" opacity="0.6" rx="5"/>
+          <text x="350" y="35" font-size="11" font-weight="600" fill="white" text-anchor="middle">模型大小？</text>
+
+          <!-- 左分支: < 13B -->
+          <line x1="300" y1="45" x2="150" y2="80" stroke="var(--line)" stroke-width="1"/>
+          <rect x="80" y="80" width="140" height="35" fill="var(--green)" opacity="0.6" rx="5"/>
+          <text x="150" y="105" font-size="10" font-weight="600" fill="white" text-anchor="middle"><13B</text>
+
+          <!-- 右分支: >= 13B -->
+          <line x1="400" y1="45" x2="550" y2="80" stroke="var(--line)" stroke-width="1"/>
+          <rect x="480" y="80" width="140" height="35" fill="var(--orange)" opacity="0.6" rx="5"/>
+          <text x="550" y="105" font-size="10" font-weight="600" fill="white" text-anchor="middle">≥ 13B</text>
+
+          <!-- 左: 单 GPU? -->
+          <line x1="150" y1="115" x2="80" y2="150" stroke="var(--line)" stroke-width="1"/>
+          <rect x="20" y="150" width="120" height="30" fill="var(--teal)" opacity="0.6" rx="4"/>
+          <text x="80" y="170" font-size="9" fill="white" text-anchor="middle">单 GPU?</text>
+
+          <line x1="150" y1="115" x2="220" y2="150" stroke="var(--line)" stroke-width="1"/>
+          <rect x="160" y="150" width="120" height="30" fill="var(--teal)" opacity="0.6" rx="4"/>
+          <text x="220" y="170" font-size="9" fill="white" text-anchor="middle">多 GPU?</text>
+
+          <!-- 左-是: LoRA -->
+          <line x1="80" y1="180" x2="50" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="10" y="210" width="80" height="25" fill="var(--green)" opacity="0.8" rx="4"/>
+          <text x="50" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">LoRA</text>
+
+          <!-- 左-否: DDP -->
+          <line x1="80" y1="180" x2="110" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="80" y="210" width="80" height="25" fill="var(--blue)" opacity="0.8" rx="4"/>
+          <text x="120" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">DDP</text>
+
+          <!-- 中: DDP -->
+          <line x1="220" y1="180" x2="220" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="180" y="210" width="80" height="25" fill="var(--blue)" opacity="0.8" rx="4"/>
+          <text x="220" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">DDP</text>
+
+          <!-- 右: 资源充足? -->
+          <line x1="550" y1="115" x2="480" y2="150" stroke="var(--line)" stroke-width="1"/>
+          <rect x="420" y="150" width="120" height="30" fill="var(--amber)" opacity="0.6" rx="4"/>
+          <text x="480" y="170" font-size="9" fill="white" text-anchor="middle">资源充足?</text>
+
+          <line x1="550" y1="115" x2="620" y2="150" stroke="var(--line)" stroke-width="1"/>
+          <rect x="560" y="150" width="120" height="30" fill="var(--amber)" opacity="0.6" rx="4"/>
+          <text x="620" y="170" font-size="9" fill="white" text-anchor="middle">资源紧张?</text>
+
+          <!-- 右-是: FSDP -->
+          <line x1="480" y1="180" x2="450" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="410" y="210" width="80" height="25" fill="var(--purple)" opacity="0.8" rx="4"/>
+          <text x="450" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">FSDP</text>
+
+          <!-- 右-是-3D? -->
+          <line x1="480" y1="180" x2="520" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="480" y="210" width="80" height="25" fill="var(--purple)" opacity="0.8" rx="4"/>
+          <text x="520" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">3D</text>
+
+          <!-- 右-否: QLoRA/FSDP -->
+          <line x1="620" y1="180" x2="590" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="550" y="210" width="80" height="25" fill="var(--coral)" opacity="0.8" rx="4"/>
+          <text x="590" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">QLoRA</text>
+
+          <line x1="620" y1="180" x2="650" y2="210" stroke="var(--line)" stroke-width="1"/>
+          <rect x="620" y="210" width="80" height="25" fill="var(--purple)" opacity="0.8" rx="4"/>
+          <text x="660" y="228" font-size="9" font-weight="600" fill="white" text-anchor="middle">FSDP</text>
+
+          <!-- 说明 -->
+          <g transform="translate(20, 270)">
+            <text x="0" y="0" font-size="10" font-weight="600" fill="var(--text)">补充说明</text>
+            <text x="0" y="20" font-size="9" fill="var(--sub)">• 混合精度: 默认 BF16</text>
+            <text x="0" y="36" font-size="9" fill="var(--sub)">• Gradient Checkpointing: 内存紧张时启用</text>
+            <text x="0" y="52" font-size="9" fill="var(--sub)">• DeepSpeed: 生产环境优先选择</text>
+            <text x="0" y="68" font-size="9" fill="var(--sub)">• LoRA 推荐优先: 简单、高效、多任务友好</text>
+          </g>
+        </svg>
+      </div>
+
+      <h3 style="font-size:1.1rem;margin:24px 0 12px;color:var(--text);font-weight:600">学习资源与进阶方向</h3>
+      <div class="prose">
+        <ul>
+          <li><strong>论文：</strong> LoRA (Hu et al.), DeepSpeed (Rasley et al.), FSDP 官方文档</li>
+          <li><strong>框架：</strong> PyTorch DDP/FSDP, DeepSpeed, Megatron-LM, vLLM (推理优化)</li>
+          <li><strong>进阶：</strong> 量化感知训练 (QAT)、多 GPU 通信优化、推理部署优化</li>
+          <li><strong>实战：</strong> 在真实数据集上复现 LoRA 微调、DDP 分布式训练、FSDP 大模型训练</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

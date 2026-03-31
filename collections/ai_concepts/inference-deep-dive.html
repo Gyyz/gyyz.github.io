@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM 推理优化深度解析 - AI 技术演进</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        :root{--bg:#07080f;--bg2:#0d0f1a;--bg3:#131520;--bg4:#191c2a;--card:#1b1e2d;--line:rgba(255,255,255,0.06);--line2:rgba(255,255,255,0.11);--text:#dde0ef;--sub:#7a7d94;--dim:#4a4d62;--green:#34d399;--teal:#22d3ee;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--amber:#fbbf24;--coral:#f87171;--orange:#fb923c;--gd:rgba(52,211,153,0.08);--td:rgba(34,211,238,0.08);--bd:rgba(96,165,250,0.08);--pd:rgba(167,139,250,0.08);--ad:rgba(251,191,36,0.08);--cd:rgba(248,113,113,0.08)}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+        .hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(34,211,238,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(96,165,250,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+        .hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+        .hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--teal);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+        .hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px}
+        .hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--teal),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px}
+        .sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+        .sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+        .sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+        .sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--teal);background:rgba(34,211,238,0.05)}
+        .sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+        .sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--teal);text-decoration:none;border-bottom:1px solid var(--line)}
+        .main{margin-left:220px;max-width:900px}
+        .section{padding:56px 48px;border-bottom:1px solid var(--line)}.section:last-child{border-bottom:none}
+        .section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+        .section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+        .section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+        .prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}.prose strong{color:var(--text)}.prose em{color:var(--teal);font-style:normal}.prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}.prose ul,.prose ol{margin:8px 0 16px 20px}.prose li{margin-bottom:6px}
+        .callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+        .diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+        .diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+        .diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+        .formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+        .formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+        .cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+        .cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+        .cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}.cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+        .steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}
+        .step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}
+        .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px}
+        .step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px}.step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+        .tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+        @media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+        .tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}.tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}.tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px}.tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+        .interview-box{background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:18px 20px;margin:24px 0}
+        .interview-box .ib-tag{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+        .interview-box p,.interview-box li{color:var(--sub);font-size:0.88rem;line-height:1.7}
+        .code-block{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 22px;margin:16px 0;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;line-height:1.7;color:#c9d1d9;overflow-x:auto;white-space:pre}
+    </style>
+</head>
+<body>
+    <nav class="sidenav">
+        <a href="llm.html" class="back-link">← 返回 LLM 主页</a>
+        <div class="sidenav-title">章节导航</div>
+        <a href="#section-00" class="nav-link">
+            <span class="nav-num">00</span>
+            推理的两个阶段
+        </a>
+        <a href="#section-01" class="nav-link">
+            <span class="nav-num">01</span>
+            KV Cache 原理
+        </a>
+        <a href="#section-02" class="nav-link">
+            <span class="nav-num">02</span>
+            KV Cache 优化
+        </a>
+        <a href="#section-03" class="nav-link">
+            <span class="nav-num">03</span>
+            量化：GPTQ / AWQ / GGUF
+        </a>
+        <a href="#section-04" class="nav-link">
+            <span class="nav-num">04</span>
+            Speculative Decoding
+        </a>
+        <a href="#section-05" class="nav-link">
+            <span class="nav-num">05</span>
+            PagedAttention / vLLM
+        </a>
+        <a href="#section-06" class="nav-link">
+            <span class="nav-num">06</span>
+            Continuous Batching
+        </a>
+        <a href="#section-07" class="nav-link">
+            <span class="nav-num">07</span>
+            推理框架对比
+        </a>
+        <a href="#section-08" class="nav-link">
+            <span class="nav-num">08</span>
+            总结与面试题
+        </a>
+    </nav>
+
+    <div class="main">
+        <div class="hero">
+            <div class="hero-tag">Deep Dive · 推理工程</div>
+            <h1>从 KV Cache 到 <em>Speculative Decoding</em> — 让大模型快起来的每一个技巧</h1>
+            <p class="hero-sub">掌握 LLM 推理的核心优化技术，从内存管理到并发策略，成为高效推理工程师</p>
+        </div>
+
+        <!-- Section 00 -->
+        <section class="section" id="section-00">
+            <div class="section-badge" style="border-color:var(--teal);color:var(--teal)">⚡ 基础概念</div>
+            <h2 class="section-title">推理的两个阶段</h2>
+            <p class="section-sub">Prefill 与 Decode — 理解性能瓶颈的起点</p>
+
+            <div class="prose">
+                <p>LLM 推理分为两个截然不同的阶段，它们的计算特征和优化策略完全不同。</p>
+
+                <p><strong>Prefill 阶段（前缀填充）：</strong> 处理用户输入的完整提示词，计算所有 token 的 attention。这个阶段是 <em>计算密集型</em> 的，GPU 利用率高。</p>
+
+                <p><strong>Decode 阶段（生成阶段）：</strong> 自回归地逐个生成输出 token。每次只生成一个新 token，但需要加载之前所有 token 的 KV Cache，这个阶段是 <em>内存带宽密集型</em> 的。</p>
+
+                <p>大多数推理时间耗在 Decode 阶段，而且越长的生成长度，Decode 的比例就越高。</p>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">Prefill vs Decode 计算流程</div>
+                <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Prefill section -->
+                    <rect x="20" y="20" width="340" height="350" fill="none" stroke="#22d3ee" stroke-width="2" stroke-dasharray="5,5" rx="8"/>
+                    <text x="40" y="50" font-size="16" font-weight="bold" fill="#22d3ee">Prefill Stage</text>
+                    <text x="40" y="75" font-size="12" fill="#7a7d94">Compute-Bound</text>
+
+                    <!-- Input tokens -->
+                    <rect x="35" y="100" width="80" height="35" fill="#131520" stroke="#60a5fa" stroke-width="1" rx="4"/>
+                    <text x="75" y="123" text-anchor="middle" font-size="11" fill="#60a5fa" font-weight="bold">输入</text>
+                    <text x="75" y="138" text-anchor="middle" font-size="10" fill="#7a7d94">1024 tokens</text>
+
+                    <!-- Attention computation -->
+                    <path d="M 75 135 L 150 150" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow1)"/>
+                    <circle cx="180" cy="155" r="50" fill="none" stroke="#22d3ee" stroke-width="2"/>
+                    <text x="180" y="155" text-anchor="middle" font-size="11" fill="#22d3ee" font-weight="bold">Self-Attention</text>
+                    <text x="180" y="170" text-anchor="middle" font-size="10" fill="#7a7d94">所有 token 对</text>
+
+                    <!-- KV Cache generation -->
+                    <path d="M 230 155 L 280 155" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow1)"/>
+                    <rect x="280" y="130" width="70" height="50" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="315" y="153" text-anchor="middle" font-size="11" fill="#a78bfa" font-weight="bold">KV Cache</text>
+                    <text x="315" y="168" text-anchor="middle" font-size="10" fill="#7a7d94">保存</text>
+
+                    <!-- Complexity -->
+                    <rect x="35" y="220" width="310" height="130" fill="rgba(34,211,238,0.05)" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="50" y="245" font-size="12" font-weight="bold" fill="#dde0ef">计算复杂度：</text>
+                    <text x="50" y="265" font-size="11" fill="#b0b3c8">• Attention: O(seq_len²) per layer</text>
+                    <text x="50" y="285" font-size="11" fill="#b0b3c8">• seq_len = 1024 → ~10²⁶ ops</text>
+                    <text x="50" y="305" font-size="11" fill="#b0b3c8">• 时间: 单次前向传播完成</text>
+                    <text x="50" y="325" font-size="11" fill="#b0b3c8">• 关键: 最大化 GPU 并行度</text>
+
+                    <!-- Decode section -->
+                    <rect x="420" y="20" width="340" height="350" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="5,5" rx="8"/>
+                    <text x="440" y="50" font-size="16" font-weight="bold" fill="#f87171">Decode Stage</text>
+                    <text x="440" y="75" font-size="12" fill="#7a7d94">Memory-Bound</text>
+
+                    <!-- Previous KV -->
+                    <rect x="435" y="100" width="80" height="35" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="475" y="118" text-anchor="middle" font-size="11" fill="#a78bfa" font-weight="bold">Previous KV</text>
+                    <text x="475" y="133" text-anchor="middle" font-size="10" fill="#7a7d94">1024 tokens</text>
+
+                    <!-- New token -->
+                    <rect x="540" y="100" width="70" height="35" fill="#131520" stroke="#fb923c" stroke-width="1" rx="4"/>
+                    <text x="575" y="118" text-anchor="middle" font-size="11" fill="#fb923c" font-weight="bold">New Token</text>
+                    <text x="575" y="133" text-anchor="middle" font-size="10" fill="#7a7d94">x_t</text>
+
+                    <!-- Concat and compute -->
+                    <path d="M 475 135 L 520 150" stroke="#f87171" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <path d="M 575 135 L 540 150" stroke="#f87171" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <circle cx="530" cy="180" r="45" fill="none" stroke="#f87171" stroke-width="2"/>
+                    <text x="530" y="175" text-anchor="middle" font-size="11" fill="#f87171" font-weight="bold">Compute</text>
+                    <text x="530" y="190" text-anchor="middle" font-size="10" fill="#7a7d94">seq_len+1</text>
+
+                    <!-- Output -->
+                    <path d="M 530 225 L 580 250" stroke="#f87171" stroke-width="2" marker-end="url(#arrow2)"/>
+                    <rect x="550" y="250" width="70" height="35" fill="#131520" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="585" y="268" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">Next Token</text>
+
+                    <!-- Complexity -->
+                    <rect x="435" y="220" width="310" height="130" fill="rgba(248,113,113,0.05)" stroke="#f87171" stroke-width="1" rx="4"/>
+                    <text x="450" y="245" font-size="12" font-weight="bold" fill="#dde0ef">计算复杂度：</text>
+                    <text x="450" y="265" font-size="11" fill="#b0b3c8">• 每次: 一个 token 的 Attention</text>
+                    <text x="450" y="285" font-size="11" fill="#b0b3c8">• O(seq_len) × matrix mult</text>
+                    <text x="450" y="305" font-size="11" fill="#b0b3c8">• 时间: 重复 N 次（生成 N 个 token）</text>
+                    <text x="450" y="325" font-size="11" fill="#b0b3c8">• 关键: 最小化内存延迟</text>
+
+                    <!-- Arrow markers -->
+                    <defs>
+                        <marker id="arrow1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#22d3ee"/>
+                        </marker>
+                        <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#f87171"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="interview-box">
+                <div class="ib-tag">面试提示</div>
+                <p><strong>关键区别：</strong> Prefill 可以充分利用 GPU 的并行计算能力（批处理），而 Decode 阶段受到内存带宽的严重限制，这是优化的重点。</p>
+            </div>
+        </section>
+
+        <!-- Section 01 -->
+        <section class="section" id="section-01">
+            <div class="section-badge" style="border-color:var(--teal);color:var(--teal)">⚙️ 核心原理</div>
+            <h2 class="section-title">KV Cache 原理</h2>
+            <p class="section-sub">为什么我们需要缓存 Key 和 Value</p>
+
+            <div class="prose">
+                <p>在 Transformer 中，自注意力机制计算 <code>Attention(Q, K, V)</code>。在生成阶段，我们逐个生成 token，但每次都需要与历史所有 token 进行 attention 计算。</p>
+
+                <p><strong>不使用 KV Cache 时：</strong> 为了生成第 1024 个 token，我们需要重新计算前 1024 个 token 的 K 和 V，这是巨大的浪费。</p>
+
+                <p><strong>使用 KV Cache：</strong> 我们只计算新 token 的 Q，然后与缓存的所有历史 K、V 进行 attention。这样避免了重复计算。</p>
+            </div>
+
+            <div class="formula">
+                KV Cache Memory = 2 × num_layers × num_heads × d_head × seq_len × batch_size × 2 bytes
+                <span class="comment">系数2：K 和 V；系数2字节：FP16 精度（2 bytes per value）</span>
+            </div>
+
+            <div class="prose">
+                <p><strong>LLaMA 系列具体计算：</strong></p>
+            </div>
+
+            <table class="cmp-table">
+                <thead>
+                    <tr>
+                        <th>模型</th>
+                        <th>Layers</th>
+                        <th>Heads</th>
+                        <th>d_head</th>
+                        <th>seq_len=2048</th>
+                        <th>seq_len=4096</th>
+                        <th>seq_len=8192</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LLaMA 7B</td>
+                        <td>32</td>
+                        <td>32</td>
+                        <td>128</td>
+                        <td>8.4 MB</td>
+                        <td>16.8 MB</td>
+                        <td>33.6 MB</td>
+                    </tr>
+                    <tr>
+                        <td>LLaMA 13B</td>
+                        <td>40</td>
+                        <td>40</td>
+                        <td>128</td>
+                        <td>13.1 MB</td>
+                        <td>26.2 MB</td>
+                        <td>52.4 MB</td>
+                    </tr>
+                    <tr>
+                        <td>LLaMA 70B</td>
+                        <td>80</td>
+                        <td>64</td>
+                        <td>128</td>
+                        <td>52.4 MB</td>
+                        <td>104.8 MB</td>
+                        <td>209.6 MB</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="prose">
+                <p>以 batch_size=1 为例。当 batch_size 增大时，内存成线性增长。对于 LLaMA 70B 和 8192 长序列，单个请求就需要 209.6 MB 的 KV Cache！</p>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">KV Cache 的增长过程</div>
+                <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Timeline -->
+                    <line x1="80" y1="300" x2="750" y2="300" stroke="#7a7d94" stroke-width="1"/>
+
+                    <!-- Step 1 -->
+                    <circle cx="120" cy="300" r="4" fill="#22d3ee"/>
+                    <text x="120" y="320" text-anchor="middle" font-size="11" fill="#7a7d94">t=1</text>
+                    <rect x="90" y="220" width="60" height="60" fill="#131520" stroke="#22d3ee" stroke-width="2" rx="4"/>
+                    <text x="120" y="248" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">K₁, V₁</text>
+                    <text x="120" y="262" text-anchor="middle" font-size="9" fill="#7a7d94">128D</text>
+                    <text x="120" y="345" text-anchor="middle" font-size="10" fill="#dde0ef">Input</text>
+
+                    <!-- Step 2 -->
+                    <circle cx="240" cy="300" r="4" fill="#22d3ee"/>
+                    <text x="240" y="320" text-anchor="middle" font-size="11" fill="#7a7d94">t=2</text>
+                    <g>
+                        <rect x="200" y="200" width="80" height="80" fill="#131520" stroke="#22d3ee" stroke-width="2" rx="4"/>
+                        <text x="240" y="235" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">K₁, V₁</text>
+                        <text x="240" y="255" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">K₂, V₂</text>
+                        <text x="240" y="270" text-anchor="middle" font-size="9" fill="#7a7d94">256D</text>
+                    </g>
+
+                    <!-- Step 3 -->
+                    <circle cx="360" cy="300" r="4" fill="#22d3ee"/>
+                    <text x="360" y="320" text-anchor="middle" font-size="11" fill="#7a7d94">t=3</text>
+                    <g>
+                        <rect x="305" y="170" width="110" height="110" fill="#131520" stroke="#22d3ee" stroke-width="2" rx="4"/>
+                        <text x="360" y="205" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">K₁..K₃</text>
+                        <text x="360" y="225" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">V₁..V₃</text>
+                        <text x="360" y="242" text-anchor="middle" font-size="9" fill="#7a7d94">384D</text>
+                    </g>
+
+                    <!-- Step n (compressed view) -->
+                    <circle cx="480" cy="300" r="4" fill="#22d3ee"/>
+                    <text x="480" y="320" text-anchor="middle" font-size="11" fill="#7a7d94">t=n</text>
+                    <g>
+                        <rect x="420" y="50" width="120" height="230" fill="#131520" stroke="#22d3ee" stroke-width="2" rx="4"/>
+                        <text x="480" y="130" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">K₁..Kₙ</text>
+                        <text x="480" y="150" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">V₁..Vₙ</text>
+                        <text x="480" y="175" text-anchor="middle" font-size="9" fill="#fb923c">n × 128D</text>
+                        <line x1="435" y1="190" x2="605" y2="190" stroke="#fb923c" stroke-width="1" stroke-dasharray="2,2"/>
+                        <text x="480" y="210" text-anchor="middle" font-size="9" fill="#f87171" font-weight="bold">线性增长！</text>
+                    </g>
+
+                    <!-- Memory pressure indicator -->
+                    <text x="600" y="40" font-size="11" fill="#f87171" font-weight="bold">内存压力</text>
+                    <line x1="600" y1="50" x2="650" y2="150" stroke="#f87171" stroke-width="2"/>
+                    <polygon points="650,150 650,140 658,145" fill="#f87171"/>
+
+                    <!-- Query -->
+                    <text x="600" y="290" font-size="10" fill="#7a7d94">每步：</text>
+                    <rect x="565" y="295" width="50" height="30" fill="#131520" stroke="#fbbf24" stroke-width="1" rx="3"/>
+                    <text x="590" y="317" text-anchor="middle" font-size="9" fill="#fbbf24" font-weight="bold">Qₙ (新)</text>
+                </svg>
+            </div>
+
+            <div class="interview-box">
+                <div class="ib-tag">核心公式</div>
+                <p>KV Cache 是推理优化的基础。它用<strong>线性的内存</strong>换取<strong>指数级的计算节省</strong>。总计算量从 O(n²) 降低到 O(n)。</p>
+            </div>
+        </section>
+
+        <!-- Section 02 -->
+        <section class="section" id="section-02">
+            <div class="section-badge" style="border-color:var(--green);color:var(--green)">🎯 优化策略</div>
+            <h2 class="section-title">KV Cache 优化</h2>
+            <p class="section-sub">减少内存占用的多种方法</p>
+
+            <div class="prose">
+                <p>KV Cache 是推理的内存瓶颈。以下是几个主要优化方向：</p>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1️⃣</div>
+                    <div class="step-body">
+                        <div class="title">GQA / MQA（分组查询注意力）</div>
+                        <div class="desc">
+                            标准 Multi-Head Attention 中，K 和 V 有与 Q 相同数量的头（num_heads）。GQA 让多个 query heads 共享一个 K/V head。MQA 是极端情况，所有 Q heads 共享单个 K/V head。
+                            <br/>效果：KV Cache 缩小 8-16 倍（取决于分组比例）。LLaMA 2-70B 采用 GQA。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">2️⃣</div>
+                    <div class="step-body">
+                        <div class="title">Sliding Window（滑动窗口）</div>
+                        <div class="desc">
+                            在某些任务中，不需要完全保留所有历史 token 的 KV。只保留最近 W 个 token 的 KV（例如 W=2048）。
+                            <br/>权衡：损失一些长依赖能力，但大幅降低内存。Llama 2、Mistral 等采用此策略。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">3️⃣</div>
+                    <div class="step-body">
+                        <div class="title">KV Cache 压缩（Quantization）</div>
+                        <div class="desc">
+                            将 KV Cache 从 FP16 (2 bytes) 量化为 INT8 (1 byte) 或甚至更低精度。
+                            <br/>效果：内存减半，需要在线量化/反量化，加速主要取决于访问带宽。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-num">4️⃣</div>
+                    <div class="step-body">
+                        <div class="title">Activation-Aware Quantization (AAQ)</div>
+                        <div class="desc">
+                            不是均匀量化，而是根据激活值的分布进行非均匀量化，保护重要的 channels。
+                            <br/>效果：相比均匀量化，质量更好，但计算成本更高。
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">KV Cache 优化技术对比</div>
+                <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Header -->
+                    <text x="50" y="35" font-size="13" font-weight="bold" fill="#dde0ef">方案</text>
+                    <text x="200" y="35" font-size="13" font-weight="bold" fill="#dde0ef">内存占用</text>
+                    <text x="400" y="35" font-size="13" font-weight="bold" fill="#dde0ef">精度损失</text>
+                    <text x="620" y="35" font-size="13" font-weight="bold" fill="#dde0ef">应用</text>
+
+                    <!-- Line separators -->
+                    <line x1="30" y1="50" x2="770" y2="50" stroke="#7a7d94" stroke-width="1"/>
+
+                    <!-- Row 1: Standard -->
+                    <text x="50" y="85" font-size="11" fill="#dde0ef" font-weight="600">标准 FP16</text>
+                    <rect x="180" y="70" width="60" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="210" y="88" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">100%</text>
+
+                    <rect x="380" y="70" width="60" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="410" y="88" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">0%</text>
+
+                    <text x="620" y="85" font-size="11" fill="#7a7d94">基准</text>
+
+                    <!-- Row 2: GQA -->
+                    <text x="50" y="135" font-size="11" fill="#dde0ef" font-weight="600">GQA</text>
+                    <rect x="180" y="120" width="45" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="202" y="138" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">12.5%</text>
+
+                    <rect x="380" y="120" width="50" height="25" fill="rgba(251,191,36,0.2)" stroke="#fbbf24" stroke-width="1" rx="3"/>
+                    <text x="405" y="138" text-anchor="middle" font-size="11" fill="#fbbf24" font-weight="bold">&lt;0.5%</text>
+
+                    <text x="620" y="135" font-size="11" fill="#7a7d94">推荐</text>
+
+                    <!-- Row 3: MQA -->
+                    <text x="50" y="185" font-size="11" fill="#dde0ef" font-weight="600">MQA</text>
+                    <rect x="180" y="170" width="35" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="197" y="188" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">6.25%</text>
+
+                    <rect x="380" y="170" width="60" height="25" fill="rgba(248,113,113,0.2)" stroke="#f87171" stroke-width="1" rx="3"/>
+                    <text x="410" y="188" text-anchor="middle" font-size="11" fill="#f87171" font-weight="bold">1-2%</text>
+
+                    <text x="620" y="185" font-size="11" fill="#7a7d94">快速模型</text>
+
+                    <!-- Row 4: Sliding Window -->
+                    <text x="50" y="235" font-size="11" fill="#dde0ef" font-weight="600">滑动窗口</text>
+                    <rect x="180" y="220" width="55" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="207" y="238" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">4-25%</text>
+
+                    <rect x="380" y="220" width="60" height="25" fill="rgba(248,113,113,0.2)" stroke="#f87171" stroke-width="1" rx="3"/>
+                    <text x="410" y="238" text-anchor="middle" font-size="11" fill="#f87171" font-weight="bold">2-5%</text>
+
+                    <text x="620" y="235" font-size="11" fill="#7a7d94">短上下文</text>
+
+                    <!-- Row 5: INT8 Quant -->
+                    <text x="50" y="285" font-size="11" fill="#dde0ef" font-weight="600">KV INT8</text>
+                    <rect x="180" y="270" width="45" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="202" y="288" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">50%</text>
+
+                    <rect x="380" y="270" width="65" height="25" fill="rgba(248,113,113,0.2)" stroke="#f87171" stroke-width="1" rx="3"/>
+                    <text x="412" y="288" text-anchor="middle" font-size="11" fill="#f87171" font-weight="bold">1-3%</text>
+
+                    <text x="620" y="285" font-size="11" fill="#7a7d94">折中方案</text>
+
+                    <!-- Row 6: 组合 -->
+                    <text x="50" y="335" font-size="11" fill="#dde0ef" font-weight="600">GQA + INT8</text>
+                    <rect x="180" y="320" width="35" height="25" fill="rgba(34,211,153,0.2)" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="197" y="338" text-anchor="middle" font-size="11" fill="#34d399" font-weight="bold">6.25%</text>
+
+                    <rect x="380" y="320" width="70" height="25" fill="rgba(248,113,113,0.2)" stroke="#f87171" stroke-width="1" rx="3"/>
+                    <text x="415" y="338" text-anchor="middle" font-size="11" fill="#f87171" font-weight="bold">1.5-3%</text>
+
+                    <text x="620" y="335" font-size="11" fill="#7a7d94">最优</text>
+
+                    <!-- Legend -->
+                    <line x1="30" y1="360" x2="770" y2="360" stroke="#7a7d94" stroke-width="1"/>
+                    <text x="30" y="378" font-size="10" fill="#7a7d94">相对于标准 FP16 KV Cache 的百分比</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 03 -->
+        <section class="section" id="section-03">
+            <div class="section-badge" style="border-color:var(--purple);color:var(--purple)">📊 量化技术</div>
+            <h2 class="section-title">量化：GPTQ / AWQ / GGUF</h2>
+            <p class="section-sub">将 32-bit FP32 权重压缩到 4-8 bit</p>
+
+            <div class="prose">
+                <p><strong>量化概念：</strong> 用更少的 bit 表示权重。一个权重从 FP32 (4 bytes) 压缩到 INT4 (0.5 bytes)，模型大小减小 8 倍。</p>
+
+                <p><strong>两种方式：</strong></p>
+                <ul>
+                    <li><em>PTQ (Post-Training Quantization)</em>：量化已训练好的模型，快速但精度损失可能更大</li>
+                    <li><em>QAT (Quantization-Aware Training)</em>：在训练时就考虑量化，精度更好但成本高</li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top:32px;margin-bottom:12px;font-size:1.2rem;color:var(--text)">GPTQ：Optimal Brain Quantization (OBQ) 的改进</h3>
+
+            <div class="prose">
+                <p><strong>原理：</strong> OBQ 方法使用 Hessian 矩阵来确定哪些权重对模型输出最重要，优先保护这些权重。GPTQ 是其优化版本，通过分层量化提高效率。</p>
+
+                <p><strong>流程：</strong></p>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <div class="title">计算 Fisher Information</div>
+                        <div class="desc">估计每个权重对输出的影响程度（Hessian diagonal）</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <div class="title">贪心量化</div>
+                        <div class="desc">逐个量化权重，每次选择量化损失最小的权重</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <div class="title">调整剩余权重</div>
+                        <div class="desc">为补偿已量化权重的损失，调整剩余权重</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top:32px;margin-bottom:12px;font-size:1.2rem;color:var(--text)">AWQ：激活权重量化</h3>
+
+            <div class="prose">
+                <p><strong>核心洞察：</strong> 不是所有权重对输出的影响都相等。某些权重与大的激活值相乘（重要路径），应该保护；而与小激活值相乘的权重可以更激进地量化。</p>
+
+                <p><strong>算法：</strong> 寻找最优的缩放系数 α，使得通过缩放权重和激活值，能在 INT4 精度下保持精度。</p>
+            </div>
+
+            <div class="formula">
+                W_quant = Quant( scale_w(α) × W ) / scale_w(α)
+                <span class="comment">通过学习 α，保护重要的权重-激活路径</span>
+            </div>
+
+            <h3 style="margin-top:32px;margin-bottom:12px;font-size:1.2rem;color:var(--text)">GGUF：通用格式</h3>
+
+            <div class="prose">
+                <p><strong>特点：</strong> GGUF (GUFF Format) 是一个与推理框架无关的格式，支持多种量化方式：INT4、INT5、INT8、FP16 等。特别针对 CPU 推理优化（llama.cpp）。</p>
+
+                <p><strong>优势：</strong> 可以在消费级设备上运行大模型，虽然速度不如 GPU，但开启了更多应用场景。</p>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">量化过程对比</div>
+                <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg">
+                    <!-- GPTQ path -->
+                    <text x="50" y="30" font-size="12" font-weight="bold" fill="#22d3ee">GPTQ (Hessian-Based)</text>
+
+                    <rect x="30" y="50" width="80" height="50" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="70" y="78" text-anchor="middle" font-size="10" fill="#22d3ee">Pre-trained</text>
+                    <text x="70" y="92" text-anchor="middle" font-size="9" fill="#7a7d94">FP32</text>
+
+                    <path d="M 110 75 L 150 75" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr1)"/>
+
+                    <rect x="150" y="50" width="80" height="50" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="190" y="72" text-anchor="middle" font-size="10" fill="#22d3ee">Hessian</text>
+                    <text x="190" y="86" text-anchor="middle" font-size="10" fill="#22d3ee">Compute</text>
+
+                    <path d="M 230 75 L 270 75" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr1)"/>
+
+                    <rect x="270" y="50" width="80" height="50" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="310" y="72" text-anchor="middle" font-size="10" fill="#22d3ee">Greedy</text>
+                    <text x="310" y="86" text-anchor="middle" font-size="10" fill="#22d3ee">Quantize</text>
+
+                    <path d="M 350 75 L 390 75" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr1)"/>
+
+                    <rect x="390" y="50" width="80" height="50" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="430" y="75" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">INT4</text>
+                    <text x="430" y="92" text-anchor="middle" font-size="9" fill="#7a7d94">量化权重</text>
+
+                    <!-- AWQ path -->
+                    <text x="50" y="180" font-size="12" font-weight="bold" fill="#a78bfa">AWQ (Activation-Aware)</text>
+
+                    <rect x="30" y="200" width="80" height="50" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="70" y="228" text-anchor="middle" font-size="10" fill="#a78bfa">Pre-trained</text>
+                    <text x="70" y="242" text-anchor="middle" font-size="9" fill="#7a7d94">FP32</text>
+
+                    <path d="M 110 225 L 150 225" stroke="#a78bfa" stroke-width="2" marker-end="url(#arr2)"/>
+
+                    <rect x="150" y="200" width="80" height="50" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="190" y="222" text-anchor="middle" font-size="10" fill="#a78bfa">Activation</text>
+                    <text x="190" y="236" text-anchor="middle" font-size="10" fill="#a78bfa">Analysis</text>
+
+                    <path d="M 230 225 L 270 225" stroke="#a78bfa" stroke-width="2" marker-end="url(#arr2)"/>
+
+                    <rect x="270" y="200" width="80" height="50" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="310" y="222" text-anchor="middle" font-size="10" fill="#a78bfa">Scale</text>
+                    <text x="310" y="236" text-anchor="middle" font-size="10" fill="#a78bfa">Learning</text>
+
+                    <path d="M 350 225 L 390 225" stroke="#a78bfa" stroke-width="2" marker-end="url(#arr2)"/>
+
+                    <rect x="390" y="200" width="80" height="50" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="4"/>
+                    <text x="430" y="225" text-anchor="middle" font-size="10" fill="#a78bfa" font-weight="bold">INT4</text>
+                    <text x="430" y="242" text-anchor="middle" font-size="9" fill="#7a7d94">保护重要路径</text>
+
+                    <!-- Comparison box -->
+                    <rect x="30" y="280" width="440" height="30" fill="rgba(34,211,153,0.08)" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="50" y="303" font-size="10" fill="#dde0ef">GPTQ: 准确但慢（需计算 Hessian）  |  AWQ: 快且准确（推荐）</text>
+
+                    <!-- GGUF path -->
+                    <text x="510" y="30" font-size="12" font-weight="bold" fill="#34d399">GGUF (通用格式)</text>
+
+                    <rect x="490" y="50" width="80" height="50" fill="#131520" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="530" y="75" text-anchor="middle" font-size="10" fill="#34d399" font-weight="bold">Any Model</text>
+                    <text x="530" y="92" text-anchor="middle" font-size="9" fill="#7a7d94">各种精度</text>
+
+                    <path d="M 570 75 L 610 75" stroke="#34d399" stroke-width="2" marker-end="url(#arr3)"/>
+
+                    <rect x="610" y="50" width="80" height="50" fill="#131520" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="650" y="72" text-anchor="middle" font-size="10" fill="#34d399">Serialize</text>
+                    <text x="650" y="86" text-anchor="middle" font-size="10" fill="#34d399">to GGUF</text>
+
+                    <path d="M 690 75 L 730 75" stroke="#34d399" stroke-width="2" marker-end="url(#arr3)"/>
+
+                    <rect x="730" y="50" width="50" height="50" fill="#131520" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="755" y="78" text-anchor="middle" font-size="10" fill="#34d399">CPU</text>
+                    <text x="755" y="92" text-anchor="middle" font-size="9" fill="#7a7d94">Run</text>
+
+                    <!-- GGUF details -->
+                    <rect x="490" y="130" width="290" height="140" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="510" y="152" font-size="10" font-weight="bold" fill="#dde0ef">支持的量化方式：</text>
+                    <text x="510" y="172" font-size="9" fill="#b0b3c8">• Q2_K, Q3_K, Q4_K, Q5_K, Q6_K</text>
+                    <text x="510" y="188" font-size="9" fill="#b0b3c8">• Q8_0 (高质量)</text>
+                    <text x="510" y="204" font-size="9" fill="#b0b3c8">• IQ2_S, IQ2_M, IQ3_S, IQ3_M, IQ4_NL</text>
+                    <text x="510" y="224" font-size="9" fill="#7a7d94" font-style="italic">通过 llama.cpp 支持 CPU/GPU</text>
+                    <text x="510" y="244" font-size="9" fill="#7a7d94">可在笔记本运行 7B/13B 模型</text>
+                    <text x="510" y="260" font-size="9" fill="#7a7d94">开启开源 LLM 的民主化应用</text>
+
+                    <!-- Arrow markers -->
+                    <defs>
+                        <marker id="arr1" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#22d3ee"/>
+                        </marker>
+                        <marker id="arr2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#a78bfa"/>
+                        </marker>
+                        <marker id="arr3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#34d399"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="tech-row">
+                <div class="tech-card">
+                    <div class="tc-label">GPTQ</div>
+                    <div class="tc-val">INT4</div>
+                    <div class="tc-desc">准确但计算成本高，适合离线量化</div>
+                </div>
+                <div class="tech-card">
+                    <div class="tc-label">AWQ</div>
+                    <div class="tc-val">INT4</div>
+                    <div class="tc-desc">快速高效，成为工业标准，推荐</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 04 -->
+        <section class="section" id="section-04">
+            <div class="section-badge" style="border-color:var(--blue);color:var(--blue)">⚡ 推理加速</div>
+            <h2 class="section-title">Speculative Decoding</h2>
+            <p class="section-sub">用小模型加速大模型的推理</p>
+
+            <div class="prose">
+                <p><strong>问题：</strong> LLM 推理是内存密集型的。Decode 阶段的主要时间消耗是加载大模型的权重和计算 attention。每生成一个 token 需要一次完整的模型前向传播。</p>
+
+                <p><strong>思路：</strong> 用一个小、快的草稿模型（draft model）生成多个候选 token，然后用大模型一次性验证这些候选。如果大模型验证通过，这些 token 都被接受；否则部分被拒绝。</p>
+
+                <p><strong>关键性质：</strong> 输出分布完全与大模型相同（通过拒绝采样保证）。</p>
+            </div>
+
+            <div class="formula">
+                Speedup = (Prefill_time + Decode_time_draft × K + Verify_time) / (Prefill_time + Decode_time_large × K)
+                <span class="comment">K 为生成的 token 数，理想情况下草稿模型快 10-100 倍</span>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">Speculative Decoding 工作流程</div>
+                <svg viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Step 1: Draft generation -->
+                    <text x="50" y="35" font-size="12" font-weight="bold" fill="#22d3ee">Step 1: 草稿模型快速生成</text>
+
+                    <rect x="60" y="55" width="100" height="60" fill="#131520" stroke="#22d3ee" stroke-width="2" rx="4"/>
+                    <text x="110" y="80" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">Draft Model</text>
+                    <text x="110" y="100" text-anchor="middle" font-size="9" fill="#7a7d94">LLaMA 1B</text>
+
+                    <path d="M 160 85 L 210 85" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr4)"/>
+
+                    <rect x="210" y="60" width="140" height="50" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="4"/>
+                    <text x="280" y="80" text-anchor="middle" font-size="10" fill="#22d3ee">生成 K 个候选</text>
+                    <text x="280" y="98" text-anchor="middle" font-size="10" fill="#22d3ee" font-weight="bold">x₁, x₂, ..., xₖ</text>
+
+                    <!-- Visual representation of K tokens -->
+                    <g>
+                        <rect x="370" y="60" width="25" height="25" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                        <text x="382" y="77" text-anchor="middle" font-size="10" fill="#22d3ee">x₁</text>
+
+                        <rect x="400" y="60" width="25" height="25" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                        <text x="412" y="77" text-anchor="middle" font-size="10" fill="#22d3ee">x₂</text>
+
+                        <circle cx="432" cy="72" r="3" fill="#22d3ee"/>
+                        <circle cx="442" cy="72" r="3" fill="#22d3ee"/>
+                        <circle cx="452" cy="72" r="3" fill="#22d3ee"/>
+
+                        <rect x="465" y="60" width="25" height="25" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                        <text x="477" y="77" text-anchor="middle" font-size="10" fill="#22d3ee">xₖ</text>
+                    </g>
+
+                    <!-- Step 2: Verification -->
+                    <text x="50" y="165" font-size="12" font-weight="bold" fill="#f87171">Step 2: 大模型并行验证</text>
+
+                    <rect x="60" y="185" width="100" height="60" fill="#131520" stroke="#f87171" stroke-width="2" rx="4"/>
+                    <text x="110" y="210" text-anchor="middle" font-size="10" fill="#f87171" font-weight="bold">Large Model</text>
+                    <text x="110" y="230" text-anchor="middle" font-size="9" fill="#7a7d94">LLaMA 70B</text>
+
+                    <path d="M 160 215 L 210 215" stroke="#f87171" stroke-width="2" marker-end="url(#arr5)"/>
+
+                    <rect x="210" y="185" width="140" height="60" fill="#131520" stroke="#f87171" stroke-width="1" rx="4"/>
+                    <text x="280" y="205" text-anchor="middle" font-size="10" fill="#f87171">一次前向传播</text>
+                    <text x="280" y="223" text-anchor="middle" font-size="10" fill="#f87171">计算 K+1 位置</text>
+                    <text x="280" y="238" text-anchor="middle" font-size="9" fill="#7a7d94">（seq_len + K）</text>
+
+                    <!-- Verification details -->
+                    <g>
+                        <rect x="370" y="185" width="140" height="60" fill="rgba(248,113,113,0.08)" stroke="#f87171" stroke-width="1" rx="4"/>
+                        <text x="440" y="205" text-anchor="middle" font-size="10" fill="#f87171" font-weight="bold">验证逻辑</text>
+                        <text x="440" y="225" text-anchor="middle" font-size="9" fill="#b0b3c8">p_large(xᵢ) vs p_draft(xᵢ)</text>
+                        <text x="440" y="238" text-anchor="middle" font-size="9" fill="#7a7d94">拒绝采样</text>
+                    </g>
+
+                    <!-- Step 3: Accept/Reject -->
+                    <text x="50" y="295" font-size="12" font-weight="bold" fill="#34d399">Step 3: 接受/拒绝决策</text>
+
+                    <!-- Accept example -->
+                    <rect x="60" y="315" width="130" height="70" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="125" y="335" text-anchor="middle" font-size="10" fill="#34d399" font-weight="bold">✓ 接受</text>
+                    <text x="125" y="355" text-anchor="middle" font-size="9" fill="#b0b3c8">所有 K 个 token</text>
+                    <text x="125" y="370" text-anchor="middle" font-size="9" fill="#b0b3c8">都匹配大模型</text>
+
+                    <!-- Reject example -->
+                    <rect x="210" y="315" width="130" height="70" fill="rgba(248,113,113,0.08)" stroke="#f87171" stroke-width="1" rx="4"/>
+                    <text x="275" y="335" text-anchor="middle" font-size="10" fill="#f87171" font-weight="bold">✗ 部分拒绝</text>
+                    <text x="275" y="355" text-anchor="middle" font-size="9" fill="#b0b3c8">前 i 个接受</text>
+                    <text x="275" y="370" text-anchor="middle" font-size="9" fill="#b0b3c8">第 i+1 个重新生成</text>
+
+                    <!-- Performance -->
+                    <rect x="370" y="315" width="130" height="70" fill="rgba(96,165,250,0.08)" stroke="#60a5fa" stroke-width="1" rx="4"/>
+                    <text x="435" y="335" text-anchor="middle" font-size="10" fill="#60a5fa" font-weight="bold">加速效果</text>
+                    <text x="435" y="355" text-anchor="middle" font-size="9" fill="#b0b3c8">期望加速: 2-3x</text>
+                    <text x="435" y="370" text-anchor="middle" font-size="9" fill="#b0b3c8">取决于 K 和接受率</text>
+
+                    <!-- Arrow markers -->
+                    <defs>
+                        <marker id="arr4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#22d3ee"/>
+                        </marker>
+                        <marker id="arr5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#f87171"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="interview-box">
+                <div class="ib-tag">核心算法：拒绝采样</div>
+                <p>如果 p_draft(x_i) &gt; 0，则以概率 min(1, p_large(x_i)/p_draft(x_i)) 接受候选 token。这保证了输出分布与大模型完全相同，是一种无偏的加速。</p>
+            </div>
+        </section>
+
+        <!-- Section 05 -->
+        <section class="section" id="section-05">
+            <div class="section-badge" style="border-color:var(--green);color:var(--green)">💾 内存管理</div>
+            <h2 class="section-title">PagedAttention 与 vLLM</h2>
+            <p class="section-sub">解决 KV Cache 内存碎片化问题</p>
+
+            <div class="prose">
+                <p><strong>问题：</strong> 在批处理请求时，不同请求的序列长度不同。如果为每个请求预分配固定大小的连续 KV Cache 内存，会导致严重的内存浪费。例如，为最长序列 (4096 tokens) 预分配内存，但某个请求只用 512 tokens，其余内存闲置。</p>
+
+                <p><strong>解决方案：</strong> PagedAttention — 借鉴操作系统的虚拟内存管理。KV Cache 被分成固定大小的"页"（通常 16 个 token），请求可以非连续地占用这些页。</p>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">传统连续内存 vs PagedAttention</div>
+                <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Traditional approach -->
+                    <text x="50" y="30" font-size="12" font-weight="bold" fill="#f87171">传统方式：连续内存分配</text>
+
+                    <!-- Memory blocks -->
+                    <rect x="50" y="55" width="60" height="40" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                    <text x="80" y="80" text-anchor="middle" font-size="9" fill="#22d3ee">Req 1</text>
+                    <text x="80" y="92" text-anchor="middle" font-size="8" fill="#7a7d94">512</text>
+
+                    <rect x="50" y="100" width="180" height="40" fill="#131520" stroke="#f87171" stroke-width="2" rx="2"/>
+                    <text x="140" y="125" text-anchor="middle" font-size="9" fill="#f87171" font-weight="bold">未使用（浪费）</text>
+
+                    <rect x="50" y="145" width="120" height="40" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                    <text x="110" y="170" text-anchor="middle" font-size="9" fill="#a78bfa">Req 2</text>
+                    <text x="110" y="182" text-anchor="middle" font-size="8" fill="#7a7d94">1024</text>
+
+                    <rect x="50" y="190" width="60" height="40" fill="#131520" stroke="#34d399" stroke-width="1" rx="2"/>
+                    <text x="80" y="215" text-anchor="middle" font-size="9" fill="#34d399">Req 3</text>
+                    <text x="80" y="227" text-anchor="middle" font-size="8" fill="#7a7d94">768</text>
+
+                    <!-- Waste indicator -->
+                    <text x="250" y="80" font-size="10" fill="#f87171" font-weight="bold">↑ 严重浪费</text>
+                    <path d="M 245 85 L 235 105" stroke="#f87171" stroke-width="2" marker-end="url(#arr6)"/>
+
+                    <!-- Utilization -->
+                    <rect x="50" y="270" width="300" height="50" fill="rgba(248,113,113,0.08)" stroke="#f87171" stroke-width="1" rx="4"/>
+                    <text x="70" y="290" font-size="10" fill="#dde0ef">内存使用率: (512+1024+768)/4096 = 62%</text>
+                    <text x="70" y="308" font-size="9" fill="#b0b3c8">平均情况下浪费 20-40% 的内存</text>
+
+                    <!-- Paged Attention approach -->
+                    <text x="470" y="30" font-size="12" font-weight="bold" fill="#34d399">PagedAttention：分页管理</text>
+
+                    <!-- Page size indicator -->
+                    <text x="470" y="55" font-size="9" fill="#7a7d94">页大小：16 tokens</text>
+
+                    <!-- Memory pages -->
+                    <g>
+                        <!-- Req 1: 32 tokens = 2 pages -->
+                        <rect x="480" y="75" width="30" height="25" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                        <text x="495" y="91" text-anchor="middle" font-size="8" fill="#22d3ee">Req1</text>
+
+                        <rect x="515" y="75" width="30" height="25" fill="#131520" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                        <text x="530" y="91" text-anchor="middle" font-size="8" fill="#22d3ee">Req1</text>
+
+                        <!-- Req 2: 64 tokens = 4 pages -->
+                        <rect x="480" y="105" width="30" height="25" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                        <text x="495" y="121" text-anchor="middle" font-size="8" fill="#a78bfa">Req2</text>
+
+                        <rect x="515" y="105" width="30" height="25" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                        <text x="530" y="121" text-anchor="middle" font-size="8" fill="#a78bfa">Req2</text>
+
+                        <rect x="550" y="105" width="30" height="25" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                        <text x="565" y="121" text-anchor="middle" font-size="8" fill="#a78bfa">Req2</text>
+
+                        <rect x="585" y="105" width="30" height="25" fill="#131520" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                        <text x="600" y="121" text-anchor="middle" font-size="8" fill="#a78bfa">Req2</text>
+
+                        <!-- Req 3: 48 tokens = 3 pages -->
+                        <rect x="550" y="75" width="30" height="25" fill="#131520" stroke="#34d399" stroke-width="1" rx="2"/>
+                        <text x="565" y="91" text-anchor="middle" font-size="8" fill="#34d399">Req3</text>
+
+                        <rect x="585" y="75" width="30" height="25" fill="#131520" stroke="#34d399" stroke-width="1" rx="2"/>
+                        <text x="600" y="91" text-anchor="middle" font-size="8" fill="#34d399">Req3</text>
+
+                        <rect x="480" y="135" width="30" height="25" fill="#131520" stroke="#34d399" stroke-width="1" rx="2"/>
+                        <text x="495" y="151" text-anchor="middle" font-size="8" fill="#34d399">Req3</text>
+                    </g>
+
+                    <!-- Page table -->
+                    <text x="680" y="75" font-size="9" fill="#7a7d94">页表</text>
+                    <rect x="670" y="85" width="100" height="100" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="680" y="105" font-size="9" fill="#dde0ef">Req1: [0, 1]</text>
+                    <text x="680" y="125" font-size="9" fill="#dde0ef">Req2: [2, 3, 4, 5]</text>
+                    <text x="680" y="145" font-size="9" fill="#dde0ef">Req3: [1, 6, 2]</text>
+                    <text x="680" y="165" font-size="8" fill="#7a7d94">非连续映射</text>
+
+                    <!-- Benefits -->
+                    <rect x="470" y="270" width="300" height="50" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="1" rx="4"/>
+                    <text x="490" y="290" font-size="10" fill="#dde0ef">内存使用率: (2+4+3)/9 = 100%</text>
+                    <text x="490" y="308" font-size="9" fill="#b0b3c8">支持更大的批次规模、减少浪费</text>
+
+                    <!-- Arrow markers -->
+                    <defs>
+                        <marker id="arr6" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#f87171"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="interview-box">
+                <div class="ib-tag">vLLM 的优势</div>
+                <p><strong>吞吐量提升：</strong> 通过 PagedAttention，vLLM 可以在相同 GPU 内存下支持 20-40 倍的吞吐量增加。这是因为内存利用率从 ~60% 提升到接近 100%。</p>
+            </div>
+        </section>
+
+        <!-- Section 06 -->
+        <section class="section" id="section-06">
+            <div class="section-badge" style="border-color:var(--coral);color:var(--coral)">🔄 并发策略</div>
+            <h2 class="section-title">Continuous Batching</h2>
+            <p class="section-sub">动态调度请求，最大化 GPU 利用率</p>
+
+            <div class="prose">
+                <p><strong>传统静态批处理问题：</strong> 将 N 个请求组成一个批次，所有请求一起处理，直到最长的请求完成。短请求必须等待长请求，造成 GPU 空闲。</p>
+
+                <p><strong>Continuous Batching：</strong> 请求逐个完成后，立即将新请求加入批次，无需等待整个批次完成。这样长短请求交错进行，GPU 利用率接近 100%。</p>
+            </div>
+
+            <div class="diagram">
+                <div class="diagram-title">静态批处理 vs 连续批处理</div>
+                <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Static batching -->
+                    <text x="50" y="30" font-size="12" font-weight="bold" fill="#f87171">静态批处理 (Static Batching)</text>
+
+                    <rect x="50" y="50" width="300" height="25" fill="#22d3ee" opacity="0.3" stroke="#22d3ee" stroke-width="1" rx="3"/>
+                    <text x="60" y="68" font-size="10" fill="#22d3ee" font-weight="bold">Request 1 (1024 tokens)</text>
+
+                    <rect x="50" y="80" width="150" height="25" fill="#a78bfa" opacity="0.3" stroke="#a78bfa" stroke-width="1" rx="3"/>
+                    <text x="60" y="98" font-size="10" fill="#a78bfa" font-weight="bold">Request 2 (512)</text>
+                    <rect x="200" y="80" width="150" height="25" fill="#ddd" opacity="0.2" stroke="#7a7d94" stroke-width="1" stroke-dasharray="2,2" rx="3"/>
+                    <text x="250" y="98" font-size="10" fill="#7a7d94">等待 (浪费)</text>
+
+                    <rect x="50" y="110" width="100" height="25" fill="#34d399" opacity="0.3" stroke="#34d399" stroke-width="1" rx="3"/>
+                    <text x="60" y="128" font-size="10" fill="#34d399" font-weight="bold">Request 3 (256)</text>
+                    <rect x="150" y="110" width="200" height="25" fill="#ddd" opacity="0.2" stroke="#7a7d94" stroke-width="1" stroke-dasharray="2,2" rx="3"/>
+                    <text x="220" y="128" font-size="10" fill="#7a7d94">等待</text>
+
+                    <!-- Timeline -->
+                    <line x1="50" y1="145" x2="360" y2="145" stroke="#7a7d94" stroke-width="1"/>
+                    <text x="50" y="165" font-size="9" fill="#7a7d94">t=0</text>
+                    <text x="340" y="165" font-size="9" fill="#7a7d94">t=1024 steps</text>
+
+                    <!-- Utilization -->
+                    <rect x="50" y="185" width="300" height="40" fill="rgba(248,113,113,0.08)" stroke="#f87171" stroke-width="1" rx="4"/>
+                    <text x="70" y="205" font-size="10" fill="#dde0ef">GPU 利用率: (1024+512+256)/3072 = 59%</text>
+                    <text x="70" y="223" font-size="9" fill="#b0b3c8">大量空闲时间，GPU 浪费</text>
+
+                    <!-- Continuous batching -->
+                    <text x="50" y="260" font-size="12" font-weight="bold" fill="#34d399">连续批处理 (Continuous Batching)</text>
+
+                    <!-- Timeline view -->
+                    <line x1="50" y1="310" x2="700" y2="310" stroke="#7a7d94" stroke-width="1"/>
+
+                    <!-- Requests flowing -->
+                    <rect x="50" y="280" width="200" height="20" fill="#22d3ee" opacity="0.4" stroke="#22d3ee" stroke-width="1" rx="2"/>
+                    <text x="70" y="293" font-size="9" fill="#22d3ee">Req 1</text>
+                    <text x="250" y="293" font-size="9" fill="#7a7d94">(finish)</text>
+
+                    <rect x="260" y="280" width="100" height="20" fill="#a78bfa" opacity="0.4" stroke="#a78bfa" stroke-width="1" rx="2"/>
+                    <text x="270" y="293" font-size="9" fill="#a78bfa">Req 2</text>
+
+                    <rect x="370" y="280" width="50" height="20" fill="#34d399" opacity="0.4" stroke="#34d399" stroke-width="1" rx="2"/>
+                    <text x="375" y="293" font-size="9" fill="#34d399">Req 3</text>
+
+                    <rect x="430" y="280" width="200" height="20" fill="#fbbf24" opacity="0.4" stroke="#fbbf24" stroke-width="1" rx="2"/>
+                    <text x="450" y="293" font-size="9" fill="#fbbf24">Req 4 (new)</text>
+
+                    <!-- Timeline -->
+                    <text x="50" y="323" font-size="9" fill="#7a7d94">t=0</text>
+                    <text x="680" y="323" font-size="9" fill="#7a7d94">t=1024 steps</text>
+
+                    <text x="500" y="35" font-size="10" fill="#34d399" font-weight="bold">吞吐提升 2-5x</text>
+                </svg>
+            </div>
+
+            <div class="tech-row">
+                <div class="tech-card">
+                    <div class="tc-label">静态批处理</div>
+                    <div class="tc-val">59%</div>
+                    <div class="tc-desc">GPU 利用率低，简单易实现</div>
+                </div>
+                <div class="tech-card">
+                    <div class="tc-label">连续批处理</div>
+                    <div class="tc-val">90%+</div>
+                    <div class="tc-desc">GPU 利用率高，需要复杂调度</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 07 -->
+        <section class="section" id="section-07">
+            <div class="section-badge" style="border-color:var(--blue);color:var(--blue)">🛠️ 工具对比</div>
+            <h2 class="section-title">推理框架对比</h2>
+            <p class="section-sub">vLLM、TensorRT-LLM、SGLang、llama.cpp 等主流框架</p>
+
+            <div class="prose">
+                <p>LLM 推理框架众多，各有特色。选择合适的框架对性能和开发效率都有重大影响。</p>
+            </div>
+
+            <table class="cmp-table">
+                <thead>
+                    <tr>
+                        <th>框架</th>
+                        <th>后端</th>
+                        <th>关键特性</th>
+                        <th>量化支持</th>
+                        <th>吞吐量</th>
+                        <th>适用场景</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>vLLM</strong></td>
+                        <td>PyTorch</td>
+                        <td>PagedAttention、连续批处理、异步推理</td>
+                        <td>AWQ、GPTQ、INT8</td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>通用、学术</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TensorRT-LLM</strong></td>
+                        <td>NVIDIA TensorRT</td>
+                        <td>自动优化、多 GPU 支持、自定义 kernel</td>
+                        <td>INT8、FP8、INT4</td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>高性能、生产环境</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SGLang</strong></td>
+                        <td>vLLM 基础</td>
+                        <td>结构化输出、前缀缓存、编译优化</td>
+                        <td>AWQ、GPTQ</td>
+                        <td>⭐⭐⭐⭐</td>
+                        <td>结构化任务</td>
+                    </tr>
+                    <tr>
+                        <td><strong>llama.cpp</strong></td>
+                        <td>C++（CPU）</td>
+                        <td>轻量级、GGUF 格式、跨平台</td>
+                        <td>GGUF (多种)</td>
+                        <td>⭐⭐⭐</td>
+                        <td>消费级设备</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ollama</strong></td>
+                        <td>llama.cpp 包装</td>
+                        <td>易用、模型库、API 简单</td>
+                        <td>GGUF</td>
+                        <td>⭐⭐⭐</td>
+                        <td>本地快速部署</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TGI</strong></td>
+                        <td>PyTorch + Flash Attention</td>
+                        <td>流式输出、多模型、生产就绪</td>
+                        <td>AWQ、GPTQ、INT8</td>
+                        <td>⭐⭐⭐⭐</td>
+                        <td>Hugging Face 生态</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="interview-box">
+                <div class="ib-tag">框架选择建议</div>
+                <ul>
+                    <li><strong>学术研究：</strong> vLLM（快速迭代、文档完善）</li>
+                    <li><strong>生产高性能：</strong> TensorRT-LLM（最快但需 NVIDIA GPU）</li>
+                    <li><strong>结构化输出：</strong> SGLang（受限解码、JSON 模式）</li>
+                    <li><strong>消费设备：</strong> ollama（易用，7B/13B 模型可流畅运行）</li>
+                    <li><strong>生产通用：</strong> vLLM 或 TGI（平衡性能和易用性）</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 08 -->
+        <section class="section" id="section-08">
+            <div class="section-badge" style="border-color:var(--amber);color:var(--amber)">📝 总结</div>
+            <h2 class="section-title">总结与面试题</h2>
+            <p class="section-sub">核心知识点回顾与常见面试问题</p>
+
+            <h3 style="margin-top:32px;margin-bottom:16px;font-size:1.2rem;color:var(--text)">核心知识体系</h3>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">🎯</div>
+                    <div class="step-body">
+                        <div class="title">推理的两个阶段</div>
+                        <div class="desc">Prefill（计算密集）vs Decode（内存密集）。大部分时间在 Decode，优化重点在内存</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">💾</div>
+                    <div class="step-body">
+                        <div class="title">KV Cache 是瓶颈</div>
+                        <div class="desc">线性增长，内存成本高。GQA/MQA/量化/滑动窗口是主要优化方向</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">⚡</div>
+                    <div class="step-body">
+                        <div class="title">量化和小模型加速</div>
+                        <div class="desc">AWQ 最实用，Speculative Decoding 可获得 2-3x 加速</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">📦</div>
+                    <div class="step-body">
+                        <div class="title">PagedAttention 和连续批处理</div>
+                        <div class="desc">vLLM 的核心，内存利用率从 60% 提升到 100%，吞吐提升 2-5x</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top:40px;margin-bottom:16px;font-size:1.2rem;color:var(--text)">常见面试题</h3>
+
+            <div class="interview-box" style="margin-top:20px;margin-bottom:16px">
+                <div class="ib-tag">Q1</div>
+                <p><strong>解释 Prefill 和 Decode 阶段的区别，为什么优化策略不同？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    Prefill 是计算密集型，可以充分利用 GPU 的并行计算能力。Decode 是内存密集型，受内存带宽限制。因此 Prefill 需要最大化计算吞吐，Decode 需要最小化内存访问。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q2</div>
+                <p><strong>KV Cache 的内存公式是什么？对 LLaMA 70B 和 8K 序列，单个请求需要多少 GB？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    2 × layers × heads × d_head × seq_len × batch × 2 bytes。LLaMA 70B：2 × 80 × 64 × 128 × 8192 × 1 × 2 = 209.6 MB ≈ 0.21 GB。批量处理时线性增长。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q3</div>
+                <p><strong>GQA、MQA、Sliding Window 如何降低 KV Cache？各有什么 trade-off？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    GQA：多个 Q 头共享一个 K/V 头，降低 8-16 倍。MQA 更极端，单个 K/V 头。Sliding Window：只保留最近 W 个 token，损失长距离依赖。都需要在设计时考虑，训练后难以改变。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q4</div>
+                <p><strong>GPTQ 和 AWQ 的区别？为什么 AWQ 现在更常用？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    GPTQ 基于 Hessian 计算，准确但需要大量计算。AWQ 基于激活值分布，快速高效，精度相近。AWQ 成为工业标准因为它速度快（小时级 vs 天级）且精度不输 GPTQ。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q5</div>
+                <p><strong>Speculative Decoding 如何工作？为什么输出分布与大模型相同？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    草稿模型生成 K 个候选，大模型一次验证。使用拒绝采样：以 min(1, p_large/p_draft) 的概率接受。这保证边际分布与大模型相同，是无偏加速。期望加速 2-3x。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q6</div>
+                <p><strong>PagedAttention 解决了什么问题？内存利用率提升多少？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    传统连续分配导致严重碎片化（60% 利用率）。PagedAttention 使用虚拟内存映射，KV Cache 按页分配，可以非连续。利用率提升到接近 100%，支持更大批量。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q7</div>
+                <p><strong>Continuous Batching 为什么比静态批处理快那么多？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    静态批处理中，短请求必须等待长请求，GPU 大量空闲。连续批处理中，请求完成后立即加入新请求，GPU 始终有工作，利用率从 60% 提升到 90%+，吞吐提升 2-5x。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q8</div>
+                <p><strong>如何估计一个推理系统的吞吐量？影响因素有哪些？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    吞吐 = tokens_per_second × batch_size。关键因素：(1) 内存带宽（主要瓶颈），(2) 模型大小，(3) 序列长度，(4) 量化方式，(5) 批处理策略，(6) 硬件（A100 > V100）。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q9</div>
+                <p><strong>为什么 INT4 量化通常不损失性能，但 INT2 会？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    权重分布不均匀，少数通道很重要。INT4 仍能保留足够信息，量化后通过激活缩放补偿。INT2 太激进，丢失关键信息，难以恢复。AWQ 通过学习缩放系数，可推进极限到 INT3。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q10</div>
+                <p><strong>选择推理框架的关键考虑因素？vLLM vs TensorRT-LLM？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    vLLM：开源、易用、快速迭代、学术友好。TensorRT-LLM：最快、生产稳定、需 NVIDIA。选择 vLLM 用于研究和快速原型，生产高性能选 TensorRT。中间选项：TGI（平衡）或 SGLang（结构化）。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q11</div>
+                <p><strong>如果限制内存为 8GB，能部署 LLaMA 13B 吗？需要什么优化？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    13B FP32 ≈ 52 GB，不可行。需要：(1) INT4 量化 ≈ 3.3 GB 权重，(2) GQA 减少 KV Cache，(3) 滑动窗口（max_seq=2048），(4) batch_size=1。总计约 5-6 GB，可行。或使用 GGUF + llama.cpp 在 CPU 上。
+                </p>
+            </div>
+
+            <div class="interview-box" style="margin-bottom:16px">
+                <div class="ib-tag">Q12</div>
+                <p><strong>优化推理延迟 (latency) 和吞吐量 (throughput) 的策略有什么矛盾？</strong></p>
+                <p style="margin-top:8px;color:#b0b3c8;font-size:0.9rem">
+                    低延迟需要小批量/及时响应。高吞吐需要大批量。单个请求的延迟 = 预热时间 + 序列长度/tokens_per_sec。优化方向：(1) 对延迟敏感：小批量 + 快速调度，(2) 吞吐优先：大批量 + 连续批处理。可用分离队列兼得。
+                </p>
+            </div>
+        </section>
+
+        <div style="height:60px"></div>
+    </div>
+
+    <script>
+        // Simple navigation highlight
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

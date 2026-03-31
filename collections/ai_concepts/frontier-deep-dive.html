@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前沿技术专题 — Context Engineering · Inference Scaling · Coding Agents | AI 技术演进</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root{--bg:#07080f;--bg2:#0d0f1a;--bg3:#131520;--bg4:#191c2a;--card:#1b1e2d;--line:rgba(255,255,255,0.06);--line2:rgba(255,255,255,0.11);--text:#dde0ef;--sub:#7a7d94;--dim:#4a4d62;--green:#34d399;--teal:#22d3ee;--blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--amber:#fbbf24;--coral:#f87171;--orange:#fb923c;--gd:rgba(52,211,153,0.08);--td:rgba(34,211,238,0.08);--bd:rgba(96,165,250,0.08);--pd:rgba(167,139,250,0.08);--ad:rgba(251,191,36,0.08);--cd:rgba(248,113,113,0.08);--pkd:rgba(244,114,182,0.08)}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans SC',system-ui,sans-serif;line-height:1.8}
+.hero{min-height:260px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px 48px;margin-left:220px;background:radial-gradient(ellipse 70% 80% at 15% 50%,rgba(34,211,238,0.07) 0%,transparent 65%),radial-gradient(ellipse 50% 60% at 85% 30%,rgba(96,165,250,0.06) 0%,transparent 60%),var(--bg);border-bottom:1px solid var(--line2);position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 80px);pointer-events:none}
+.hero-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:2px;color:var(--teal);text-transform:uppercase;margin-bottom:14px;opacity:0.85}
+.hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.5px;max-width:700px;position:relative;z-index:1}
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--teal),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{margin-top:14px;color:var(--sub);font-size:0.95rem;max-width:580px;position:relative;z-index:1}
+.sidenav{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--line2);overflow-y:auto;padding:24px 0;z-index:100}
+.sidenav-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;padding:0 20px 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.sidenav a{display:block;padding:7px 20px;font-size:0.82rem;color:var(--sub);text-decoration:none;transition:all 0.15s;border-left:2px solid transparent;line-height:1.4}
+.sidenav a:hover,.sidenav a.active{color:var(--text);border-left-color:var(--teal);background:rgba(34,211,238,0.05)}
+.sidenav .nav-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--dim);display:block;margin-bottom:1px}
+.sidenav .back-link{display:block;padding:8px 20px;margin-bottom:12px;font-size:0.82rem;color:var(--teal);text-decoration:none;border-bottom:1px solid var(--line)}
+.main{margin-left:220px;max-width:900px}
+.section{padding:56px 48px;border-bottom:1px solid var(--line)}.section:last-child{border-bottom:none}
+.section-badge{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:18px;border:1px solid}
+.section-title{font-size:1.7rem;font-weight:700;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.25}
+.section-sub{color:var(--sub);font-size:0.9rem;margin-bottom:28px}
+.prose{color:#b0b3c8;font-size:0.95rem;line-height:1.9;margin-bottom:20px}.prose strong{color:var(--text)}.prose em{color:var(--teal);font-style:normal}.prose code{font-family:'IBM Plex Mono',monospace;font-size:0.85em;background:var(--bg3);padding:1px 6px;border-radius:4px;color:var(--amber)}.prose ul,.prose ol{margin:8px 0 16px 20px}.prose li{margin-bottom:6px}
+.callout{padding:16px 20px;border-radius:0 10px 10px 0;border-left:3px solid;margin:20px 0;font-size:0.9rem;line-height:1.75}
+.diagram{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:28px;margin:24px 0;overflow-x:auto}
+.diagram-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:20px}
+.diagram svg{display:block;width:100%;max-width:780px;margin:0 auto}
+.formula{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 24px;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;color:var(--teal);margin:16px 0;text-align:center;line-height:2}
+.formula .comment{color:var(--dim);font-size:0.78rem;display:block;margin-top:4px}
+.cmp-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:0.85rem}
+.cmp-table th{background:var(--bg3);color:var(--sub);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;padding:10px 14px;border:1px solid var(--line2);text-align:left}
+.cmp-table td{padding:10px 14px;border:1px solid var(--line);color:var(--text);vertical-align:top;line-height:1.6}.cmp-table tr:nth-child(even) td{background:rgba(255,255,255,0.015)}
+.steps{display:flex;flex-direction:column;gap:12px;margin:20px 0}.step{display:flex;gap:16px;padding:16px 18px;background:var(--bg3);border-radius:10px;border:1px solid var(--line)}.step-num{font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;min-width:28px;padding-top:1px;color:var(--teal)}.step-body .title{font-weight:600;font-size:0.9rem;margin-bottom:4px;color:var(--text)}.step-body .desc{color:var(--sub);font-size:0.83rem;line-height:1.65}
+.tech-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}@media(max-width:620px){.tech-row{grid-template-columns:1fr}}
+.tech-card{background:var(--bg3);border-radius:10px;padding:16px 18px;border:1px solid var(--line)}.tech-card .tc-label{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}.tech-card .tc-val{font-size:1.1rem;font-weight:700;margin-bottom:4px;color:var(--green)}.tech-card .tc-desc{color:var(--sub);font-size:0.78rem;line-height:1.5}
+.interview-box{background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.2);border-radius:10px;padding:18px 20px;margin:24px 0}.interview-box .ib-tag{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:8px}.interview-box p,.interview-box li{color:var(--sub);font-size:0.88rem;line-height:1.7}
+.code-block{background:var(--bg3);border:1px solid var(--line2);border-radius:10px;padding:18px 22px;margin:16px 0;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;line-height:1.7;color:#c9d1d9;overflow-x:auto;white-space:pre}
+.subsection-title{font-size:1.2rem;font-weight:600;color:var(--text);margin-top:28px;margin-bottom:12px;border-left:3px solid var(--teal);padding-left:12px}
+h2{font-size:1.3rem;font-weight:600;margin:32px 0 16px;color:var(--text);border-bottom:1px solid var(--line2);padding-bottom:12px}
+h3{font-size:1.05rem;font-weight:600;margin:24px 0 12px;color:var(--teal)}
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-tag">Deep Dive · 前沿技术 2025-2026</div>
+        <h1>从 Context Engineering 到 <em>World Models</em> — AI 前沿技术全景</h1>
+        <p class="hero-sub">涵盖 Context Engineering、推理时扩展、AI Coding Agents、Constrained Decoding、合成数据、模型合并、Diffusion Transformers 与 World Models。</p>
+    </div>
+
+    <nav class="sidenav">
+        <a href="index.html" class="back-link">← 返回首页</a>
+        <div class="sidenav-title">目录</div>
+        <a href="#sec00"><span class="nav-num">00</span>Context Engineering</a>
+        <a href="#sec01"><span class="nav-num">01</span>Test-Time Compute</a>
+        <a href="#sec02"><span class="nav-num">02</span>AI Coding Agents</a>
+        <a href="#sec03"><span class="nav-num">03</span>Constrained Decoding</a>
+        <a href="#sec04"><span class="nav-num">04</span>Synthetic Data</a>
+        <a href="#sec05"><span class="nav-num">05</span>Model Merging</a>
+        <a href="#sec06"><span class="nav-num">06</span>Diffusion Transformers</a>
+        <a href="#sec07"><span class="nav-num">07</span>World Models</a>
+    </nav>
+
+    <div class="main">
+
+<!-- Section 00: Context Engineering -->
+<div class="section" id="sec00">
+  <div class="section-badge" style="background-color: var(--teal);">CONTEXT</div>
+  <h1 class="section-title">上下文工程：从提示词到内存管理</h1>
+  <p class="section-sub">Andrej Karpathy 提出的范式转变——将大语言模型视为计算系统的核心概念</p>
+
+  <div class="subsection-title">核心隐喻与系统类比</div>
+  <p class="prose">Andrej Karpathy 在2024年提出了一个深刻的比喻：<strong>LLM = CPU，Context Window = RAM，Engineer = OS</strong>。这个框架彻底改变了我们思考模型交互的方式。不再将注意力集中在精心设计"提示词"（prompt engineering），而是转向<em>上下文工程</em>（context engineering）——一个关于如何在有限的"内存"中动态调配信息的系统问题。Context Window 是一个有限资源，就像计算机的RAM一样，工程师的职责是像操作系统一样高效地管理这份资源，确保在任何时刻，最重要的信息都被保留在模型的"视野"中。</p>
+
+  <div class="callout" style="border-left: 3px solid var(--teal); background: rgba(34, 211, 238, 0.1);">
+    <strong>核心观点：</strong> Context Engineering 不是关于写出更聪明的句子，而是关于在有限的token预算内部署正确的信息架构。这要求动态加载、优先级管理和实时压缩。
+  </div>
+
+  <div class="subsection-title">上下文的关键组件</div>
+  <p class="prose">一个完整的上下文系统由多个独立的"层"组成，每一层都有明确的用途和生命周期：</p>
+
+  <ul class="prose">
+    <li><strong>Task Description</strong>（任务描述）——系统级别的目标陈述，通常是静态的。定义了模型应该做什么的基本框架。</li>
+    <li><strong>Few-shot Examples</strong>（少样本示例）——通过具体例子展示预期的输出格式和推理模式。研究表明3-5个高质量例子可以显著提升性能。</li>
+    <li><strong>RAG Documents</strong>（检索增强的外部文档）——基于用户查询动态检索的背景知识。包括文档片段、API文档、知识库条目。</li>
+    <li><strong>Tool Specifications</strong>（工具规范）——可用工具的完整定义（函数签名、参数、返回值、错误处理）。</li>
+    <li><strong>State/History</strong>（状态与历史）——对话历史、中间计算结果、前一步的输出。这是"内存"的核心部分。</li>
+    <li><strong>Multimodal Context</strong>（多模态上下文）——图像、表格、代码块等非文本信息。</li>
+  </ul>
+
+  <div class="subsection-title">动态系统提示构建</div>
+  <p class="prose">传统的静态系统提示（system prompt）无法适应变化的任务需求。现代的方法是<em>条件式动态加载</em>（conditional dynamic loading），根据请求的优先级动态组装系统提示：</p>
+
+  <div class="code-block"><pre>// 伪代码：动态系统提示组装
+class DynamicPromptBuilder {
+  constructor(tokenBudget = 8000) {
+    this.tokenBudget = tokenBudget;
+    this.layers = [];
+  }
+
+  addLayer(name, content, priority, condition = null) {
+    // condition 是一个谓词函数，决定该层是否加载
+    this.layers.push({
+      name, content, priority,
+      condition, tokens: countTokens(content)
+    });
+  }
+
+  build(context = {}) {
+    // 1. 评估所有层的条件
+    let active = this.layers
+      .filter(l => !l.condition || l.condition(context))
+      .sort((a, b) => b.priority - a.priority);
+
+    // 2. 按优先级打包，直到达到token预算
+    let result = [];
+    let used = 0;
+
+    for (const layer of active) {
+      if (used + layer.tokens <= this.tokenBudget) {
+        result.push(layer.content);
+        used += layer.tokens;
+      }
+    }
+
+    return result.join('\n---\n');
+  }
+}
+
+// 使用示例
+const builder = new DynamicPromptBuilder(8000);
+builder.addLayer(
+  'base_instructions',
+  'You are a code review agent...',
+  priority = 100  // 最高优先级
+);
+builder.addLayer(
+  'framework_context',
+  'This is a React project. Framework-specific patterns...',
+  priority = 80,
+  condition = (ctx) => ctx.projectType === 'react'
+);
+builder.addLayer(
+  'rag_documents',
+  retrievedDocs,
+  priority = 60,
+  condition = (ctx) => ctx.queryType === 'knowledge'
+);
+
+const systemPrompt = builder.build({ projectType: 'react', queryType: 'knowledge' });</pre></div>
+
+  <div class="subsection-title">Token预算管理策略</div>
+  <p class="prose">Token预算是硬约束。高效的预算管理需要多个策略的组合：</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">成本核算（Cost Accounting）</div>
+        <div class="desc">对每个信息片段进行token计数。使用Tiktoken或相似工具精确计算。维护一个"成本清单"（manifest），跟踪系统中每个元素的开销。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">优先级排序（Priority Ranking）</div>
+        <div class="desc">为不同的信息分配优先级。关键的任务说明优先级最高，低信息密度的装饰性文本优先级最低。在token不足时，优先级决定了什么被保留。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">动态窗口滑动（Sliding Window）</div>
+        <div class="desc">在长对话中，不能保留所有历史。实现一个滑动窗口，保留最近的N条交互 + 关键的历史断点。某些框架使用"记忆汇总"（memory summary）来压缩旧交互。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">条件性加载（Conditional Loading）</div>
+        <div class="desc">只在需要时加载信息。一个React项目不需要Django文档。使用条件谓词确定用户的上下文，然后只加载相关的文档。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection-title">事件驱动提醒与决策点注入</div>
+  <p class="prose">模型在执行长期任务时会犯错误，特别是在面临决策点时。<em>事件驱动提醒</em>（Event-Driven Reminders）是一种在关键时刻自动注入指导的技术：</p>
+
+  <div class="callout" style="border-left: 3px solid var(--teal); background: rgba(34, 211, 238, 0.1);">
+    <strong>示例：</strong> 在代码生成任务中，每当模型即将调用外部API时，系统自动注入一条提醒："检查API文档中的错误处理部分。大多数API在速率限制或网络超时时需要指数退避重试。"这个提醒是通过检测token流中的API调用而动态触发的。
+  </div>
+
+  <div class="subsection-title">自适应上下文压缩</div>
+  <p class="prose">给定固定的context window，信息压缩是必然的。传统方法（如简单的总结）会丧失细节。现代方法使用<em>熵减原理</em>（entropy-reduction principle）：优先保留高信息密度的部分，降低冗余信息。</p>
+
+  <p class="prose">一个关键洞察是：<strong>并非所有token都是平等的</strong>。一个包含关键变量赋值的代码行（5 tokens）的价值可能高于一段解释性的自然语言文本（20 tokens）。使用信息论的方法——如互信息（Mutual Information）——来评估每个token对最终任务的贡献程度，然后根据这个评分进行压缩。</p>
+
+  <div class="subsection-title">渐进式功能披露</div>
+  <p class="prose">当系统有100个可用工具时，将所有工具规范都放在上下文中会产生巨大的开销。<em>渐进式披露</em>（Progressive Disclosure）策略会根据对话的进度逐步引入工具：</p>
+
+  <ul class="prose">
+    <li>初始阶段：只列出5个最常用的工具的简化描述。</li>
+    <li>中期阶段：用户提到某个工具时，加载该工具的完整规范。</li>
+    <li>高级阶段：显示高级工具的组合模式和最佳实践。</li>
+  </ul>
+
+  <div class="subsection-title">上下文工程 vs 提示词工程对比</div>
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>提示词工程（Prompt Engineering）</th>
+          <th>上下文工程（Context Engineering）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>焦点</strong></td>
+          <td>优化单个提示词的措辞</td>
+          <td>整个上下文生态系统的设计与优化</td>
+        </tr>
+        <tr>
+          <td><strong>视角</strong></td>
+          <td>静态、一次性</td>
+          <td>动态、适应性、多层次</td>
+        </tr>
+        <tr>
+          <td><strong>时间维度</strong></td>
+          <td>关注单一请求</td>
+          <td>跨越多轮对话和会话的长期策略</td>
+        </tr>
+        <tr>
+          <td><strong>资源管理</strong></td>
+          <td>尽力而为，无严格预算</td>
+          <td>精确的token预算和优先级管理</td>
+        </tr>
+        <tr>
+          <td><strong>适应性</strong></td>
+          <td>手动调整，通常是trial-and-error</td>
+          <td>基于条件和上下文信号的自动化调整</td>
+        </tr>
+        <tr>
+          <td><strong>扩展性</strong></td>
+          <td>难以扩展到复杂、多步骤任务</td>
+          <td>为长链任务和多代理系统设计</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection-title">实战代码示例：完整的上下文管理系统</div>
+  <div class="code-block"><pre>// TypeScript: 完整的上下文管理框架
+interface ContextLayer {
+  id: string;
+  content: string;
+  priority: number;
+  tokens: number;
+  condition?: (state: AppState) => boolean;
+  refreshInterval?: number; // ms，用于动态更新
+  version: number;
+}
+
+interface TokenBudget {
+  total: number;
+  reserved: Map<string, number>; // 为特定层预留的tokens
+  used: number;
+}
+
+class ContextManager {
+  private layers: Map<string, ContextLayer> = new Map();
+  private budget: TokenBudget;
+  private eventEmitter = new EventEmitter();
+
+  constructor(totalTokens: number) {
+    this.budget = {
+      total: totalTokens,
+      reserved: new Map(),
+      used: 0
+    };
+  }
+
+  registerLayer(layer: ContextLayer): void {
+    this.layers.set(layer.id, layer);
+    if (layer.refreshInterval) {
+      setInterval(() => this.refreshLayer(layer.id), layer.refreshInterval);
+    }
+  }
+
+  private refreshLayer(layerId: string): void {
+    const layer = this.layers.get(layerId);
+    if (layer) {
+      layer.version++;
+      this.eventEmitter.emit('layer-updated', { layerId, version: layer.version });
+    }
+  }
+
+  buildContext(state: AppState): {
+    context: string;
+    tokenUsage: number;
+    excluded: string[];
+  } {
+    // 1. 评估所有层
+    const activeLayers = Array.from(this.layers.values())
+      .filter(l => !l.condition || l.condition(state))
+      .sort((a, b) => b.priority - a.priority);
+
+    // 2. 分配tokens
+    let context: string[] = [];
+    let tokenUsage = 0;
+    let excluded: string[] = [];
+    const reserved = this.budget.reserved;
+
+    for (const layer of activeLayers) {
+      const reserved_tokens = reserved.get(layer.id) || 0;
+      const available = this.budget.total - tokenUsage;
+
+      if (reserved_tokens > 0 && available >= reserved_tokens) {
+        // 这一层有预留，必须包含
+        context.push(`[${layer.id}]`);
+        context.push(layer.content);
+        tokenUsage += layer.tokens;
+      } else if (available >= layer.tokens && reserved_tokens === 0) {
+        // 没有预留，容量许可就包含
+        context.push(`[${layer.id}]`);
+        context.push(layer.content);
+        tokenUsage += layer.tokens;
+      } else {
+        excluded.push(layer.id);
+      }
+    }
+
+    return {
+      context: context.join('\n---\n'),
+      tokenUsage,
+      excluded
+    };
+  }
+
+  getUtilization(): number {
+    return (this.budget.used / this.budget.total) * 100;
+  }
+
+  setReservedTokens(layerId: string, tokens: number): void {
+    this.budget.reserved.set(layerId, tokens);
+  }
+
+  getExcludedLayers(): string[] {
+    // 返回由于预算限制而未被包含的层的ID列表
+    return Array.from(this.layers.values())
+      .filter(l => this.budget.used + l.tokens > this.budget.total)
+      .map(l => l.id);
+  }
+}
+
+// 使用示例
+const manager = new ContextManager(8192);
+
+manager.registerLayer({
+  id: 'system_instructions',
+  content: 'You are a code generation assistant...',
+  priority: 100,
+  tokens: 150,
+  version: 1
+});
+
+manager.registerLayer({
+  id: 'user_project_context',
+  content: 'This project uses React 18, TypeScript, Vite...',
+  priority: 90,
+  tokens: 300,
+  condition: (state) => state.projectType === 'web',
+  version: 1
+});
+
+manager.registerLayer({
+  id: 'relevant_docs',
+  content: retrievedDocumentation,
+  priority: 70,
+  tokens: 2000,
+  refreshInterval: 30000, // 每30秒刷新
+  version: 1
+});
+
+manager.registerLayer({
+  id: 'conversation_history',
+  content: lastNMessages(10),
+  priority: 85,
+  tokens: 1500,
+  refreshInterval: 5000, // 每消息更新
+  version: 1
+});
+
+const result = manager.buildContext(currentState);
+console.log(`Context utilization: ${manager.getUtilization().toFixed(2)}%`);
+console.log(`Excluded layers: ${result.excluded.join(', ')}`);
+</pre></div>
+
+  <div class="interview-box">
+    <div class="ib-tag">核心概念</div>
+    <p class="prose"><strong>Q: Context Window 真的像RAM一样工作吗？</strong> A: 在很多方面是的。就像RAM一样，更大的context window 允许更复杂的任务，但成本更高。就像RAM管理一样，工程师必须做出关于什么留在"内存"中、什么被换出的决策。然而，不同之处在于RAM是随机访问，而context window是顺序的——前面的token对后面的token有更强的影响力。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">实战策略</div>
+    <p class="prose"><strong>Q: 我应该如何决定哪些层应该被优先加载？</strong> A: 使用一个启发式：信息密度除以token成本。如果一个100-token的文档片段能解决用户的问题，而一个1000-token的详细指南可能不会，前者有更高的优先级。此外，始终给予任务定义和少样本示例最高优先级，因为它们影响整个推理过程。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">常见陷阱</div>
+    <p class="prose"><strong>Q: 动态加载是否会引入延迟？</strong> A: 是的，但通常是可接受的。初始化动态上下文的延迟（通常为50-200ms）通常被推理本身的改进所弥补。关键是在离线预计算（如文档索引）和在线决策（如条件评估）之间找到平衡。缓存是你的朋友——缓存已评估的条件和频繁访问的文档。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">未来方向</div>
+    <p class="prose"><strong>Q: 上下文工程的下一个前沿是什么？</strong> A: 学习自适应context allocation——使用强化学习来自动优化层的优先级和token分配，基于任务结果反馈。另一个方向是跨会话的长期记忆管理，这需要解决健忘策略（遗忘过时信息）和记忆检索（找到相关的旧信息）的问题。</p>
+  </div>
+</div>
+
+<!-- Section 01: Test-Time Compute Scaling -->
+<div class="section" id="sec01">
+  <div class="section-badge" style="background-color: var(--purple);">INFERENCE SCALING</div>
+  <h1 class="section-title">测试时计算缩放：从参数到推理的范式转变</h1>
+  <p class="section-sub">在推理时投入更多计算资源以换取更好的性能——打破参数缩放的天花板</p>
+
+  <div class="subsection-title">范式转变的背景</div>
+  <p class="prose">过去十年，深度学习的进步基于一个简单的模式：<strong>扩大模型</strong>。Scaling Laws（缩放定律）表明，性能与参数数量有幂律关系。然而，这种方法在2024年遇到了实际限制：训练更大的模型需要更多的计算、能源和数据，而收益在逐渐递减。</p>
+
+  <p class="prose">OpenAI 的 o1、o3 模型和其他最先进的系统代表了一个<em>根本性的转变</em>：<strong>在推理时进行重型计算，而不仅仅在训练时</strong>。这是一个自古以来就被计算机科学理解的原则——在计算密集的任务上，你可以选择权衡：更强大的硬件、更多的时间或更聪明的算法。现在，LLMs 被赋予了在推理时探索更多可能性、尝试多条路径、进行更深入思考的能力。</p>
+
+  <div class="callout" style="border-left: 3px solid var(--purple); background: rgba(167, 139, 250, 0.1);">
+    <strong>核心洞察：</strong> 推理时计算的价值在于它打破了一次性推理的约束。不再局限于"给我一个答案"，现在变成了"探索可能性空间，然后给我最好的答案"。
+  </div>
+
+  <div class="subsection-title">Chinchilla 缩放定律 vs 推理优化缩放</div>
+  <p class="prose"><em>Chinchilla Scaling Laws</em>（由DeepMind提出）建立了一个经验性的关系：对于给定的计算预算，最优的模型大小和训练token数有一个特定的比率。这通常表述为：</p>
+
+  <div class="formula">
+    <div class="comment">Chinchilla 最优配置</div>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">FLOPs ≈ C</p>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">N (参数) ≈ C / (6D) ，其中 D = 训练 tokens</p>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">最优：N 和 D 应该大约相等</p>
+  </div>
+
+  <p class="prose">Chinchilla 定律优化了训练时的计算分配。但它假设所有计算都发生在训练时。<em>推理优化缩放</em>（Inference-Optimal Scaling）重新思考了这一点：如果我们有固定的推理预算（例如，用户愿意等待5秒），我们应该如何分配它？</p>
+
+  <p class="prose">答案是：<strong>投入更多token生成，而不是更大的模型</strong>。一个较小的模型，给予更多的"思考时间"（更多生成的token），往往可以超越一个更大的模型的单次传递推理。这反映了一个深刻的真理：<em>计算深度（reasoning depth）有时比参数宽度更有价值</em>。</p>
+
+  <div class="subsection-title">关键推理时计算方法</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">多数投票（Majority Voting / 最佳采样）</div>
+        <div class="desc">最简单的方法：运行同一个提示N次，收集N个响应，让模型或简单启发式方法选择最常见的答案。成本：N倍推理成本。性能提升：通常达到20-30%，随着N增加而收益递减。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Best-of-N 采样</div>
+        <div class="desc">生成N个候选答案，使用外部评分函数（如reward model）选择最好的。比多数投票更复杂，但利用了答案质量的细粒度信号。常用于RLHF（Reinforcement Learning from Human Feedback）管道。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">树搜索（Tree Search / 蒙特卡洛树搜索）</div>
+        <div class="desc">将生成视为一个搜索问题。在每一步，从当前状态生成多个可能的下一个token，评估每个分支的前景，然后选择最有希望的。类似于围棋AI（AlphaGo）中的MCTS。成本高但对复杂推理任务非常有效。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">加权投票与一致性选择</div>
+        <div class="desc">不是简单的多数投票，而是根据模型置信度或其他信号对投票进行加权。例如，如果模型在某个答案上的困惑度较低，该答案获得更高的权重。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">扩展推理与思考标记（Extended Reasoning / Thinking Tokens）</div>
+        <div class="desc">允许模型在"思考"状态下生成额外的token，这些token用户看不到。模型可以探索思路、自我纠正、制定计划。最后，只有最终答案被返回给用户。这是o1/o3的核心创新。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection-title">思考标记（Thinking Tokens）的数学</div>
+  <p class="prose">一个关键的创新是<em>思考标记</em>的概念。与其他tokens不同，思考tokens是"隐藏的"——模型可以在其中进行冗长、迂回的推理，而无需因为冗长而被惩罚。这在传统的模型中是不被鼓励的，因为用户必须为所有输出token付费。</p>
+
+  <p class="prose">在扩展思考模型中，架构看起来像这样：</p>
+
+  <div class="formula">
+    <div class="comment">扩展推理架构</div>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">输入 → [Hidden Thinking Tokens] → [Final Answer Tokens] → 输出</p>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">总计算 = 输入 + 隐藏思考 + 答案</p>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">用户成本 = 输入 + 答案（隐藏思考通常按更低的费率计费或不计费）</p>
+  </div>
+
+  <p class="prose">这改变了优化动态。模型被激励进行更多的思考，因为这不会直接增加用户的成本。在o1的情况下，平均思考:答案的比率约为5:1到10:1，这意味着模型为了生成简洁的最终答案而投入大量思考。</p>
+
+  <div class="subsection-title">使用推理时计算的模型</div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">OpenAI o1 / o3</div>
+      <div class="tc-val">可配置推理预算</div>
+      <div class="tc-desc">允许用户选择low/medium/high思考级别。更高的级别分配更多的思考tokens用于复杂推理。在数学、编码、科学问题上表现出色。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">Claude 3.7 Sonnet 扩展思考</div>
+      <div class="tc-val">集成思考模式</div>
+      <div class="tc-desc">在运行时启用思考功能。模型在<code>&lt;thinking&gt;</code>标签内进行内部推理。最适合需要复杂多步推理的任务。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">Gemini 2.0 Flash Thinking</div>
+      <div class="tc-val">快速+思考</div>
+      <div class="tc-desc">结合了Gemini 2.0 Flash的速度和思考能力。在降低延迟的同时保持推理质量。适合对延迟敏感的应用。</div>
+    </div>
+  </div>
+
+  <div class="subsection-title">成本-延迟-精度三角形权衡</div>
+  <p class="prose">推理时计算是一场三维权衡：<strong>成本、延迟和精度</strong>。你不能同时最大化这三个维度。</p>
+
+  <div class="formula">
+    <div class="comment">三角形权衡的维度</div>
+    <p style="text-align: center; margin-top: 20px;"><strong>精度</strong> (Accuracy)</p>
+    <p style="text-align: center; margin: 30px 0;">↙ ↘</p>
+    <p style="text-align: center; margin: 0 20px;"><strong>成本</strong> (Cost) ↔ <strong>延迟</strong> (Latency)</p>
+  </div>
+
+  <ul class="prose" style="margin-top: 20px;">
+    <li><strong>高精度 + 低成本</strong> → 高延迟。一个单一的o1高思考运行可能需要30秒，但会产生极其准确的答案。</li>
+    <li><strong>高精度 + 低延迟</strong> → 高成本。多个并行的o1高思考运行，然后投票选择最佳答案。</li>
+    <li><strong>低成本 + 低延迟</strong> → 低精度。单次通过一个小模型的快速生成。</li>
+  </ul>
+
+  <p class="prose">应用程序设计必须根据具体需求在这个三角形中选择一个点。实时聊天应用可能会选择低延迟的角。科学论文生成可能会选择高精度的角。</p>
+
+  <div class="subsection-title">何时使用测试时计算 vs 模型缩放</div>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>场景</th>
+          <th>测试时计算（推理时扩展）</th>
+          <th>模型缩放（训练时扩展）</th>
+          <th>推荐方法</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>复杂推理问题（数学、编码）</strong></td>
+          <td>✓✓✓ 优秀<br/>思考空间有大的ROI</td>
+          <td>✓✓ 好<br/>但边际收益递减</td>
+          <td>测试时计算</td>
+        </tr>
+        <tr>
+          <td><strong>事实性知识</strong></td>
+          <td>✓ 有限帮助<br/>更多思考不会增加事实知识</td>
+          <td>✓✓✓ 优秀<br/>更大的模型有更多知识</td>
+          <td>模型缩放</td>
+        </tr>
+        <tr>
+          <td><strong>创意写作</strong></td>
+          <td>✓✓ 中等<br/>思考可以改进结构，但创意需要多样性</td>
+          <td>✓✓ 中等<br/>更大的模型更有创意，但ROI有限</td>
+          <td>组合方法</td>
+        </tr>
+        <tr>
+          <td><strong>低延迟交互</strong></td>
+          <td>✗ 不适用<br/>思考增加延迟</td>
+          <td>✓✓✓ 必需<br/>必须预先优化</td>
+          <td>模型缩放</td>
+        </tr>
+        <tr>
+          <td><strong>成本敏感应用</strong></td>
+          <td>✗✗ 昂贵<br/>N倍推理成本</td>
+          <td>✓✓ 好<br/>一次性推理</td>
+          <td>模型缩放</td>
+        </tr>
+        <tr>
+          <td><strong>长链任务（验证、多步骤）</strong></td>
+          <td>✓✓✓ 优秀<br/>反思和自纠正有高ROI</td>
+          <td>✓ 有限<br/>长链仍然容易失败</td>
+          <td>测试时计算</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection-title">推理时计算的数学基础</div>
+  <p class="prose">设<code>L(N, T)</code>为一个有N个参数的模型，生成T个额外的推理tokens后的损失。<em>缩放定律</em>通常表述为：</p>
+
+  <div class="formula">
+    <div class="comment">参数化缩放定律</div>
+    <p style="text-align: center; font-family: 'Courier New', monospace;">L(N, T) = A * N^(-α) + B * T^(-β) + ε</p>
+    <p style="text-align: center; margin-top: 20px; font-size: 14px;">其中 N = 参数数, T = 生成的tokens</p>
+    <p style="text-align: center; margin-top: 10px; font-size: 14px;">α 和 β 是幂律指数（通常在0.07到0.1之间）</p>
+  </div>
+
+  <p class="prose">这个公式的含义是：性能改进来自两个独立的来源——更大的模型（N）和更多的推理（T）。关键的洞察是<strong>边际收益通常是相似的</strong>。这意味着，对于给定的计算预算，你可能可以通过投入更多的推理tokens而不是扩大模型来获得类似的收益。</p>
+
+  <div class="subsection-title">推理时计算的实现</div>
+
+  <div class="code-block"><pre>// Python: 使用Best-of-N采样的推理时计算
+import anthropic
+from typing import Any
+
+class InferenceTimeComputeOrchestrator:
+    def __init__(self, model: str, n_samples: int = 4):
+        self.client = anthropic.Anthropic()
+        self.model = model
+        self.n_samples = n_samples
+
+    def best_of_n_sampling(
+        self,
+        prompt: str,
+        scoring_fn=None,
+        temperature: float = 1.0
+    ) -> dict[str, Any]:
+        """
+        生成 N 个候选答案，使用评分函数选择最好的。
+
+        Args:
+            prompt: 用户提示
+            scoring_fn: 函数 f(answer) -> float，给出答案的质量分数
+                      如果为None，使用长度启发式（偏好较短、有结构的答案）
+            temperature: 采样温度（更高=更多多样性）
+
+        Returns:
+            {
+                'best_answer': str,
+                'score': float,
+                'all_candidates': list[str],
+                'total_tokens': int,
+                'inference_cost_multiplier': float
+            }
+        """
+        candidates = []
+        token_counts = []
+
+        print(f"生成 {self.n_samples} 个候选答案...")
+        for i in range(self.n_samples):
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                temperature=temperature,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            candidates.append(response.content[0].text)
+            token_counts.append(
+                response.usage.input_tokens + response.usage.output_tokens
+            )
+            print(f"  候选 {i+1}/{self.n_samples} 生成完成")
+
+        # 评分
+        if scoring_fn is None:
+            # 默认启发式：更偏好包含逻辑分解的答案
+            def default_scorer(text: str) -> float:
+                length_score = len(text.split()) / 500  # 归一化长度
+                structure_score = (
+                    text.count('\n') +
+                    text.count('1.') +
+                    text.count('2.') +
+                    text.count('**')
+                ) / 10
+                return length_score * 0.3 + structure_score * 0.7
+
+            scoring_fn = default_scorer
+
+        scores = [scoring_fn(cand) for cand in candidates]
+        best_idx = scores.index(max(scores))
+
+        return {
+            'best_answer': candidates[best_idx],
+            'score': scores[best_idx],
+            'all_candidates': candidates,
+            'candidate_scores': scores,
+            'total_tokens': sum(token_counts),
+            'inference_cost_multiplier': self.n_samples,
+            'best_candidate_index': best_idx
+        }
+
+    def tree_search_simplified(
+        self,
+        prompt: str,
+        max_depth: int = 3,
+        branching_factor: int = 2
+    ) -> dict[str, Any]:
+        """
+        简化的树搜索实现：在每一步生成多个可能的延续，
+        使用启发式方法修剪不有希望的分支。
+
+        Args:
+            prompt: 初始提示
+            max_depth: 搜索树的最大深度
+            branching_factor: 每个节点的分支数
+
+        Returns:
+            最有希望的路径和其得分
+        """
+        def get_branching_continuations(text: str, k: int) -> list[str]:
+            """生成 text 的 k 个可能的延续"""
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=200,
+                temperature=1.2,  # 更高的温度来鼓励多样性
+                messages=[{"role": "user", "content": text}]
+            )
+            # 简化：使用单个响应，通过分割来模拟多个延续
+            # 在实际中，应该生成 k 个单独的响应
+            main_response = response.content[0].text
+            # 模拟分支的启发式方法
+            return [main_response + f" [branch_{i}]" for i in range(k)]
+
+        def heuristic_value(text: str) -> float:
+            """评估部分解的质量"""
+            # 启发式：包含具体步骤的文本得分更高
+            step_count = text.count('step') + text.count('Step')
+            logic_count = text.count('because') + text.count('therefore')
+            return (step_count * 0.6 + logic_count * 0.4) / max(1, len(text.split()) / 100)
+
+        # 简化的深度优先搜索
+        best_solution = None
+        best_value = -float('inf')
+        total_tokens = 0
+        nodes_explored = 0
+
+        def dfs(current_text: str, depth: int):
+            nonlocal best_solution, best_value, total_tokens, nodes_explored
+
+            if depth >= max_depth:
+                value = heuristic_value(current_text)
+                if value > best_value:
+                    best_value = value
+                    best_solution = current_text
+                return
+
+            branches = get_branching_continuations(current_text, branching_factor)
+            nodes_explored += 1
+            total_tokens += branching_factor * 200  # 近似
+
+            # 修剪：只追踪最有希望的分支
+            scored_branches = [
+                (branch, heuristic_value(branch)) for branch in branches
+            ]
+            scored_branches.sort(key=lambda x: x[1], reverse=True)
+
+            # 只扩展top-50%的分支（修剪）
+            for branch, score in scored_branches[:max(1, branching_factor // 2)]:
+                dfs(branch, depth + 1)
+
+        dfs(prompt, 0)
+
+        return {
+            'best_path': best_solution,
+            'value_score': best_value,
+            'nodes_explored': nodes_explored,
+            'total_tokens': total_tokens,
+            'inference_cost_multiplier': max_depth * branching_factor
+        }
+
+# 使用示例
+orchestrator = InferenceTimeComputeOrchestrator(
+    model="claude-opus-4-1",
+    n_samples=4
+)
+
+# Best-of-N 采样
+result_bon = orchestrator.best_of_n_sampling(
+    prompt="Solve this: What is 17 * 23 + 45?",
+    temperature=0.8
+)
+print(f"Best answer: {result_bon['best_answer']}")
+print(f"Cost multiplier: {result_bon['inference_cost_multiplier']}x")
+print(f"Total tokens used: {result_bon['total_tokens']}")
+
+# 树搜索
+result_tree = orchestrator.tree_search_simplified(
+    prompt="Design a simple algorithm to find the median of two sorted arrays",
+    max_depth=2,
+    branching_factor=2
+)
+print(f"Best solution: {result_tree['best_path']}")
+print(f"Value: {result_tree['value_score']:.3f}")
+</pre></div>
+
+  <div class="interview-box">
+    <div class="ib-tag">成本分析</div>
+    <p class="prose"><strong>Q: Best-of-N 采样相比单次推理要贵多少倍？</strong> A: 精确成本取决于模型定价，但粗略地说，它乘以N。如果你使用N=4，推理成本是4倍。然而，这通常通过更高的准确性来补偿。在许多情况下，4倍的成本结合Best-of-4的精度可能比运行单一的"更大"模型更经济。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">延迟权衡</div>
+    <p class="prose"><strong>Q: 我可以并行运行多个采样吗以减少延迟？</strong> A: 绝对可以。如果你有足够的并发容量，你可以并行生成所有N个候选答案，然后评分。延迟变成单个生成的延迟，而不是N倍。这是服务端缓存的完美用例——缓存候选答案以获得未来相同查询的益处。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">何时不使用</div>
+    <p class="prose"><strong>Q: 测试时计算什么时候不值得？</strong> A: 当你的任务对精度边界不敏感时。例如，在聊天应用中生成自然对话，多数投票或Best-of-N可能不会带来显著的用户可见改进。同样，对于事实性检索问题（模型只是查找信息），更多的采样不会增加更多的事实知识。</p>
+  </div>
+</div>
+
+<!-- Section 02: AI Coding Agents -->
+<div class="section" id="sec02">
+  <div class="section-badge" style="background-color: var(--green);">CODE AGENTS</div>
+  <h1 class="section-title">AI编码代理：从补全到自主执行的演进</h1>
+  <p class="section-sub">2025年的浪潮：代码补全 → 代码生成 → 自主任务执行和推理验证</p>
+
+  <div class="subsection-title">2025年的代理代码革命</div>
+  <p class="prose">五年前，"AI编程助手"意味着代码补全——你打字，模型预测下一个tokens。今天，这个概念已经进化成了完整的<em>自主代码代理</em>，能够理解任务规范、设计解决方案、编写代码、运行测试、调试失败，并迭代直到成功。这不仅仅是更好的补全；这是一个在本质上不同的架构范式。</p>
+
+  <p class="prose">关键的里程碑是<strong>SWE-bench</strong>的出现和广泛采用。SWE-bench是第一个允许AI系统在真实软件工程任务上进行基准测试的标准化基准——修复真实GitHub问题、实现功能、通过单元测试。这将AI编程从"演示"变成了有可验证指标的科学领域。</p>
+
+  <div class="subsection-title">2025年的关键参与者</div>
+
+  <div class="tech-row">
+    <div class="tech-card">
+      <div class="tc-label">Claude Code</div>
+      <div class="tc-val">72%+ SWE-bench<br/>CLI 代理</div>
+      <div class="tc-desc">Anthropic 的官方命令行代理。建立在Claude 3.5 Sonnet上，支持完整的工具使用架构（代码执行、文件操作、终端命令）。在SWE-bench上达到72%通过率。强项：长上下文理解、多步骤推理、错误恢复。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">Cursor</div>
+      <div class="tc-val">IDE 集成<br/>快速迭代</div>
+      <div class="tc-desc">完全集成的VS Code 变体。强调用户-AI 交互而不是完全自主。支持自由形式的代码操作、问题发现和快速修正。基于信用的定价模式。强项：用户体验、实时反馈、增量开发工作流。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">Devin（Cognition）</div>
+      <div class="tc-val">最自主<br/>沙箱环境</div>
+      <div class="tc-desc">完全沙箱化的AI工程师。运行在隔离的Linux容器中，具有完整的开发工具栈（VS Code、终端、浏览器）。能够长时间运行、自我管理任务分解。通过其内部基准在许多任务上超越其他代理。</div>
+    </div>
+    <div class="tech-card">
+      <div class="tc-label">OpenAI Codex CLI</div>
+      <div class="tc-val">开源<br/>终端驱动</div>
+      <div class="tc-desc">基于GPT-4的命令行代理，注重终端交互和脚本生成。开源且可本地化。强项：Shell脚本生成、快速命令生成、与现有工具集成。</div>
+    </div>
+  </div>
+
+  <div class="subsection-title">代理架构的模式和设计</div>
+  <p class="prose">所有现代代码代理都遵循一个共同的<em>循环模式</em>，虽然在细节上有所不同：</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">规划（Planning）</div>
+        <div class="desc">分解任务为可执行的子任务。代理分析问题陈述、代码库结构和约束，制定高层策略。使用思考tokens或显式的"思考阶段"来探索多个方法。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">代码生成（Code Generation）</div>
+        <div class="desc">生成候选实现。这可能不是完美的——代理期望需要调试。通常使用多个少样本示例来引导输出格式和风格。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">执行与测试（Execution & Testing）</div>
+        <div class="desc">在真实环境中运行代码。关键：代理可以执行命令、运行测试、查看实际输出。这是与纯粹生成式系统的区别。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">反馈和调试（Feedback & Debugging）</div>
+        <div class="desc">错误输出、失败的测试和执行输出被反馈到模型中。模型分析根本原因并生成修复。这一步是迭代的。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">迭代（Iteration）</div>
+        <div class="desc">根据反馈重复步骤2-4，直到所有测试通过或达到最大迭代次数。关键的停止条件是客观的（测试通过），而不是主观的（"代码看起来不错"）。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="border-left: 3px solid var(--green); background: rgba(52, 211, 153, 0.1);">
+    <strong>关键洞察：</strong> 能够执行代码和看到输出是一个游戏改变者。这创建了一个<em>反馈循环</em>，允许代理从真实的故障中学习，而不是猜测代码是否有效。这是使现代代理相比早期"代码完成"系统有效率的原因。
+  </div>
+
+  <div class="subsection-title">SWE-bench：基准和指标</div>
+  <p class="prose">SWE-bench（Software Engineering Bench）是由Princeton和OpenAI的研究人员创建的第一个大规模的AI编程基准。它包含来自真实GitHub存储库的2,294个真实世界的软件工程问题。</p>
+
+  <p class="prose"><strong>它如何工作：</strong> 每个问题包括一个问题描述（从GitHub问题提取）和一个应该应用的补丁（解决方案）。代理被给予问题描述和代码库，必须生成代码修改来解决问题。评估是自动的：代理的补丁应用于代码库，运行测试套件，成功仅当所有原始测试通过且不会引入回归（不破坏其他测试）。</p>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>系统</th>
+          <th>SWE-bench 通过率</th>
+          <th>备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Claude Code（Claude 3.5 Sonnet）</strong></td>
+          <td>72%</td>
+          <td>顶级性能。强大的上下文理解和多步骤推理。</td>
+        </tr>
+        <tr>
+          <td><strong>Devin（Cognition）</strong></td>
+          <td>~70%（内部报告）</td>
+          <td>完全沙箱化。高自主性但数据点较少。</td>
+        </tr>
+        <tr>
+          <td><strong>GPT-4 Turbo</strong></td>
+          <td>~50%</td>
+          <td>基线。单次传递，无反馈循环。</td>
+        </tr>
+        <tr>
+          <td><strong>Claude 3 Opus</strong></td>
+          <td>~48%</td>
+          <td>前代模型。仍然强大，但不如Sonnet。</td>
+        </tr>
+        <tr>
+          <td><strong>Cursor（基于GPT-4o）</strong></td>
+          <td>~45-50%*</td>
+          <td>*非官方估计。用户驱动的迭代可能提高真实性能。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="prose">值得注意的是，72%的"通过率"不意味着代理完全自主解决了所有问题。许多情况涉及多次迭代、失败的初始尝试和错误恢复。这<em>仍然</em>非常有用——即使代理只解决了50%的问题而无需人工干预，也能显著加快开发。</p>
+
+  <div class="subsection-title">代理循环：一个真实的例子</div>
+
+  <div class="code-block"><pre>// TypeScript + 伪代码：代码代理的一个迭代循环
+interface TaskDefinition {
+  problem: string;
+  context: CodeContext;  // 代码库、测试等
+  maxIterations: number;
+}
+
+interface AgentState {
+  currentPlan: string;
+  generatedCode: string;
+  testResults: TestResult[];
+  executionErrors: string[];
+  iterationCount: number;
+  isComplete: boolean;
+}
+
+class CodeAgent {
+  async solveTask(task: TaskDefinition): Promise<AgentState> {
+    const state: AgentState = {
+      currentPlan: '',
+      generatedCode: '',
+      testResults: [],
+      executionErrors: [],
+      iterationCount: 0,
+      isComplete: false
+    };
+
+    // 步骤 1: 规划
+    state.currentPlan = await this.planTask(task);
+    console.log(`计划:\n${state.currentPlan}\n`);
+
+    // 步骤 2-5: 迭代循环
+    while (state.iterationCount < task.maxIterations && !state.isComplete) {
+      state.iterationCount++;
+      console.log(`\n=== 迭代 ${state.iterationCount} ===`);
+
+      // 步骤 2: 代码生成
+      const previousContext = state.iterationCount > 1
+        ? {
+            previousAttempt: state.generatedCode,
+            errors: state.executionErrors,
+            testFailures: state.testResults
+              .filter(r => !r.passed)
+              .map(r => r.message)
+          }
+        : null;
+
+      state.generatedCode = await this.generateCode(
+        task,
+        state.currentPlan,
+        previousContext
+      );
+      console.log(`生成代码（${state.generatedCode.split('\n').length} 行）`);
+
+      // 步骤 3: 执行和测试
+      const execution = await this.executeCode(
+        state.generatedCode,
+        task.context
+      );
+      state.testResults = execution.testResults;
+      state.executionErrors = execution.errors;
+
+      const passedTests = state.testResults.filter(r => r.passed).length;
+      const totalTests = state.testResults.length;
+      console.log(`测试结果: ${passedTests}/${totalTests} 通过`);
+
+      if (state.executionErrors.length > 0) {
+        console.log(`执行错误:`);
+        state.executionErrors.forEach(err => console.log(`  - ${err}`));
+      }
+
+      // 检查完成条件
+      if (passedTests === totalTests && state.executionErrors.length === 0) {
+        state.isComplete = true;
+        console.log('✓ 所有测试通过！任务完成。');
+      } else if (state.iterationCount >= task.maxIterations) {
+        console.log(`✗ 达到最大迭代次数（${task.maxIterations}）。');
+      }
+    }
+
+    return state;
+  }
+
+  private async planTask(task: TaskDefinition): Promise<string> {
+    const systemPrompt = `You are a software engineer solving coding tasks.
+First, analyze the problem and create a step-by-step plan.`;
+
+    const userMessage = `
+问题: ${task.problem}
+
+代码库上下文:
+${task.context.summary}
+
+制定一个解决这个问题的计划。`;
+
+    const response = await this.modelCall(systemPrompt, userMessage, {
+      thinkingBudget: 'high'  // 使用扩展思考进行规划
+    });
+
+    return response.text;
+  }
+
+  private async generateCode(
+    task: TaskDefinition,
+    plan: string,
+    previousContext: any = null
+  ): Promise<string> {
+    let userMessage = `
+计划: ${plan}
+
+现在，基于这个计划生成代码来解决问题。
+确保代码与现有风格一致。
+包括错误处理。`;
+
+    if (previousContext) {
+      userMessage += `
+
+之前的尝试失败了，错误如下:
+${previousContext.errors.join('\n')}
+
+测试失败:
+${previousContext.testFailures.join('\n')}
+
+分析这些错误并改进你的解决方案。`;
+    }
+
+    const response = await this.modelCall(
+      'You are a code generation AI. Generate high-quality, production-ready code.',
+      userMessage,
+      { temperature: 0.7 }
+    );
+
+    // 提取代码块
+    const codeMatch = response.text.match(/```[\w]*\n([\s\S]*?)\n```/);
+    return codeMatch ? codeMatch[1] : response.text;
+  }
+
+  private async executeCode(
+    code: string,
+    context: CodeContext
+  ): Promise<{ testResults: TestResult[]; errors: string[] }> {
+    try {
+      // 模拟执行环境（实际使用沙箱）
+      const sandbox = new CodeSandbox(context);
+      const result = await sandbox.execute(code);
+
+      const testResults: TestResult[] = result.tests.map(t => ({
+        name: t.name,
+        passed: t.passed,
+        message: t.message
+      }));
+
+      return {
+        testResults,
+        errors: result.runtimeErrors || []
+      };
+    } catch (error) {
+      return {
+        testResults: [],
+        errors: [`执行失败: ${error.message}`]
+      };
+    }
+  }
+
+  private async modelCall(
+    systemPrompt: string,
+    userMessage: string,
+    options: any = {}
+  ): Promise<{ text: string }> {
+    // 实际调用 Claude API
+    // 这里是伪代码
+    return {
+      text: '// 代码生成结果'
+    };
+  }
+}
+
+// 使用示例
+const agent = new CodeAgent();
+const result = await agent.solveTask({
+  problem: '在 utils.ts 中实现一个 debounce 函数，应该返回一个延迟执行的函数',
+  context: new CodeContext('./my-project'),
+  maxIterations: 5
+});
+
+console.log(`\n最终状态:`);
+console.log(`完成: ${result.isComplete}`);
+console.log(`迭代: ${result.iterationCount}`);
+console.log(`通过的测试: ${result.testResults.filter(r => r.passed).length}/${result.testResults.length}`);
+</pre></div>
+
+  <div class="subsection-title">代理编码 vs 传统自动补全对比</div>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>传统自动补全</th>
+          <th>代理编码</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>作用域</strong></td>
+          <td>预测下一行或函数</td>
+          <td>解决整个任务或问题</td>
+        </tr>
+        <tr>
+          <td><strong>反馈</strong></td>
+          <td>无真实反馈；基于统计模式</td>
+          <td>执行代码、测试输出、实际错误</td>
+        </tr>
+        <tr>
+          <td><strong>迭代</strong></td>
+          <td>不迭代；用户手动修正</td>
+          <td>自动调试和改进，直到成功</td>
+        </tr>
+        <tr>
+          <td><strong>上下文理解</strong></td>
+          <td>局部（当前行周围）</td>
+          <td>全局（整个代码库、架构）</td>
+        </tr>
+        <tr>
+          <td><strong>验证</strong></td>
+          <td>用户必须测试</td>
+          <td>自动运行测试；验证通过/失败</td>
+        </tr>
+        <tr>
+          <td><strong>典型准确性</strong></td>
+          <td>~60-70%（第一个token）</td>
+          <td>~70-75%（整个任务解决）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection-title">成本-延迟权衡</div>
+  <p class="prose">使用代码代理涉及一个有趣的经济学问题。单次API调用成本较低，但代理可能执行多个迭代（因此多个调用）。然而，关键是<em>相对于开发者时间</em>。</p>
+
+  <ul class="prose">
+    <li><strong>成本的观点：</strong> 一个可能花费2-5倍的推理成本的代理，但消除了人工调试时间，仍然是极其经济的。</li>
+    <li><strong>延迟的观点：</strong> 一个简单的任务（"写一个登录表单"）可能需要2-3次迭代，总共10-20秒。中等任务可能需要30-60秒。复杂的任务（重构、架构变更）可能需要2-5分钟，但仍然比手工编码快。</li>
+  </ul>
+
+  <div class="subsection-title">限制和开放问题</div>
+  <p class="prose">尽管进步很大，但代码代理仍然有重要的限制：</p>
+
+  <ul class="prose">
+    <li><strong>幻觉和不切实际的提议：</strong> 模型可能生成看起来合理但实际上不起作用的代码。这通常通过测试反馈来捕获，但有时测试本身可能不完整。</li>
+    <li><strong>长期推理：</strong> 对于需要维持一致性跨越许多文件和步骤的大型重构，代理往往会偏离。上下文工程有帮助，但这仍然是一个挑战。</li>
+    <li><strong>错误积累：</strong> 当代理在早期步骤中犯错误时，它可能在后续迭代中加倍这个错误，而不是纠正根本原因。</li>
+    <li><strong>测试覆盖依赖：</strong> 代理的有效性受到可用测试的质量和覆盖范围的严格限制。如果没有测试来验证行为，代理可能生成看起来有效但实际上有微妙缺陷的代码。</li>
+  </ul>
+
+  <div class="interview-box">
+    <div class="ib-tag">何时部署</div>
+    <p class="prose"><strong>Q: 我应该何时在生产中使用代码代理 vs 人工开发者？</strong> A: 代理在<em>明确定义的问题</em>上最有效，具有现成的测试。修复Bug、实现有明确规范的功能、写一致代码——这些都是好候选项。它们在<em>架构决策</em>、<em>跨系统设计</em>和<em>创意解决方案</em>上较差。最佳实践是混合方法：使用代理处理明确的任务，有经验的工程师处理复杂的设计。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">SWE-bench限制</div>
+    <p class="prose"><strong>Q: 72%的SWE-bench通过率在现实中意味着什么？</strong> A: 它意味着在真实GitHub问题中，代理可以自主解决约3/4的问题而不需要人工干预。但要注意基准的局限性：大多数问题相对较小，许多有非常清晰的测试。更大的重构或架构变更可能有更低的自主通过率。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">迭代限制</div>
+    <p class="prose"><strong>Q: 代理应该尝试多少次迭代？</strong> A: 典型的限制是5-10次。在那之后，如果代理仍然失败，问题可能太复杂了，需要人工干预。某些框架使用"可达性分析"来检测代理是否陷入循环（重复相同的错误），并提前停止。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">未来</div>
+    <p class="prose"><strong>Q: 下一步对代码代理来说是什么？</strong> A: 更好的长期规划（使用扩展思考的专门训练）、多代理协作（不同专家处理不同子任务）和跨repo推理（理解多个项目的交互）。还有工程工具集成的问题——代理需要能够使用更多工具（deployment、monitoring、debugging profilers）以处理真实工程工作流。</p>
+  </div>
+</div>
+
+<!-- Section 03: Structured Output & Constrained Decoding -->
+<div class="section" id="sec03">
+  <div class="section-badge" style="background-color: var(--amber);">CONSTRAINED</div>
+  <h1 class="section-title">结构化输出与约束解码：可靠性的基础</h1>
+  <p class="section-sub">在生成时强制LLM输出遵循严格的结构——消除解析歧义和幻觉</p>
+
+  <div class="subsection-title">问题：LLM输出的不可预测性</div>
+  <p class="prose">LLMs 是概率系统。它们生成token one-at-a-time，每个token是概率分布上的样本。这意味着：</p>
+
+  <ul class="prose">
+    <li><strong>输出格式不一致：</strong> 你要求JSON；有时你得到JSON，有时得到Markdown，有时是纯文本。</li>
+    <li><strong>错误的数据类型：</strong> 你期望一个数字；模型返回一个字符串，有时是一个格式错误的数字。</li>
+    <li><strong>无效字段：</strong> 你定义了一个包含特定枚举值的字段（"status": "active" 或 "inactive"）；模型创造了一个新值（"pending"）。</li>
+    <li><strong>缺失字段：</strong> 一个需要5个字段的结构在只有3个字段的地方被返回，迫使下游代码处理缺失的数据。</li>
+  </ul>
+
+  <p class="prose">传统解决方案是<em>后处理解析</em>（post-hoc parsing）：模型生成任意文本，然后应用程序尝试用正则表达式或自定义解析器提取结构。这是脆弱的，容易出错，并增加延迟（你必须首先生成全部输出，然后解析它）。</p>
+
+  <div class="callout" style="border-left: 3px solid var(--amber); background: rgba(251, 191, 36, 0.1);">
+    <strong>核心问题：</strong> 为什么等待模型生成一个可能是垃圾的响应，然后尝试修复它？更好的方法是<em>在生成时</em>强制正确性。
+  </div>
+
+  <div class="subsection-title">解决方案：约束解码</div>
+  <p class="prose"><em>约束解码</em>（Constrained Decoding）是一个在token生成的<em>每一步</em>强制遵守约束的技术。与其让模型在所有50,000个可能的token上自由采样，我们根据当前生成的前缀以及目标结构动态屏蔽无效token。</p>
+
+  <p class="prose">例如，如果生成了 <code>{"name": "John", "age": </code> 并且schema要求age是一个整数，解码器只允许token `0` 到 `9` 和 `.` （对于浮点数）。当到达对象的结尾时，解码器强制一个 `}` token，确保有效的JSON。</p>
+
+  <div class="formula">
+    <div class="comment">约束解码概念</div>
+    <p style="text-align: center; margin-top: 20px;">原始token概率分布（50K tokens）</p>
+    <p style="text-align: center; margin: 20px 0;">↓ [应用约束]</p>
+    <p style="text-align: center;">屏蔽分布（仅有效tokens；其他为 -∞）</p>
+    <p style="text-align: center; margin: 20px 0;">↓ [采样]</p>
+    <p style="text-align: center;">有保证有效的下一个token</p>
+  </div>
+
+  <div class="subsection-title">约束解码的关键技术</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">Token 屏蔽（Token Masking）</div>
+        <div class="desc">基于当前前缀和目标schema，生成一个有效token的列表。所有其他token的概率被设置为-∞（在softmax后变为0）。最简单但有效的方法。使用自动机（FSM）来跟踪当前解析状态。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">FSM 方法（有限状态机）</div>
+        <div class="desc">Outlines 库的方法。schema 被编译为FSM。每个状态代表一个解析位置，边代表有效的token。这对于JSON、regex和简单的结构化格式非常有效。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">CFG 方法（上下文无关文法）</div>
+        <div class="desc">llguidance（Microsoft）和 lm-format-enforcer 使用完整的上下文无关文法来描述有效的输出。支持更复杂的结构，如递归数据结构。性能权衡：更强大但比FSM慢。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">Schema 验证器（Schema-Based）</div>
+        <div class="desc">OpenAI 的Structured Outputs（August 2024）和 Anthropic 的 tool_use 在API级别强制约束。模型被训练来尊重schema；违规导致模型重新生成。比token级别屏蔽不太有效，但更易于使用。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection-title">性能进展</div>
+  <p class="prose">约束解码的一个关键优势是<em>零或最小的性能开销</em>。早期的实现（2023）为每个token增加了30-50%的延迟。现代库已经优化到near-zero：</p>
+
+  <ul class="prose">
+    <li><strong>Outlines（FSM）：</strong> 约 <code>5-10μs</code> 的开销/token（可忽略不计）</li>
+    <li><strong>llguidance（CFG）：</strong> 约 <code>50μs</code> 的开销/token（仍然可接受，对于4K-token生成只增加200ms）</li>
+    <li><strong>OpenAI Structured Outputs：</strong> 无测量开销；从模型推理时间中摊销。</li>
+  </ul>
+
+  <p class="prose">关键的洞察是约束检查可以在GPU或CPU上高度并行化，不会阻塞生成循环。</p>
+
+  <div class="subsection-title">JsonSchemaBench 2025：评估框架</div>
+  <p class="prose">为了系统地评估约束解码框架的准确性、性能和鲁棒性，社区创建了<em>JsonSchemaBench</em>——包含10,000个实际JSON schemas和相应的测试用例的基准。这个基准测试：</p>
+
+  <ul class="prose">
+    <li><strong>准确性：</strong> 给定一个schema，框架是否生成有效的JSON？</li>
+    <li><strong>完整性：</strong> 是否可以使用该框架表达任意的JSON schemas？</li>
+    <li><strong>性能：</strong> 约束检查增加的吞吐量损失是多少？</li>
+    <li><strong>多模态支持：</strong> 框架是否处理数组、嵌套对象、联合类型等？</li>
+  </ul>
+
+  <div class="subsection-title">框架对比</div>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>框架</th>
+          <th>方法</th>
+          <th>支持的格式</th>
+          <th>性能</th>
+          <th>使用便利性</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Outlines</strong></td>
+          <td>FSM</td>
+          <td>JSON, Regex, Pydantic</td>
+          <td>~5-10μs/token</td>
+          <td>优秀。集成HF生态。</td>
+        </tr>
+        <tr>
+          <td><strong>llguidance</strong></td>
+          <td>CFG</td>
+          <td>任意CFG</td>
+          <td>~50μs/token</td>
+          <td>好。学习曲线陡峭。</td>
+        </tr>
+        <tr>
+          <td><strong>XGrammar</strong></td>
+          <td>混合（FSM + CFG）</td>
+          <td>JSON, XML, 自定义</td>
+          <td>~15-25μs/token</td>
+          <td>好。多语言支持。</td>
+        </tr>
+        <tr>
+          <td><strong>llama.cpp</strong></td>
+          <td>Token掩码</td>
+          <td>GBNF (EBNF变体)</td>
+          <td>~2-5μs/token</td>
+          <td>优秀。轻量级。</td>
+        </tr>
+        <tr>
+          <td><strong>OpenAI结构化输出</strong></td>
+          <td>模型级别</td>
+          <td>JSON Schema</td>
+          <td>无开销</td>
+          <td>优秀。API一体化。</td>
+        </tr>
+        <tr>
+          <td><strong>Anthropic工具使用</strong></td>
+          <td>模型级别</td>
+          <td>JSON Schema（工具）</td>
+          <td>无开销</td>
+          <td>优秀。原生集成。</td>
+        </tr>
+        <tr>
+          <td><strong>Gemini API</strong></td>
+          <td>模型级别</td>
+          <td>JSON Schema</td>
+          <td>无开销</td>
+          <td>优秀。Google集成。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection-title">实现：使用约束解码</div>
+
+  <div class="code-block"><pre>// Python: 使用 Outlines 和 llguidance 的约束解码
+
+# 使用 Outlines（FSM 方法）
+from outlines.models import transformers
+from outlines.integrations.json_schema import to_json_schema
+
+# 定义 Pydantic 模型作为schema
+from pydantic import BaseModel
+from typing import List
+
+class Person(BaseModel):
+    name: str
+    age: int
+    email: str
+    skills: List[str]
+
+# 加载模型和创建受约束的生成器
+model = transformers.get_model("mistral-7b")
+schema = to_json_schema(Person)
+generator = model.generate(schema=schema)
+
+# 生成受约束的输出
+prompt = "Generate a person with the following details:"
+result = generator(prompt, max_tokens=200)
+print(result)
+# 保证是有效的 JSON，可以直接解析为 Person
+
+---
+
+# 使用 llguidance（CFG 方法）
+from lm_format_enforcer import JsonSchemaParser
+import json
+
+class Product(BaseModel):
+    product_id: int
+    name: str
+    price: float
+    in_stock: bool
+    tags: List[str]
+
+# 创建解析器
+schema = {
+    "type": "object",
+    "properties": {
+        "product_id": {"type": "integer"},
+        "name": {"type": "string"},
+        "price": {"type": "number"},
+        "in_stock": {"type": "boolean"},
+        "tags": {
+            "type": "array",
+            "items": {"type": "string"}
+        }
+    },
+    "required": ["product_id", "name", "price", "in_stock", "tags"]
+}
+
+parser = JsonSchemaParser(schema)
+
+# 在解码循环中应用约束
+prompt = "Generate a product listing:"
+for token_id in model.generate_token_ids(prompt):
+    # 获取下一个可能的tokens
+    valid_tokens = parser.get_allowed_tokens(decoder_state)
+
+    # 只允许有效的tokens（屏蔽其他）
+    if token_id not in valid_tokens:
+        token_id = valid_tokens[0]  # 选择第一个有效token
+
+    # 更新解析器状态
+    parser.update(token_id)
+    yield token_id
+
+    if parser.is_complete():
+        break
+
+# 输出保证是有效的 JSON，可以直接反序列化
+output = parser.result()
+product = Product(**output)
+
+---
+
+# 使用 OpenAI 的结构化输出（API 级别）
+from openai import OpenAI
+from pydantic import BaseModel
+
+client = OpenAI()
+
+class Event(BaseModel):
+    event_type: str  # "meeting", "deadline", "reminder"
+    date: str        # ISO 8601 格式
+    title: str
+    description: str
+    attendees: list[str]
+
+# API 强制 schema
+response = client.beta.messages.create(
+    model="gpt-4-turbo",
+    messages=[
+        {
+            "role": "user",
+            "content": "Extract calendar events from this text: ..."
+        }
+    ],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "CalendarEvents",
+            "schema": Event.model_json_schema(),
+            "strict": True  # 强制严格 schema 遵守
+        }
+    }
+)
+
+# response.content[0].text 保证是有效的 JSON
+events = [Event(**event) for event in json.loads(response.content[0].text)]
+
+---
+
+# 使用 Anthropic 的工具使用（结构化输出）
+from anthropic import Anthropic
+
+client = Anthropic()
+
+# 定义工具schema
+tools = [
+    {
+        "name": "record_user_feedback",
+        "description": "记录用户关于功能的反馈",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "feature": {
+                    "type": "string",
+                    "description": "反馈所关于的功能"
+                },
+                "sentiment": {
+                    "type": "string",
+                    "enum": ["positive", "negative", "neutral"],
+                    "description": "反馈的情感"
+                },
+                "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "1-5 的评分"
+                },
+                "comments": {
+                    "type": "string",
+                    "description": "详细的评论（可选）"
+                }
+            },
+            "required": ["feature", "sentiment", "rating"]
+        }
+    }
+]
+
+response = client.messages.create(
+    model="claude-opus-4-1",
+    max_tokens=1024,
+    tools=tools,
+    messages=[
+        {
+            "role": "user",
+            "content": "用户说：'我喜欢新的搜索功能，但有时它很慢。我会给它4/5。'"
+        }
+    ]
+)
+
+# 处理工具调用响应
+for content_block in response.content:
+    if content_block.type == "tool_use":
+        tool_input = content_block.input
+        # tool_input 保证遵守 schema
+        # 可以直接验证和存储
+        record_feedback(
+            feature=tool_input["feature"],
+            sentiment=tool_input["sentiment"],
+            rating=tool_input["rating"],
+            comments=tool_input.get("comments", "")
+        )
+
+---
+
+# 性能对比：约束 vs 非约束解码
+import time
+from outlines import models
+
+model = models.transformers.get_model("mistral-7b")
+
+prompt = "Generate a JSON object with person details:"
+
+# 非约束（有风险）
+start = time.time()
+unconstrained = model.generate(prompt, max_tokens=200)
+unconstrained_time = time.time() - start
+
+# 约束（使用 Outlines）
+schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"},
+        "email": {"type": "string"}
+    }
+}
+start = time.time()
+constrained = model.generate(prompt, schema=schema, max_tokens=200)
+constrained_time = time.time() - start
+
+print(f"非约束: {unconstrained_time:.3f}s")
+print(f"约束: {constrained_time:.3f}s")
+print(f"开销: {((constrained_time - unconstrained_time) / unconstrained_time * 100):.1f}%")
+# 典型结果: 开销 < 5%
+</pre></div>
+
+  <div class="subsection-title">何时使用约束解码 vs 后处理解析</div>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>场景</th>
+          <th>约束解码</th>
+          <th>后处理解析</th>
+          <th>推荐</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>简单JSON APIs</strong></td>
+          <td>✓✓✓ 完美<br/>零开销，100%有效</td>
+          <td>✓ 有效<br/>但容易失败</td>
+          <td>约束解码</td>
+        </tr>
+        <tr>
+          <td><strong>结构化数据提取</strong></td>
+          <td>✓✓✓ 优秀<br/>确保有效性</td>
+          <td>✓✓ 可行<br/>但需要重试</td>
+          <td>约束解码</td>
+        </tr>
+        <tr>
+          <td><strong>自由格式文本</strong></td>
+          <td>✗ 不适用<br/>约束会限制创意</td>
+          <td>✓✓✓ 好<br/>模型有自由度</td>
+          <td>后处理</td>
+        </tr>
+        <tr>
+          <td><strong>复杂递归结构</strong></td>
+          <td>✓✓ 好<br/>CFG 支持（但较慢）</td>
+          <td>✗ 困难<br/>容易有边界情况</td>
+          <td>约束解码</td>
+        </tr>
+        <tr>
+          <td><strong>低成本、高吞吐</strong></td>
+          <td>✓✓ 好<br/>最小化重试</td>
+          <td>✗ 差<br/>失败时需要重新生成</td>
+          <td>约束解码</td>
+        </tr>
+        <tr>
+          <td><strong>实验/探索</strong></td>
+          <td>✓ 有限<br/>约束可能太严格</td>
+          <td>✓✓✓ 好<br/>最大灵活性</td>
+          <td>后处理</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection-title">故障排查与调试</div>
+  <p class="prose">即使约束解码可以保证有效的JSON，<em>语义</em>错误仍然可能发生。</p>
+
+  <div class="code-block"><pre>// 常见问题和诊断
+
+// 问题 1: 约束太严格，模型频繁失败
+// 症状: 生成过程经常"卡住"，输出不完整
+
+症状代码:
+{
+  "name": "John",
+  "age": [STUCK - 期望数字，但模型想说"30或35"]
+}
+
+诊断:
+- 检查 schema 是否过度约束
+- 确认模型理解 schema（在少样本中显示示例）
+- 考虑使用更宽松的类型（string 而不是严格的 enum）
+
+解决方案:
+# 之前：严格的 enum
+"status": {
+  "type": "string",
+  "enum": ["active", "inactive"]  # 模型有时想生成"pending"
+}
+
+# 之后：允许任何字符串，但记录意外值
+"status": {
+  "type": "string"
+  // 在后处理中验证
+}
+if status not in ["active", "inactive"]:
+    log_unexpected_value(status)
+    status = "unknown"
+
+---
+
+// 问题 2: 语义不正确但语法有效的输出
+// 症状: JSON 有效，但内容没有意义
+
+例子:
+{
+  "product": "laptop",
+  "quantity": -5,  # 数字有效，但负数没有意义
+  "price": "apple"  # 类型有效（string），但不是有效的价格
+}
+
+诊断:
+- schema 仅强制类型和格式，不强制业务逻辑
+- 需要在输出后进行后处理验证
+
+解决方案:
+class Product(BaseModel):
+    name: str
+    quantity: int = Field(gt=0)  # quantity > 0
+    price: float = Field(gt=0)   # price > 0
+
+# Pydantic 自动验证业务逻辑
+try:
+    product = Product(**json_output)
+except ValidationError as e:
+    log_error(f"Semantic error: {e}")
+    retry_with_feedback(original_prompt)
+
+---
+
+// 问题 3: 递归或嵌套结构中的不完整数据
+
+例子（期望）:
+{
+  "items": [
+    {"id": 1, "name": "Item 1"},
+    {"id": 2, "name": "Item 2"}
+  ]
+}
+
+例子（实际，使用某些框架）:
+{
+  "items": [
+    {"id": 1, "name": "Item 1"}
+    // 第二个对象未生成
+  ]
+}
+
+原因:
+- 某些约束库在数组处理中有错误
+- token 限制可能截断输出
+
+解决方案:
+- 使用已知在数组上工作良好的库（Outlines, OpenAI）
+- 增加 max_tokens
+- 在少样本中显示完整的数组示例
+
+---
+
+// 问题 4: 性能退化
+
+症状: 约束解码比预期慢得多
+
+原因:
+- 复杂的 CFG 约束（O(n²) 最坏情况）
+- 每 token 过多的重新编译/重新计算
+- 不匹配的库（某些库针对某些模型优化）
+
+解决方案:
+# 使用分析来检查约束开销
+import time
+
+for i, token in enumerate(constrained_generator):
+    if i % 10 == 0:
+        elapsed = time.time() - start
+        tokens_per_second = i / elapsed
+        if tokens_per_second < 50:  # 典型值：100-500 tps
+            logger.warning(f"Slow generation: {tokens_per_second} tps")
+
+# 如果很慢，尝试：
+# 1. 简化 schema（FSM 比 CFG 快）
+# 2. 切换库
+# 3. 在模型推理后应用约束（trade-off 可靠性对性能）
+</pre></div>
+
+  <div class="interview-box">
+    <div class="ib-tag">架构决策</div>
+    <p class="prose"><strong>Q: 我应该在哪一层实施约束解码？</strong> A: 最好的位置是在模型级别（OpenAI Structured Outputs、Anthropic 工具使用）或在 token 生成循环中（Outlines、llguidance）。远离post-hoc解析。如果使用API，选择本地支持约束解码的提供商。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">schema设计</div>
+    <p class="prose"><strong>Q: 当设计 JSON schema 用于约束解码时，我应该考虑什么？</strong> A: (1) 使用枚举而不是自由字符串来强制有限的值集。(2) 为数字使用 minimum/maximum 限制。(3) 使用 required 字段来避免缺失值。(4) 在少样本示例中显示有效的输出。(5) 避免过度约束（模型在太多约束下容易失败）。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">成本效益</div>
+    <p class="prose"><strong>Q: 约束解码的成本效益分析是什么？</strong> A: 假设无约束解码有70%的成功率。为了获得95%的成功率，你需要重试（在最坏的情况下2.5倍成本乘数）。约束解码有接近100%的成功率，开销<5%。经济上，约束解码赢出。而且还有错误处理成本——无效的JSON导致数据库错误、日志垃圾等。</p>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag">多模态约束</div>
+    <p class="prose"><strong>Q: 约束解码在多模态模型（有图像输入）中工作吗？</strong> A: 是的，token 级别的约束与输入模态无关。JSON 约束将像往常一样工作，无论输入是文本还是包含图像。框架（Outlines、OpenAI API）支持这种开箱即用。</p>
+  </div>
+</div>
+<!-- Section 04: Synthetic Data Generation -->
+<section class="section" id="sec04">
+  <div class="section-badge" style="background-color: var(--pink);">SYNTHETIC DATA</div>
+  <h1 class="section-title">Synthetic Data Generation: 从稀缺到丰富</h1>
+  <p class="section-sub">How frontier models create training data at scale, and the critical failure modes that threaten generalization.</p>
+
+  <h3 class="subsection-title">为什么合成数据如此关键</h3>
+  <p class="prose">
+    Real-world labeled data is <strong>expensive, slow, and fragmented</strong>. Collecting high-quality examples for specialized domains—medical imaging, legal documents, scientific papers—requires expert annotation costing thousands per sample. Meanwhile, privacy regulations (GDPR, HIPAA) restrict reuse of sensitive data. Synthetic data sidesteps these constraints: <em>a capable model can generate unlimited task-specific examples, domain-adapted to your exact needs, without privacy leaks.</em> This is why every frontier lab now runs synthetic data pipelines.
+  </p>
+
+  <div class="callout" style="border-left: 3px solid var(--pink); background: rgba(244, 114, 182, 0.08);">
+    <strong>The 2024 Synthetic Revolution:</strong> OpenAI, Google DeepMind, and Meta disclosed that >50% of their training data for recent models includes synthetic examples. Llama 3 used synthetic data extensively; GPT-4o includes model-generated examples for reasoning tasks.
+  </div>
+
+  <h3 class="subsection-title">核心生成技术</h3>
+
+  <p class="prose"><strong>Prompt-Based Generation</strong></p>
+  <p class="prose">
+    The simplest approach: use a capable model (GPT-4, Claude) to generate examples given a prompt template. E.g., "Generate 10 customer support questions about billing" → model outputs diverse questions. Quick and cheap, but quality is bounded by the prompt precision and model instruction-following.
+  </p>
+
+  <p class="prose"><strong>Retrieval-Augmented Synthesis (RAS)</strong></p>
+  <p class="prose">
+    Ground generation in real documents. Retrieve relevant passages, then instruct the model: "Based on this document, generate a Q&A pair." This <em>anchors synthesis to domain facts</em>, reducing hallucination. Essential for technical domains where factual grounding matters.
+  </p>
+
+  <p class="prose"><strong>Iterative Self-Refinement</strong></p>
+  <p class="prose">
+    Multiple passes improve quality. Generate → score → filter → regenerate weak examples. Each iteration tightens distribution toward desired quality threshold. Works especially well with weak supervision signals (e.g., reward models, classifier feedback).
+  </p>
+
+  <p class="prose"><strong>Evol-Instruct (WizardLM, 2023)</strong></p>
+  <p class="prose">
+    Evolve instructions into progressively harder versions. Start with simple prompt → model generates response → "Make this 20% harder" → recurse. This creates <em>curriculum-like synthetic data where complexity gradates naturally.</em> WizardLM achieved competitive results with >90% synthetic training data.
+  </p>
+
+  <p class="prose"><strong>Self-Instruct (Alpaca, Stanford 2023)</strong></p>
+  <p class="prose">
+    Bootstrap from a seed set of hand-written examples. Iteratively: (1) sample seed instructions, (2) prompt model to generate new instructions and outputs, (3) filter low-quality pairs, (4) add to training set. Alpaca's 52K examples cost ~$500 to generate using GPT-3.5, competitive with supervised fine-tuning.
+  </p>
+
+  <h3 class="subsection-title">RAFT: Retrieval-Augmented Fine-Tuning</h3>
+  <p class="prose">
+    RAFT (2024) marries retrieval-augmented generation with fine-tuning: (1) retrieve relevant documents, (2) use RAG to generate synthetic examples grounded in those documents, (3) fine-tune on synthetic + real data. Result: models that answer questions <em>in-domain, citing sources, resistant to distribution shift.</em> Shows 5-15% accuracy gains over vanilla fine-tuning on specialized tasks.
+  </p>
+
+  <h3 class="subsection-title">Model Collapse: 合成数据的致命陷阱</h3>
+  <p class="prose">
+    <strong>The Critical Risk:</strong> Train a model on synthetic data → use that model to generate more synthetic data → train the next model on that → repeat. Each generation, the distribution <em>narrows</em>: outliers are trimmed, variance collapses, modes concentrate. Mathematically:
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      σ²_t = σ²_0 · ρ^t  <span class="comment">(variance decays exponentially)</span><br>
+      where ρ ∈ (0,1) is the contraction rate per generation
+    </div>
+  </div>
+
+  <p class="prose">
+    After k generations, the support of the distribution is drastically reduced. Specific failure modes:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Loss of diversity:</strong> Models repeat top-k common patterns, losing tail behaviors.</li>
+      <li><strong>Language degradation:</strong> Repeated paraphrasing introduces grammatical artifacts (e.g., increased use of "undoubtedly," "in conclusion").</li>
+      <li><strong>Fact erosion:</strong> Hallucinations compound; false patterns get reinforced as "facts."</li>
+      <li><strong>Catastrophic forgetting:</strong> Minority classes vanish; marginal domains become extinct in data.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>Mitigation Strategies:</strong></p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">Data Mixing (Always Include Real Data)</div>
+        <div class="desc">Never use 100% synthetic. Industry best practice is 30-50% real, 50-70% synthetic. Real examples stabilize the distribution.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Quality Filtering & Scoring</div>
+        <div class="desc">Use a held-out validator (human judges, reward model, or external classifier) to reject low-quality synthetic examples before training. Removes noise before it contaminates the model.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">Diversity Enforcement</div>
+        <div class="desc">Explicitly sample generation prompts/parameters to maximize coverage. Use VAE-based clustering to ensure synthetic data spans the same regions as real data.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">Generational Grounding</div>
+        <div class="desc">Always ground each generation in external documents/facts, not previous model outputs. Prevents compounding of hallucinations across generations.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subsection-title">Scaling Laws for Synthetic Data</h3>
+  <p class="prose">
+    Early research (2023-2024) suggested synthetic data obeys different scaling laws than real data. Recent findings:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Quality Threshold:</strong> Synthetic data below ~80% human-equivalent quality hurts more than it helps. Beyond 90%, gains plateau.</li>
+      <li><strong>Task Dependency:</strong> Simple tasks (classification) tolerate 100% synthetic; complex reasoning needs 40%+ real examples.</li>
+      <li><strong>Scale Curve:</strong> Synthetic data enables 2-4x larger effective dataset size before hitting diminishing returns, vs. real-only baseline.</li>
+      <li><strong>Diversity Cost:</strong> To match coverage of N real examples, need 2-3x more synthetic examples due to mode concentration.</li>
+    </ul>
+  </p>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Synthetic Helps?</th>
+          <th>Key Insight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Data scarce domain (<10K real)</td>
+          <td style="color: var(--green);">✓ Strong Win</td>
+          <td>Synthetic fills the gap; quality over quantity.</td>
+        </tr>
+        <tr>
+          <td>Abundant real data (>1M examples)</td>
+          <td style="color: var(--coral);">✗ Marginal/Negative</td>
+          <td>Real diversity already sufficient; synthetic adds noise.</td>
+        </tr>
+        <tr>
+          <td>Domain shift problem</td>
+          <td style="color: var(--green);">✓ Moderate Win</td>
+          <td>Generate target-domain examples; reduces distribution mismatch.</td>
+        </tr>
+        <tr>
+          <td>Long-tail minority classes</td>
+          <td style="color: var(--green);">✓ Strong Win</td>
+          <td>Oversample rare classes synthetically without real-world cost.</td>
+        </tr>
+        <tr>
+          <td>Iterative retraining (>3 cycles)</td>
+          <td style="color: var(--coral);">✗ Risky</td>
+          <td>Model collapse risk grows exponentially; requires strict quality gates.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subsection-title">Llama 3 & Frontier Labs: Synthetic in Practice</h3>
+  <p class="prose">
+    Meta disclosed that Llama 3 (400B tokens) mixed:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>~60% public web data (original real)</li>
+      <li>~25% synthetic code/reasoning examples (generated by internal models)</li>
+      <li>~15% high-quality curated real data (research papers, books, forums)</li>
+    </ul>
+    The synthetic portion was critical for boosting reasoning and code performance. However, Meta also reported needing <strong>strict filtering</strong>: they discarded ~40% of initially generated examples as too noisy or repetitive.
+  </p>
+
+  <p class="prose">
+    GPT-4o similarly uses synthetic data for chain-of-thought reasoning and multi-modal alignment. OpenAI has hinted at iterative refinement loops where weak synthetic examples are fixed by human feedback, then reused.
+  </p>
+
+  <h3 class="subsection-title">Cost-Benefit Analysis</h3>
+  <p class="prose">
+    <strong>Cost per 1M tokens of synthetic data:</strong> ~$100-500 using a capable model (GPT-4 API). Comparison:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Human annotation:</strong> $2000-5000 per 1M tokens (slower, higher quality).</li>
+      <li><strong>Weak supervision:</strong> $500-1000 per 1M tokens (mixed quality, requires validation).</li>
+      <li><strong>Synthetic (high-quality filter):</strong> $100-300 per 1M tokens (fast, needs model investment).</li>
+    </ul>
+    <strong>ROI:</strong> For task-specific fine-tuning on budget-constrained teams, synthetic data reduces cost by 5-10x while maintaining >90% of quality if filters are tight.
+  </p>
+
+  <div class="interview-box">
+    <div class="ib-tag" style="background-color: var(--pink);">Synthetic Data Expert Interview</div>
+    <div style="padding: 12px; line-height: 1.7;">
+      <p><strong>Q: How do you prevent model collapse in production?</strong><br>
+      "We enforce a hard rule: never chain models without real-data grounding. Every generation step includes retrieval from external documents. We also track distribution entropy across generations; if it drops >5%, we halt and audit the data."</p>
+
+      <p><strong>Q: When should a team NOT use synthetic data?</strong><br>
+      "If your domain is adversarial (security, finance), synthetic can hurt by teaching patterns an attacker can exploit. Also if you have abundant high-quality real data—synthetic adds variance without signal."</p>
+
+      <p><strong>Q: What's the biggest surprise in scaling synthetic data?</strong><br>
+      "Quality filtering is harder than generation. We spend 2-3x more compute on validation than creation. And diversity is brutal: you need clever sampling strategies to avoid mode collapse."</p>
+
+      <p><strong>Q: Is synthetic data a moat for frontier labs?</strong><br>
+      "Temporarily, yes. The best synthetic pipelines are proprietary (OpenAI, DeepMind). But the techniques are publishable. Within 18 months, open-source tools (Argilla, HuggingFace datasets) will commoditize it."</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 05: Model Merging -->
+<section class="section" id="sec05">
+  <div class="section-badge" style="background-color: var(--blue);">MERGING</div>
+  <h1 class="section-title">Model Merging: 无需重训的模型融合</h1>
+  <p class="section-sub">Combining task-specific fine-tuned models through parameter manipulation, without retraining. A breakthrough for scalable multi-task serving.</p>
+
+  <h3 class="subsection-title">问题：孤立的任务特定模型</h3>
+  <p class="prose">
+    Fine-tune a base model on Task A → get a specialized model with SOTA performance. Fine-tune the same base on Task B → another SOTA model. But you have two separate models. Want both in one? Naive averaging of weights produces <em>catastrophic interference:</em> performance on both tasks drops 20-40%. You need either (a) ensemble all models at inference (expensive), or (b) retrain from scratch with multi-task loss (slow, needs careful tuning).
+  </p>
+
+  <p class="prose">
+    Model merging solves this: combine task-specific checkpoints into a <strong>single unified model</strong> that retains performance on all tasks, without retraining. This unlocked the "model marketplace" where community members fine-tune and merge models freely (e.g., Open LLM Leaderboard merged models achieving SOTA with zero additional training).
+  </p>
+
+  <h3 class="subsection-title">核心融合技术</h3>
+
+  <p class="prose"><strong>Model Soup (Wortsman et al., 2022)</strong></p>
+  <p class="prose">
+    The simplest merge: uniform averaging of fine-tuned checkpoints. Given base model θ₀ and n task-specific models θ₁, θ₂, ..., θₙ, the soup is:
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      θ_soup = (1/n) × Σ θ_i
+    </div>
+  </div>
+
+  <p class="prose">
+    <em>Why it works:</em> Fine-tuning on different tasks explores different regions of parameter space, but many regions are "compatible"—averaging them sums the task-specific improvements. Works best when tasks are diverse and base model is strong.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Pros: Dead simple; no hyperparameters; embarrassingly parallel.</li>
+      <li>Cons: Naive averaging doesn't resolve <strong>task interference</strong> (conflicting gradients); performance lags single-task models by 5-15%.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>Task Arithmetic (Ilharco et al., 2023)</strong></p>
+  <p class="prose">
+    Instead of merging raw weights, merge <em>task vectors</em>—the difference between fine-tuned and base model. Given base θ₀ and task-specific θᵢ, the task vector is τᵢ = θᵢ - θ₀. Then:
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      θ_merged = θ₀ + Σ λᵢ × τᵢ
+    </div>
+  </div>
+
+  <p class="prose">
+    where λᵢ are scalar weights controlling each task's contribution. <em>Intuition:</em> Task vectors isolate task-specific signal, removing the base model noise. Merging them preserves shared knowledge (θ₀) while adding task-specific deltas.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Pros: More interpretable; task vectors are sparse (few non-zero elements), so interference is reduced.</li>
+      <li>Cons: Still naive—conflicting deltas cause cancellation or amplification; needs manual tuning of λᵢ.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>TIES-Merging (Trim, Elect Sign, Merge) - Wang et al., 2023</strong></p>
+  <p class="prose">
+    A principled solution to task interference via a three-step algorithm:
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">Trim: Remove Small-Magnitude Deltas</div>
+        <div class="desc">For each parameter, keep only the top-k% of task vectors by magnitude. Remove noise—small changes are often interference. Typical k=20-30%.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Elect Sign: Majority Vote</div>
+        <div class="desc">For each remaining parameter, check the sign (+/-) of all task vectors. Keep only those where the majority agrees. Resolves conflicting deltas by democratic consensus.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">Merge: Weighted Average</div>
+        <div class="desc">Combine surviving task vectors with learned scalar weights λᵢ, then add to base: θ_merged = θ₀ + Σ λᵢ × τᵢ (sign-elected).</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="prose">
+    <strong>Impact:</strong> TIES-merging reduced interference dramatically. On 8-task merges, TIES achieved 96% of average single-task performance vs. 78% for naive soup. This became the de-facto standard for community model merging.
+  </p>
+
+  <p class="prose"><strong>DARE: Drop And REscale (Yu et al., 2023)</strong></p>
+  <p class="prose">
+    A probabilistic complement to TIES. Instead of keeping top-k%, randomly drop each delta parameter with probability p, then rescale survivors by 1/(1-p):
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      τ̃ᵢ(j) = (τᵢ(j) × mask(j)) / (1 - p)  <span class="comment">(mask ~ Bernoulli(1-p))</span>
+    </div>
+  </div>
+
+  <p class="prose">
+    <em>Why rescale?</em> To maintain expected value; dropping 90% of params requires scaling survivors 10x to compensate, preventing collapse.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Key finding: Works surprisingly well even at p=0.9-0.99 (dropping 90-99% of deltas!). Most task-specific info concentrates in a sparse subset.</li>
+      <li>Intuition: Task vectors are <em>redundant</em>; many params are noise. Stochastic sparsity discovers the signal.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>DARE-TIES Combination (2024)</strong></p>
+  <p class="prose">
+    Recent work combines DARE's sparsity with TIES' sign-election. (1) Apply DARE to sparsify task vectors, (2) apply TIES to resolve conflicts on surviving params. Result: better generalization across diverse task sets, ~3-5% improvement over either alone.
+  </p>
+
+  <p class="prose"><strong>Differentiable DARE-TIES (2024-2025)</strong></p>
+  <p class="prose">
+    Rather than fixed sparsity/sign rules, learn optimal merge via gradient descent. Treat dropout probabilities {p_i} and combination weights {λᵢ} as learnable parameters. Optimize on a held-out validation set (e.g., MMLU subset). Result: task-aware, adaptive merges that outperform manual tuning by 2-3%. Compute cost: ~1-2 GPU hours per merge task, still trivial vs. retraining.
+  </p>
+
+  <h3 class="subsection-title">任务干扰：为什么朴素平均失败</h3>
+  <p class="prose">
+    When fine-tuning on Task A, the optimizer updates weights to reduce Task A loss. Task B fine-tuning updates those same weights for Task B. If the updates <em>conflict</em> (e.g., increase weight w for A, decrease for B), naïve averaging cancels both changes, leaving w near its base value. Neither task benefits.
+  </p>
+
+  <p class="prose">
+    Mathematical formulation: suppose Task A loss ∂L_A/∂w > 0 (increase w) and Task B loss ∂L_B/∂w < 0 (decrease w). Merging both models gives a w between them—suboptimal for both. TIES resolves this by <em>dropping conflicts</em> (keeping only params where signs agree), and DARE by <em>discovering sparsity</em> (assuming signal concentrates in non-conflicting regions).
+  </p>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Mechanism</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Compute Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Soup</strong></td>
+          <td>Uniform average</td>
+          <td>Trivial to implement</td>
+          <td>High interference; 15-20% perf drop</td>
+          <td>Minutes</td>
+        </tr>
+        <tr>
+          <td><strong>Task Arith</strong></td>
+          <td>Merge deltas w/ scalars</td>
+          <td>Interpretable; sparse ops</td>
+          <td>Still naive; manual λ tuning</td>
+          <td>Hours</td>
+        </tr>
+        <tr>
+          <td><strong>TIES</strong></td>
+          <td>Trim + Sign Elect + Merge</td>
+          <td>Resolves conflicts; SOTA baseline</td>
+          <td>Hyperparams (trim %, vote threshold)</td>
+          <td>Hours</td>
+        </tr>
+        <tr>
+          <td><strong>DARE</strong></td>
+          <td>Stochastic sparsity + rescale</td>
+          <td>Robust; works at extreme sparsity</td>
+          <td>Randomness; benefits from averaging runs</td>
+          <td>Minutes</td>
+        </tr>
+        <tr>
+          <td><strong>Diff DARE-TIES</strong></td>
+          <td>Learned sparsity & weights</td>
+          <td>Optimal for specific task set</td>
+          <td>Needs validation data; slow</td>
+          <td>1-2 GPU hours</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subsection-title">实际应用：多任务服务与社区融合</h3>
+  <p class="prose">
+    <strong>Scenario 1: LoRA Merging</strong> — Fine-tune a base model with 5 different LoRA adapters (one per task). Each LoRA adds ~0.1% to base param count. Rather than load all LoRAs at inference, merge them into base via TIES. Single inference path, negligible overhead, near-lossless performance on all tasks.
+  </p>
+
+  <p class="prose">
+    <strong>Scenario 2: Open LLM Leaderboard</strong> — Community merges fine-tuned models (Mistral, Llama) into "super-models" (e.g., Mistral-7B-Merge-v1). These merged models sometimes outperform their constituent models on averaged benchmarks. Model merging democratized "research-grade" model optimization—any practitioner can now combine models without access to training infrastructure.
+  </p>
+
+  <p class="prose">
+    <strong>Scenario 3: Cost Reduction for Multi-Task APIs</strong> — Instead of running 10 separate models (10x VRAM, 10x latency), merge into 1. Trade-off: single-task performance drops 2-5%, but total cost drops 10x. Favorable for SaaS providers.
+  </p>
+
+  <h3 class="subsection-title">When Merging Helps vs. Hurts</h3>
+  <p class="prose">
+    <div class="cmp-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Merging Outcome</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2-3 related tasks (e.g., QA variants)</td>
+            <td style="color: var(--green);">✓ Win (5-10% perf)</td>
+            <td>Use TIES; tasks share structure.</td>
+          </tr>
+          <tr>
+            <td>5-10 diverse tasks</td>
+            <td style="color: var(--amber);">~ Neutral (2-3% drop)</td>
+            <td>Use DARE or Diff-TIES; interference unavoidable.</td>
+          </tr>
+          <tr>
+            <td>>15 orthogonal tasks</td>
+            <td style="color: var(--coral);">✗ Loss (>10% drop)</td>
+            <td>Avoid merging; use ensemble or multi-task training.</td>
+          </tr>
+          <tr>
+            <td>Tasks with conflicting labels (e.g., Q-A vs. reverse)</td>
+            <td style="color: var(--coral);">✗ Catastrophic</td>
+            <td>Do not merge; models disagree fundamentally.</td>
+          </tr>
+          <tr>
+            <td>Serving with latency/memory constraints</td>
+            <td style="color: var(--green);">✓ Essential</td>
+            <td>Merge aggressively; cost savings dominate.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </p>
+
+  <div class="interview-box">
+    <div class="ib-tag" style="background-color: var(--blue);">Model Merging Researcher Interview</div>
+    <div style="padding: 12px; line-height: 1.7;">
+      <p><strong>Q: Is merging better than multi-task training?</strong><br>
+      "For post-hoc combination of existing models, merging is superior because you don't need the original data or training compute. But if you're designing from scratch, multi-task training is still better—it leverages shared structure intentionally."</p>
+
+      <p><strong>Q: Why does DARE work at 99% dropout?</strong><br>
+      "Task vectors are heavily redundant. Most params carry little info; a tiny fraction (1-5%) drives the task-specific improvement. DARE discovers this sparsity stochastically. The 1% surviving params often suffice."</p>
+
+      <p><strong>Q: Can you merge models from different architectures?</strong><br>
+      "Not directly—param correspondence breaks. But you can merge different sizes if one is quantized/pruned to match the other. This is active research (DistilBERT + BERT merging)."</p>
+
+      <p><strong>Q: What's the merge count ceiling?</strong><br>
+      "Empirically, 5-10 tasks is comfortable. Beyond 20, interference explodes; merging fails. With Diff-TIES (learned weights), we've pushed to ~15 stable merges, but performance drops noticeably."</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 06: Diffusion Transformers (DiT) -->
+<section class="section" id="sec06">
+  <div class="section-badge" style="background-color: var(--coral);">DiT</div>
+  <h1 class="section-title">Diffusion Transformers: U-Net的终结</h1>
+  <p class="section-sub">Why Vision Transformers replaced U-Net in diffusion models, and how Sora, Flux, and Stable Diffusion 3 define the new generation.</p>
+
+  <h3 class="subsection-title">背景：扩散模型的传统架构</h3>
+  <p class="prose">
+    For the first ~5 years of diffusion models (2020-2023), the standard architecture was <strong>U-Net:</strong> encoder-decoder with skip connections, learned via DDPM and refined via DDIM. U-Net works—it powers Stable Diffusion 1.x, DALL-E 2, and countless community models.
+  </p>
+
+  <p class="prose">
+    But U-Net has fundamental limitations: (1) <strong>Fixed compute graph—</strong> depth and width are hardcoded; scaling is awkward. (2) <strong>CNN-biased design—</strong> prioritizes local, shift-invariant patterns; long-range dependencies are harder. (3) <strong>Ecosystem mismatch—</strong> optimizations for Transformers (Flash Attention, DDP, quantization) don't transfer.
+  </p>
+
+  <p class="prose">
+    In 2023, researchers realized: <em>diffusion is just next-token prediction with visual tokens.</em> If Transformers scale better for language, why not vision? Enter <strong>Diffusion Transformers (DiT).</strong>
+  </p>
+
+  <h3 class="subsection-title">为什么DiT超越U-Net</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">Superior Scaling Properties</div>
+        <div class="desc">Transformers follow well-understood scaling laws (compute ∝ loss^(-1/k) for some k). DiT models from 30M to 750M params show consistent performance gains. U-Net scaling is ad-hoc and inefficient.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Simpler Architecture</div>
+        <div class="desc">Transformer = uniform sequence of blocks. U-Net = complex encoder-decoder with skip connections, adaptive normalization, special blocks for different resolutions. Simpler → easier to experiment, understand, and optimize.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">Ecosystem Leverage</div>
+        <div class="desc">Years of Transformer optimization carry over: Flash Attention, mixed precision, LoRA, pruning, quantization. DiT benefits from the entire ML ecosystem.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">Long-Range Coherence</div>
+        <div class="desc">Transformers attend across the entire image; U-Net's receptive field is constrained. DiT naturally captures global structure, critical for coherent generation.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subsection-title">DiT Architecture详解</h3>
+
+  <p class="prose"><strong>Input Pipeline:</strong></p>
+  <p class="prose">
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Take noisy image latent z_t (from VAE encoder, ~8x compressed).</li>
+      <li>Patchify: split into patches (e.g., 2×2 stride), linearize → sequence.</li>
+      <li>Embed: learnable patch embedding → token dimension (e.g., 768).</li>
+      <li>Add positional embeddings: absolute position IDs or rotary embeddings (RoPE).</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>Conditioning: Timestep + Class via Adaptive Layer Norm (adaLN-Zero)</strong></p>
+  <p class="prose">
+    Classical approach: concatenate timestep & class labels to the sequence. Problem: breaks Transformer symmetry; adds extra tokens.
+  </p>
+
+  <p class="prose">
+    Better approach (DiT): <strong>Adaptive Layer Norm (adaLN):</strong> use timestep/class to compute layer norm affine params (γ, β). For each block:
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      x' = γ(t,c) × LayerNorm(x) + β(t,c)<br>
+      where γ, β = MLPs(timestep_embedding, class_embedding)
+    </div>
+  </div>
+
+  <p class="prose">
+    This <em>modulates</em> the representation without adding tokens. adaLN-Zero variant initializes γ, β → 0, so pre-trained models are "conditioned downstream" (can plug in new timesteps/classes at test time).
+  </p>
+
+  <p class="prose"><strong>Core: Standard Transformer Blocks</strong></p>
+  <p class="prose">
+    Repeat N times (e.g., N=28 for DiT-XL):
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Multi-head self-attention (e.g., 8 heads, head_dim=64).</li>
+      <li>Residual connection + LayerNorm.</li>
+      <li>Feed-forward (MLP with hidden_dim=4×embed_dim).</li>
+      <li>Residual connection + LayerNorm.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>Output: Noise or Velocity</strong></p>
+  <p class="prose">
+    Final layer projects each patch token to per-pixel predictions (e.g., 4 channels for 2×2 patch = 16 values). Predict either:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>ε (noise):</strong> the added Gaussian noise → standard DDPM loss.</li>
+      <li><strong>v (velocity):</strong> interpolation velocity between x_0 and x_T → often converges faster.</li>
+    </ul>
+  </p>
+
+  <h3 class="subsection-title">DiffiT: NVIDIA的时间敏感注意力</h3>
+  <p class="prose">
+    NVIDIA's DiffiT (2024) extends DiT with Time-dependent Multihead Self Attention (TMSA): rather than using a fixed positional embedding, each diffusion timestep gets its own positional encoding. The intuition: early denoising steps focus on structure (low freq), late steps on details (high freq). TMSA adapts receptive fields per timestep.
+  </p>
+
+  <p class="prose">
+    Results: on ImageNet 256×256, DiffiT achieves FID 1.73 (SOTA at the time). Simple change, big gains. Shows that conditioning information can be baked directly into attention geometry.
+  </p>
+
+  <h3 class="subsection-title">Scaling: DiT-XL/2与缩放规律</h3>
+  <p class="prose">
+    DiT scaling experiments (from the original paper):
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>DiT-S/2:</strong> 60M params, FID ~5.3.</li>
+      <li><strong>DiT-B/2:</strong> 300M params, FID ~3.1.</li>
+      <li><strong>DiT-L/2:</strong> 750M params, FID ~2.6.</li>
+      <li><strong>DiT-XL/2:</strong> 675M params, FID ~2.27 (optimal efficiency).</li>
+    </ul>
+    Clear power-law: FID ∝ params^(-0.15). Doubling params → ~7% FID improvement. This <em>predictability</em> lets researchers plan model scaling confidently.
+  </p>
+
+  <h3 class="subsection-title">Sora的背后：视频生成的DiT</h3>
+  <p class="prose">
+    OpenAI's Sora (2024) applies DiT to video generation. Key insight: <em>video is just image sequences.</em> Extend patchification to 3D:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Spacetime patches: (t, h, w) → 1D sequence (e.g., 2×2 spatial, 1 frame chunks).</li>
+      <li>Positional embeddings: now encode frame number + spatial location.</li>
+      <li>Self-attention: over all spacetime tokens, enabling temporal coherence.</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    Sora can generate videos of arbitrary duration (beyond training) and resolution, because the attention operates on patch sequences—no fixed image size constraint. This is a major capability leap over earlier video diffusion models.
+  </p>
+
+  <h3 class="subsection-title">Flux: 开源DiT的成功</h3>
+  <p class="prose">
+    Black Forest Labs' Flux (2024) is a <strong>DiT-based open-source image model</strong> that commands ~40% of the image generation market (by inference volume on Replicate). Key features:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>12B params</strong>, trained on public data.</li>
+      <li><strong>DiT architecture</strong> with joint spatial-temporal attention.</li>
+      <li><strong>FID ~11</strong> on standard benchmarks, competitive with Stable Diffusion 3.</li>
+      <li><strong>Fast inference:</strong> ~1 second for 1024×1024 image on H100.</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    Flux's success validated two ideas: (1) DiT is the right architecture choice. (2) Open-source diffusion models can compete with commercial ones if scaled properly.
+  </p>
+
+  <h3 class="subsection-title">Stable Diffusion 3: 多模态DiT</h3>
+  <p class="prose">
+    Stability AI's Stable Diffusion 3 (2024) introduces <strong>MM-DiT (Multimodal Diffusion Transformer):</strong> a single Transformer handles both image tokens and text tokens. Instead of separate encoders, the Transformer attends across all modalities:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Text tokens from a frozen language model (e.g., T5).</li>
+      <li>Image patch tokens.</li>
+      <li>Cross-attention: unified attention over both modalities.</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    Benefit: <em>native multimodal alignment</em>—the Transformer learns how image structure relates to text semantics directly, not through separate alignment losses. SD3 shows improved text rendering and concept consistency vs. Stable Diffusion 2.
+  </p>
+
+  <h3 class="subsection-title">动态DiT变体</h3>
+
+  <p class="prose"><strong>D2iT (Dynamic Diffusion Transformer):</strong> Adaptively compute attention based on input complexity. Simple images → fewer layers/heads. Complex images → full model. Reduces latency by 20-30% with minimal quality loss.
+  </p>
+
+  <p class="prose"><strong>DyDiT (Dynamic Depth-Wise DiT):</strong> Prune layers based on timestep. Early denoising steps (high noise) don't need deep networks; later steps do. Skip layers early → faster inference without sacrificing quality.
+  </p>
+
+  <h3 class="subsection-title">Video Diffusion & Temporal Attention</h3>
+  <p class="prose">
+    Extending DiT to video requires capturing temporal dynamics. Standard approaches:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Spacetime attention:</strong> single attention over (T, H, W) tokens (Sora approach, expensive).</li>
+      <li><strong>Separable attention:</strong> spatial attention per frame, then temporal attention across frames (cheaper, less coherent).</li>
+      <li><strong>3D patches:</strong> group (t, h, w) voxels into tokens (reduces sequence length, better scaling).</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    Recent models (Runway, Stability) opt for hybrid: 3D patches + some cross-frame attention. Provides good coherence without prohibitive compute.
+  </p>
+
+  <div class="cmp-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Architecture</th>
+          <th>Scaling</th>
+          <th>Simplicity</th>
+          <th>Long-Range</th>
+          <th>SOTA (2024)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>U-Net (SD 1.x)</strong></td>
+          <td>Ad-hoc</td>
+          <td>Complex</td>
+          <td>Poor</td>
+          <td>FID ~20</td>
+        </tr>
+        <tr>
+          <td><strong>U-Net + Attention (SD 2.x)</strong></td>
+          <td>Marginal</td>
+          <td>Fragile</td>
+          <td>Better</td>
+          <td>FID ~15</td>
+        </tr>
+        <tr>
+          <td><strong>DiT (SOTA)</strong></td>
+          <td style="color: var(--green);">Predictable</td>
+          <td style="color: var(--green);">Elegant</td>
+          <td style="color: var(--green);">Excellent</td>
+          <td style="color: var(--green);">FID ~2-3</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="interview-box">
+    <div class="ib-tag" style="background-color: var(--coral);">DiT Architect Interview</div>
+    <div style="padding: 12px; line-height: 1.7;">
+      <p><strong>Q: Why did U-Net dominate for so long?</strong><br>
+      "Inertia. SD 1.5 worked well; the research community optimized it heavily. DiT required reimplementation of training pipelines, new infrastructure. The first DiT models (2023) were research prototypes. By 2024, enough evidence accumulated that companies were willing to retrain."</p>
+
+      <p><strong>Q: Will DiT scale to trillion-parameter models?</strong><br>
+      "Probably, yes. Transformers have shown consistent scaling to 1T+ params (GPT-4, Grok). No architectural barrier for vision. The bottleneck is data diversity (image-text pairs) and compute. With enough investment, we'll see billion-scale vision models within 2-3 years."</p>
+
+      <p><strong>Q: What's the biggest remaining challenge for DiT?</strong><br>
+      "Latency at inference. Self-attention is O(N²); for high-resolution video (8K, 60fps), the sequence length becomes prohibitive. Linear attention and approximations are areas of active research."</p>
+
+      <p><strong>Q: Can DiT replace all vision architectures (detection, segmentation)?</strong><br>
+      "For generation, yes. For discriminative tasks, Transformers are already standard (ViT, DINO). DiT is a natural fit for generative modeling because diffusion is fundamentally about iterative refinement—Transformer's sequential nature is a feature, not a bug."</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 07: World Models & Embodied AI -->
+<section class="section" id="sec07">
+  <div class="section-badge" style="background-color: var(--orange);">WORLD MODELS</div>
+  <h1 class="section-title">世界模型与具体化AI：学习环境动力学</h1>
+  <p class="section-sub">Internal environment simulators that enable prediction, planning, and counterfactual reasoning in embodied systems.</p>
+
+  <h3 class="subsection-title">什么是世界模型</h3>
+  <p class="prose">
+    A <strong>world model</strong> is a learned, compact representation of how an environment evolves. Given current state + action, predict the next state. Given observations, infer hidden state. Given a plan, imagine future trajectories.
+  </p>
+
+  <p class="prose">
+    Unlike end-to-end RL (state → action mapping), world models decouple <em>understanding</em> (what will happen next) from <em>planning</em> (which action is best). This decomposition is powerful: a model trained on observation video can enable planning without action labels, or transfer to new tasks unseen during training.
+  </p>
+
+  <p class="prose">
+    Three canonical representations:
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">Compact Latent State (RSSM-based)</div>
+        <div class="desc">Encode observations into a small latent vector z_t. RNN predicts z_{t+1} = RNN(z_t, a_t). Fast to compute, easy to plan in latent space, but can forget visual details.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">Contrastive Embeddings (JEPA-based)</div>
+        <div class="desc">Learn embeddings s_t such that similar observations are close; different ones far. Predict s_{t+1} from s_t without reconstructing pixels. Powerful for high-level reasoning, weaker on visual details.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">Token Sequences (Transformer-based)</div>
+        <div class="desc">Tokenize observations into discrete tokens; Transformer predicts next tokens. Unified "language of the world"—same architecture as LLMs but for environment dynamics.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="subsection-title">核心管道：观察→编码→预测→规划→行动</h3>
+  <p class="prose">
+    <strong>Observe:</strong> Camera/sensor input (e.g., image, point cloud).<br>
+    <strong>Encode:</strong> Compress into latent representation (VAE bottleneck, embedding layer).<br>
+    <strong>Predict:</strong> RNN or Transformer forecasts k steps ahead.<br>
+    <strong>Plan:</strong> Optimize action sequence under learned model (CEM, MPPI, gradient-based).<br>
+    <strong>Act:</strong> Execute highest-value action; observe result; loop.
+  </p>
+
+  <p class="prose">
+    Key advantage: planning happens in latent space (10-100 dims), not pixel space (millions of dims). This makes imagining long trajectories tractable.
+  </p>
+
+  <h3 class="subsection-title">应用领域</h3>
+
+  <p class="prose"><strong>Autonomous Driving:</strong> Predict pedestrian trajectories, vehicle behavior, lane evolution 5+ seconds ahead. World models enable risk-aware planning: if pedestrian crosses, steer; otherwise, maintain speed.</p>
+
+  <p class="prose"><strong>Robotics:</strong> Pre-train world models on unlabeled video (robot reaching, manipulation in diverse scenes). Fine-tune with small labeled action data. Examples: diffusion models for robot arm trajectory planning (Diffusion Policy), video prediction for pick-and-place.</p>
+
+  <p class="prose"><strong>Game AI:</strong> MuZero (DeepMind, 2020) learns a world model of Atari games without knowing rules. Plans by rolling out the learned model; achieves superhuman play. Key insight: <em>you don't need to understand the game rules to plan in the learned latent dynamics.</em></p>
+
+  <p class="prose"><strong>Video Generation & Understanding:</strong> World models naturally extend to unconditional generation (sample trajectories) or video understanding (infer hidden causes from observations).</p>
+
+  <h3 class="subsection-title">三种架构范式详解</h3>
+
+  <p class="prose"><strong>RSSM-Based (DreamerV3, 2023)</strong></p>
+  <p class="prose">
+    Architecture: VAE encoder → latent z_t → RNN → predict z_{t+1}. During training, use latent loss + reconstruction loss. During inference, plan by sampling action sequences and scoring under the learned model.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Pros: Efficient (small latent space); interpretable (z_t is a bottleneck).</li>
+      <li>Cons: Lossy compression; hallucinations compound over long horizons.</li>
+    </ul>
+  </p>
+
+  <p class="prose"><strong>JEPA-Based (Yann LeCun's Vision, adopted by Meta AI)</strong></p>
+  <p class="prose">
+    Joint-Embedding Predictive Architecture: learn encoders f (for current obs) and g (for future obs) such that f(x_t) ≈ g(x_{t+1}). Minimize ||f(x_t) - g(x_{t+1})||² but with stop-gradients to prevent collapse.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Pros: Non-contrastive (no negatives needed); learns high-level structure; invariant to pixel details.</li>
+      <li>Cons: Doesn't directly predict observations; harder to visualize what model learns.</li>
+    </ul>
+    JEPA is gaining traction (V-JEPA, I-JEPA from Meta; used in recent robotics work).
+  </p>
+
+  <p class="prose"><strong>Transformer-Based Token Prediction</strong></p>
+  <p class="prose">
+    Tokenize observations (VQ-VAE, image-to-token models like VQGAN). Train a Transformer to predict next tokens: p(x_{t+1} | x_1,...,x_t). Enables scaling to billions of parameters; benefits from all Transformer optimizations.
+  </p>
+
+  <p class="prose">
+    Example: Genie (DeepMind, 2024) uses a Transformer to predict interactive environment tokens from video. Given a text prompt ("move left"), Genie generates plausible next frames. Works on diverse games without action labels.
+  </p>
+
+  <h3 class="subsection-title">MuZero: 无规则的游戏规划</h3>
+  <p class="prose">
+    MuZero (2020) is a landmark result: an RL algorithm that learns a compact world model—not of the full environment, but of the "value-relevant" dynamics. The model predicts:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>s_{t+1} (next abstract state)</li>
+      <li>r_t (expected immediate reward)</li>
+      <li>v_t (expected future return)</li>
+    </ul>
+    from abstract states s_t and actions a_t. It never reconstructs pixels or learns full game rules.
+  </p>
+
+  <p class="prose">
+    Why effective: By predicting only reward-relevant features, the model is smaller, faster to compute, and generalizes better than predicting full observables. MuZero achieved SOTA on Atari, Go, and chess with a single algorithm.
+  </p>
+
+  <div class="formula">
+    <div style="font-family: monospace; font-size: 14px;">
+      Loss = ||v_τ - computed_return||² + ||r_τ - true_reward||² <span class="comment">(value + reward matching)</span><br>
+      then use learned model for planning via Monte Carlo Tree Search
+    </div>
+  </div>
+
+  <h3 class="subsection-title">Genie: DeepMind 2024的交互生成</h3>
+  <p class="prose">
+    Genie (2024) is a generative interactive environment model: given a video clip from any game, Genie learns to simulate it interactively. User provides text prompts or keyboard input; Genie generates next frames.
+  </p>
+
+  <p class="prose">
+    Architecture: Transformer-based world model (token predictor). Training:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>Tokenize video frames into a sequence of codes (VQ tokens).</li>
+      <li>Train Transformer to predict next tokens conditioned on action tokens (learned embeddings of up/down/left/right).</li>
+      <li>Inference: iteratively sample tokens, decode back to pixels, repeat.</li>
+    </ul>
+    Key finding: Trained on diverse games (arcade, web games, etc.), Genie generalizes to unseen games with minimal fine-tuning. Shows that world modeling in token space can be generic.
+  </p>
+
+  <h3 class="subsection-title">4D Embodied World Models (ICCV 2025)</h3>
+  <p class="prose">
+    Emerging frontier: 4D models that capture spatial layout + temporal evolution + camera motion. Instead of predicting 2D pixels, predict a 4D representation (3D voxels over time). Enables:
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li>View synthesis from novel viewpoints (camera motion prediction).</li>
+      <li>Simulation from multiple simultaneous viewpoints.</li>
+      <li>Better robotics transfer (3D understanding generalizes across camera heights/angles).</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    Early results show 4D models are more data-efficient and robust than 2D token models. This likely becomes standard for embodied AI in 2025-2026.
+  </p>
+
+  <h3 class="subsection-title">Mixture of World Models (MoWM)</h3>
+  <p class="prose">
+    Recent work (2024-2025): combine multiple world models (one for each "mode" of environment behavior). Mixture-of-Experts-style: given observations, learn which model best explains current state, then use that for planning.
+  </p>
+
+  <p class="prose">
+    Benefit: handles multimodal futures gracefully. Standard models average over modes (blurry predictions). MoWM can maintain multiple hypotheses. Essential for long-horizon planning where uncertainty compounds.
+  </p>
+
+  <h3 class="subsection-title">世界模型与强化学习</h3>
+  <p class="prose">
+    Model-based RL: use world model to generate synthetic trajectories ("dream" into the future). Train policy on these dream-generated samples, then deploy on real environment.
+    <ul style="margin-left: 20px; line-height: 1.8;">
+      <li><strong>Sample efficiency:</strong> generate unlimited synthetic experience; real environment interactions are minimized.</li>
+      <li><strong>Off-policy learning:</strong> world model enables learning from past data; no need to collect new trajectories for each policy version.</li>
+      <li><strong>Transfer:</strong> policy trained in latent space can transfer across tasks if world model is task-agnostic.</li>
+    </ul>
+  </p>
+
+  <p class="prose">
+    DreamerV3 (DeepMind, 2023) unified world models + policy learning: single loss optimizes both model accuracy and policy reward. Achieves competitive RL performance on Atari and control benchmarks with <10% of environment interactions compared to model-free RL.
+  </p>
+
+  <h3 class="subsection-title">开放问题与挑战</h3>
+
+  <p class="prose"><strong>Sim-to-Real Transfer:</strong> World models trained in simulation often fail on real robots due to domain gap. Techniques: domain randomization, adversarial training, but still imperfect. A key research frontier.</p>
+
+  <p class="prose"><strong>Long-Horizon Prediction Accuracy:</strong> Errors compound exponentially. Predicting 100 frames accurately is hard; predicting 1000 frames nearly impossible. Active research: ensemble methods, uncertainty quantification, latent diffusion models.</p>
+
+  <p class="prose"><strong>Multimodal Futures:</strong> In stochastic environments (humans in room), many futures are plausible. Model must maintain multi-hypothesis beliefs. Standard single-mode prediction fails.</p>
+
+  <p class="prose"><strong>Computational Cost:</strong> Planning via world models is expensive: ~1000 forward passes per action. Techniques: distillation (student policy learns from teacher world model planning), but still nascent.</p>
+
+  <div class="interview-box">
+    <div class="ib-tag" style="background-color: var(--orange);">World Models Researcher Interview</div>
+    <div style="padding: 12px; line-height: 1.7;">
+      <p><strong>Q: When is a world model better than end-to-end learning?</strong><br>
+      "When you have limited action-labeled data but abundant observation data (video). World models exploit this asymmetry. If you have abundant action-labeled RL data, end-to-end might be simpler. But for vision-based robotics, world models are currently the way."</p>
+
+      <p><strong>Q: Will world models replace reinforcement learning?</strong><br>
+      "Not replace—complement. Humans combine both: we have world models (predict consequences) and cached policies (habits). Hybrid is likely the future: world model for novel situations, policy for familiar ones."</p>
+
+      <p><strong>Q: How do you handle long-horizon planning errors?</strong><br>
+      "Uncertainty quantification is key. Instead of point predictions, predict distributions. Then plan to maximize expected reward under worst-case scenarios (robust control). This is still an open problem."</p>
+
+      <p><strong>Q: Can world models learn causality?</strong><br>
+      "Partially. If you train on interventional data (agent causes changes), models can learn causal structure. But purely from observational video, causal discovery is hard. This is a frontier for next-generation world models."</p>
+
+      <p><strong>Q: What's the smallest world model that's useful?</strong><br>
+      "Surprisingly small—10M-100M params can capture essential dynamics for simple domains. Scaling doesn't always help if the task is simple. Efficiency (small models, low latency) is underexplored in world modeling."</p>
+    </div>
+  </div>
+</section>
+
+    </div>
+
+    <script>
+        document.querySelectorAll('.sidenav a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.querySelectorAll('.sidenav a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
