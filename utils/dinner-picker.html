@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今晚吃什么？</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  color: #fff;
+  overflow-x: hidden;
+}
+.header {
+  text-align: center;
+  padding: 30px 20px 10px;
+}
+.header h1 {
+  font-size: 2.2em;
+  background: linear-gradient(90deg, #ff6b6b, #feca57, #ff6b6b);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer {
+  to { background-position: 200% center; }
+}
+.header p { color: #aaa; margin-top: 8px; font-size: 1.05em; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+.tab-btn {
+  padding: 10px 28px;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: #ccc;
+  border-radius: 30px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+}
+.tab-btn:hover:not(.active) { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+/* Panel */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* === DAILY PANEL === */
+.daily-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Dual Wheel */
+.wheel-container {
+  position: relative;
+  width: 420px;
+  height: 420px;
+  margin: 10px auto 20px;
+}
+canvas#wheelCanvas {
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  display: block;
+}
+.wheel-pointer {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid #feca57;
+  z-index: 10;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.wheel-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  font-weight: bold;
+  font-size: 0.9em;
+  box-shadow: 0 2px 20px rgba(233,69,96,0.5);
+  transition: transform 0.2s;
+  user-select: none;
+}
+.wheel-center:hover { transform: translate(-50%, -50%) scale(1.1); }
+.wheel-center:active { transform: translate(-50%, -50%) scale(0.95); }
+
+.wheel-legend {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 6px;
+  font-size: 0.85em;
+  color: #aaa;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.spin-btn {
+  padding: 14px 50px;
+  font-size: 1.15em;
+  border: none;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(233,69,96,0.4);
+  transition: all 0.3s;
+  margin-top: 10px;
+}
+.spin-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(233,69,96,0.5); }
+.spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Result cards */
+.result-area {
+  margin-top: 24px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.result-card {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 20px 28px;
+  text-align: center;
+  min-width: 160px;
+  backdrop-filter: blur(10px);
+  animation: popIn 0.5s ease;
+}
+.result-card.primary { border-color: rgba(233,69,96,0.4); }
+.result-card.backup { border-color: rgba(72,219,251,0.4); }
+.result-card .label {
+  font-size: 0.8em;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+.result-card .name {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+.result-card.primary .name {
+  background: linear-gradient(90deg, #feca57, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.result-card.backup .name {
+  background: linear-gradient(90deg, #48dbfb, #0abde3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* === WEEKLY PANEL === */
+.weekly-panel {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.weekly-header {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.weekly-spin-btn {
+  padding: 12px 36px;
+  font-size: 1.05em;
+  border: none;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #0abde3, #48dbfb);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(10,189,227,0.3);
+  transition: all 0.3s;
+}
+.weekly-spin-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(10,189,227,0.4); }
+.weekly-spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.day-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.3s;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.day-card.filled {
+  border-color: rgba(254,202,87,0.3);
+  background: rgba(255,255,255,0.08);
+}
+.day-card .day-label {
+  font-size: 0.85em;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+.day-card .pick1 {
+  font-size: 1.15em;
+  font-weight: bold;
+  color: #feca57;
+  margin-bottom: 4px;
+}
+.day-card .pick2 {
+  font-size: 0.9em;
+  color: #48dbfb;
+}
+.day-card .waiting {
+  color: #555;
+  font-size: 0.9em;
+}
+.day-card.reveal {
+  animation: cardReveal 0.4s ease forwards;
+}
+@keyframes cardReveal {
+  0% { transform: scale(0.9); opacity: 0.3; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 30px;
+  color: #444;
+  font-size: 0.85em;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .header h1 { font-size: 1.6em; }
+  .wheel-container { width: 340px; height: 340px; }
+  canvas#wheelCanvas { width: 340px; height: 340px; }
+  .week-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>今晚吃什么？</h1>
+  <p>选择困难症终结者 - 让命运帮你决定晚饭</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('daily')">每日随机</button>
+  <button class="tab-btn" onclick="switchTab('weekly')">每周随机</button>
+</div>
+
+<!-- Daily Panel -->
+<div id="dailyPanel" class="panel active">
+  <div class="daily-panel">
+    <div class="wheel-legend">
+      <span><span class="legend-dot" style="background:#e94560;"></span>外圈 = 备选</span>
+      <span><span class="legend-dot" style="background:#48dbfb;"></span>内圈 = 首选</span>
+    </div>
+    <div class="wheel-container">
+      <canvas id="wheelCanvas" width="840" height="840"></canvas>
+      <div class="wheel-pointer"></div>
+      <div class="wheel-center" onclick="spinWheel()">转!</div>
+    </div>
+    <button class="spin-btn" onclick="spinWheel()">双轮启动</button>
+    <div class="result-area" id="dailyResult"></div>
+  </div>
+</div>
+
+<!-- Weekly Panel -->
+<div id="weeklyPanel" class="panel">
+  <div class="weekly-panel">
+    <div class="weekly-header">
+      <button class="weekly-spin-btn" onclick="generateWeek()">生成本周食谱</button>
+      <button class="weekly-spin-btn" style="background: linear-gradient(135deg, #e94560, #ff6b6b);" onclick="generateWeek()">换一批</button>
+    </div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+</div>
+
+<div class="footer">不知道吃什么？转一转就知道了！</div>
+
+<script>
+const DINNERS = [
+  { name: 'Bread Talk 黄焖鸡', emoji: '🍗', color: '#e94560' },
+  { name: '西安面馆',          emoji: '🍜', color: '#ff6b6b' },
+  { name: '西餐',              emoji: '🥩', color: '#feca57' },
+  { name: '幸福地 炒菜/香锅',  emoji: '🍳', color: '#ff9f43' },
+  { name: '大碗菜食阁',        emoji: '🥘', color: '#48dbfb' },
+  { name: 'Fairprice 炒米粉',  emoji: '🍝', color: '#0abde3' },
+  { name: '煎饼果子',          emoji: '🥞', color: '#10ac84' },
+  { name: '河边食阁',          emoji: '🏞️', color: '#1dd1a1' },
+  { name: '宫源麻辣烫',        emoji: '🍲', color: '#5f27cd' },
+  { name: '吃一顿好的',        emoji: '✨', color: '#c44dff' },
+];
+
+const DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+const N = DINNERS.length;
+const SLICE = (2 * Math.PI) / N;
+
+// ====== DUAL WHEEL ======
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const CX = canvas.width / 2;
+const CY = canvas.height / 2;
+const R_OUTER = CX - 8;       // outer ring outer edge
+const R_OUTER_IN = CX * 0.58; // outer ring inner edge (= inner ring outer edge boundary)
+const R_INNER = CX * 0.55;    // inner ring outer edge
+const R_INNER_IN = CX * 0.18; // inner ring inner edge (center hole)
+
+let rotOuter = 0;
+let rotInner = 0;
+let spinning = false;
+let highlightInner = -1;  // index to highlight (-1 = none)
+let highlightOuter = -1;
+
+const OUTER_COLORS = [
+  '#e94560', '#d63384', '#ff6b6b', '#ff9f43', '#feca57',
+  '#10ac84', '#1dd1a1', '#0abde3', '#5f27cd', '#c44dff'
+];
+const INNER_COLORS = [
+  '#2d6cdf', '#48dbfb', '#0abde3', '#1dd1a1', '#10ac84',
+  '#feca57', '#ff9f43', '#ff6b6b', '#d63384', '#e94560'
+];
+
+function drawDualWheel() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // === Outer ring glow ===
+  ctx.save();
+  ctx.shadowColor = 'rgba(233,69,96,0.25)';
+  ctx.shadowBlur = 30;
+  ctx.beginPath();
+  ctx.arc(CX, CY, R_OUTER + 4, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(233,69,96,0.3)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+
+  // === OUTER RING (backup) ===
+  for (let i = 0; i < N; i++) {
+    const a0 = rotOuter + i * SLICE;
+    const a1 = a0 + SLICE;
+    const isHit = (i === highlightOuter);
+
+    ctx.beginPath();
+    ctx.arc(CX, CY, R_OUTER, a0, a1);
+    ctx.arc(CX, CY, R_OUTER_IN, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = isHit ? OUTER_COLORS[i] + 'cc' : OUTER_COLORS[i] + '44';
+    ctx.fill();
+
+    if (isHit) {
+      ctx.save();
+      ctx.shadowColor = OUTER_COLORS[i];
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
+    // Text
+    const mid = a0 + SLICE / 2;
+    const tr = (R_OUTER + R_OUTER_IN) / 2;
+    ctx.save();
+    ctx.translate(CX + Math.cos(mid) * tr, CY + Math.sin(mid) * tr);
+    ctx.rotate(mid + Math.PI / 2);
+    ctx.font = '18px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(DINNERS[i].emoji, 0, -10);
+    ctx.font = isHit ? 'bold 14px -apple-system, PingFang SC, sans-serif'
+                      : 'bold 12px -apple-system, PingFang SC, sans-serif';
+    ctx.fillStyle = '#fff';
+    const nm = DINNERS[i].name;
+    if (nm.length > 5) {
+      const half = Math.ceil(nm.length / 2);
+      ctx.fillText(nm.slice(0, half), 0, 7);
+      ctx.fillText(nm.slice(half), 0, 21);
+    } else {
+      ctx.fillText(nm, 0, 12);
+    }
+    ctx.restore();
+  }
+
+  // === Divider ring ===
+  ctx.beginPath();
+  ctx.arc(CX, CY, R_OUTER_IN - 1, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // === INNER RING (primary) ===
+  for (let i = 0; i < N; i++) {
+    const a0 = rotInner + i * SLICE;
+    const a1 = a0 + SLICE;
+    const isHit = (i === highlightInner);
+
+    ctx.beginPath();
+    ctx.arc(CX, CY, R_INNER, a0, a1);
+    ctx.arc(CX, CY, R_INNER_IN, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = isHit ? INNER_COLORS[i] + 'cc' : INNER_COLORS[i] + '44';
+    ctx.fill();
+
+    if (isHit) {
+      ctx.save();
+      ctx.shadowColor = INNER_COLORS[i];
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
+    const mid = a0 + SLICE / 2;
+    const tr = (R_INNER + R_INNER_IN) / 2;
+    ctx.save();
+    ctx.translate(CX + Math.cos(mid) * tr, CY + Math.sin(mid) * tr);
+    ctx.rotate(mid + Math.PI / 2);
+    ctx.font = '16px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(DINNERS[i].emoji, 0, -8);
+    ctx.font = isHit ? 'bold 13px -apple-system, PingFang SC, sans-serif'
+                      : 'bold 11px -apple-system, PingFang SC, sans-serif';
+    ctx.fillStyle = '#fff';
+    const nm2 = DINNERS[i].name;
+    if (nm2.length > 5) {
+      const half = Math.ceil(nm2.length / 2);
+      ctx.fillText(nm2.slice(0, half), 0, 6);
+      ctx.fillText(nm2.slice(half), 0, 18);
+    } else {
+      ctx.fillText(nm2, 0, 10);
+    }
+    ctx.restore();
+  }
+
+  // === Center hole ===
+  ctx.beginPath();
+  ctx.arc(CX, CY, R_INNER_IN - 2, 0, 2 * Math.PI);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fill();
+}
+
+drawDualWheel();
+
+// Read which slice the pointer (top, -PI/2) is pointing at for a given rotation
+function getWinnerIndex(rotation) {
+  // Pointer at angle -PI/2. Slice i occupies [rotation + i*SLICE, rotation + (i+1)*SLICE).
+  // We need: rotation + i*SLICE <= -PI/2 < rotation + (i+1)*SLICE
+  // i.e. i = floor((-PI/2 - rotation) / SLICE)
+  let angle = -Math.PI / 2 - rotation;
+  // Normalize to [0, 2PI)
+  angle = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.floor(angle / SLICE) % N;
+}
+
+function spinWheel() {
+  if (spinning) return;
+  spinning = true;
+  highlightInner = -1;
+  highlightOuter = -1;
+  document.querySelector('.spin-btn').disabled = true;
+  document.getElementById('dailyResult').innerHTML = '';
+
+  // Random end rotations (just spin a bunch, then read back the result)
+  const spinsOuter = 4 + Math.random() * 3;
+  const spinsInner = 6 + Math.random() * 3;
+
+  // Random target slice offsets within a slice (avoid landing exactly on edge)
+  const randOuter = (Math.random() * 0.7 + 0.15) * SLICE; // 15%-85% into a random slice
+  const randInner = (Math.random() * 0.7 + 0.15) * SLICE;
+  const pickOuter = Math.floor(Math.random() * N);
+  let pickInner;
+  do { pickInner = Math.floor(Math.random() * N); } while (pickInner === pickOuter);
+
+  // Target: pointer (-PI/2) lands in the middle of slice `pick`
+  // slice i start = rotation + i*SLICE, so for pointer to be inside slice pick:
+  // rotation + pick*SLICE + offset = -PI/2
+  // rotation = -PI/2 - pick*SLICE - offset
+  const endOuterBase = -Math.PI / 2 - pickOuter * SLICE - randOuter;
+  const endInnerBase = -Math.PI / 2 - pickInner * SLICE - randInner;
+
+  const startOuter = rotOuter;
+  const startInner = rotInner;
+
+  // Outer spins clockwise (negative direction), inner counter-clockwise (positive)
+  const endOuter = endOuterBase - spinsOuter * 2 * Math.PI;
+  const endInner = endInnerBase + spinsInner * 2 * Math.PI;
+
+  const deltaOuter = endOuter - startOuter;
+  const deltaInner = endInner - startInner;
+
+  const duration = 4500;
+  const startTime = performance.now();
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3.5); }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const e = easeOut(t);
+
+    rotOuter = startOuter + deltaOuter * e;
+    rotInner = startInner + deltaInner * e;
+    drawDualWheel();
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Read actual winners from final rotation
+      const winInner = getWinnerIndex(rotInner);
+      const winOuter = getWinnerIndex(rotOuter);
+
+      // Set highlights and redraw
+      highlightInner = winInner;
+      highlightOuter = winOuter;
+      drawDualWheel();
+
+      spinning = false;
+      document.querySelector('.spin-btn').disabled = false;
+      showDailyResult(winInner, winOuter);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showDailyResult(iPrimary, iBackup) {
+  const area = document.getElementById('dailyResult');
+  area.innerHTML = `
+    <div class="result-card primary">
+      <div class="label">首选推荐 (内圈) ${DINNERS[iPrimary].emoji}</div>
+      <div class="name">${DINNERS[iPrimary].name}</div>
+    </div>
+    <div class="result-card backup">
+      <div class="label">备选方案 (外圈) ${DINNERS[iBackup].emoji}</div>
+      <div class="name">${DINNERS[iBackup].name}</div>
+    </div>
+  `;
+}
+
+// ====== WEEKLY ======
+function initWeekGrid() {
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = DAYS.map(d => `
+    <div class="day-card">
+      <div class="day-label">${d}</div>
+      <div class="waiting">等待生成...</div>
+    </div>
+  `).join('');
+}
+initWeekGrid();
+
+function generateWeek() {
+  const grid = document.getElementById('weekGrid');
+  const dawanDays = [];
+  while (dawanDays.length < 2) {
+    const d = Math.floor(Math.random() * 7);
+    if (!dawanDays.includes(d)) dawanDays.push(d);
+  }
+
+  const otherOptions = DINNERS.filter((_, i) => i !== 4);
+  const shuffled = [...otherOptions].sort(() => Math.random() - 0.5);
+
+  const weekPlan = [];
+  let otherIdx = 0;
+
+  for (let day = 0; day < 7; day++) {
+    let pick1, pick2;
+    if (dawanDays.includes(day)) {
+      pick1 = DINNERS[4];
+      pick2 = otherOptions[Math.floor(Math.random() * otherOptions.length)];
+    } else {
+      pick1 = shuffled[otherIdx % shuffled.length];
+      otherIdx++;
+      let bp;
+      do {
+        bp = DINNERS[Math.floor(Math.random() * DINNERS.length)];
+      } while (bp.name === pick1.name);
+      pick2 = bp;
+    }
+    weekPlan.push({ pick1, pick2 });
+  }
+
+  const cards = grid.querySelectorAll('.day-card');
+  cards.forEach((card, i) => {
+    card.classList.remove('filled', 'reveal');
+    card.innerHTML = `
+      <div class="day-label">${DAYS[i]}</div>
+      <div class="waiting">...</div>
+    `;
+  });
+
+  weekPlan.forEach((plan, i) => {
+    setTimeout(() => {
+      const card = cards[i];
+      card.classList.add('filled', 'reveal');
+      card.innerHTML = `
+        <div class="day-label">${DAYS[i]}</div>
+        <div class="pick1">${plan.pick1.emoji} ${plan.pick1.name}</div>
+        <div class="pick2">备选: ${plan.pick2.emoji} ${plan.pick2.name}</div>
+      `;
+    }, i * 200);
+  });
+}
+
+// ====== TABS ======
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (tab === 'daily') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('dailyPanel').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('weeklyPanel').classList.add('active');
+  }
+}
+</script>
+</body>
+</html>
