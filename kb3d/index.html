@@ -69,8 +69,15 @@ body { background: var(--ink); color: var(--fg); font-family: var(--font-body); 
 #legend .n { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
 .hint { font-size: 11px; color: var(--muted); max-width: 260px; line-height: 1.5; margin-top: 4px; }
 
-#card { position: fixed; z-index: 6; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
-  width: 360px; max-height: calc(100% - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column;
+#lang { position: fixed; z-index: 7; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel); border: 1px solid var(--line); color: var(--fg); border-radius: 999px; padding: 6px 14px;
+  font: 500 13px var(--font-body); letter-spacing: .04em; cursor: pointer; }
+#lang:hover { border-color: var(--accent); }
+#lang:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#lang .off { color: var(--muted); }
+#lang .on { color: var(--accent); }
+#card { position: fixed; z-index: 6; top: calc(58px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  width: 360px; max-height: calc(100% - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
 #card .head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
 .crumbs { font-size: 11px; color: var(--muted); line-height: 1.6; }
@@ -122,6 +129,7 @@ body { background: var(--ink); color: var(--fg); font-family: var(--font-body); 
     padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
   #legend { display: none; }
   .brand small { display: none; }
+  #tl { width: calc(100vw - 32px - 92px); }
   #details article { padding: 22px 18px 26px; }
   #details h1 { font-size: 23px; }
 }
@@ -132,22 +140,23 @@ body { background: var(--ink); color: var(--fg); font-family: var(--font-body); 
 <body>
 <div id="graph"></div>
 <div id="labels"></div>
-<div id="loading">正在铺开知识点……</div>
+<div id="loading" data-t="loading">正在铺开知识点……</div>
+<button id="lang" type="button"></button>
 
 <div class="hud" id="tl">
-  <div class="brand">LLM 与 Agent 知识星图<small>拖动旋转 · 滚轮缩放 · 点击知识点查看关联</small></div>
+  <div class="brand"><span data-t="title">LLM 与 Agent 知识星图</span><small data-t="subtitle">拖动旋转 · 滚轮缩放 · 点击知识点查看关联</small></div>
   <div class="search">
-    <input id="q" type="search" placeholder="搜索概念，例如 KV cache、GRPO、MCP" autocomplete="off" aria-label="搜索知识点">
+    <input id="q" type="search" data-t-ph="search" placeholder="搜索概念，例如 KV cache、GRPO、MCP" autocomplete="off" aria-label="搜索知识点">
     <div id="results" hidden></div>
   </div>
   <div class="zoomer" role="group" aria-label="视图层级">
-    <span class="t">层级</span>
-    <button data-z="1">层</button><button data-z="2">子层</button><button data-z="3">主题</button><button data-z="4">知识点</button>
+    <span class="t" data-t="levels">层级</span>
+    <button data-z="1" data-t="z1">层</button><button data-z="2" data-t="z2">子层</button><button data-z="3" data-t="z3">主题</button><button data-z="4" data-t="z4">知识点</button>
   </div>
   <div class="toggles">
-    <button class="chip" id="t-all" aria-pressed="false">显示全部关联线</button>
-    <button class="chip" id="t-tree" aria-pressed="true">层级骨架</button>
-    <button class="chip" id="t-spin" aria-pressed="false">自动旋转</button>
+    <button class="chip" id="t-all" aria-pressed="false" data-t="tAll">显示全部关联线</button>
+    <button class="chip" id="t-tree" aria-pressed="true" data-t="tTree">层级骨架</button>
+    <button class="chip" id="t-spin" aria-pressed="false" data-t="tSpin">自动旋转</button>
   </div>
 </div>
 
@@ -157,7 +166,7 @@ body { background: var(--ink); color: var(--fg); font-family: var(--font-body); 
   <button class="x" id="card-x" aria-label="关闭卡片">×</button>
   <div class="head"><div class="crumbs" id="c-crumbs"></div><h2 id="c-name"></h2><div class="kind" id="c-kind"></div></div>
   <div class="body" id="c-body"></div>
-  <div class="foot"><button class="btn" id="c-details">Details 详细讲解</button><button class="btn ghost" id="c-focus">聚焦</button></div>
+  <div class="foot"><button class="btn" id="c-details" data-t="details">Details 详细讲解</button><button class="btn ghost" id="c-focus" data-t="focus">聚焦</button></div>
 </aside>
 
 <div id="details" hidden role="dialog" aria-modal="true" aria-labelledby="d-title">
@@ -179,8 +188,32 @@ const G = window.KB_GRAPH;
 const LOCAL = location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(location.hostname);
 const LAYER_COLORS = { L0: '#94a7bd', L1: '#6fb3ff', L2: '#b493ff', L3: '#4fd1c5', L4: '#f2c46d', L5: '#ff7f8a',
   L6: '#7fd99a', L7: '#ff9d5c', L8: '#e48fd6', LS: '#cbbd8e', root: '#ffffff' };
-const LEVEL_NAME = ['根', '层', '子层', '主题', '知识点'];
-const KIND = { h: '同一主题', ref: '引用同一小节', x: '跨章节串联', sim: '语义相近' };
+const STR = {
+  zh: { title: 'LLM 与 Agent 知识星图', subtitle: '拖动旋转 · 滚轮缩放 · 点击知识点查看关联', loading: '正在铺开知识点……',
+    search: '搜索概念，例如 KV cache、GRPO、MCP', levels: '层级', z1: '层', z2: '子层', z3: '主题', z4: '知识点',
+    tAll: '显示全部关联线', tTree: '层级骨架', tSpin: '自动旋转', details: 'Details 详细讲解', focus: '聚焦',
+    level: ['根', '层', '子层', '主题', '知识点'], kind: { h: '同一主题', ref: '引用同一小节', x: '跨章节串联', sim: '语义相近' },
+    count: k => `${k} 个知识点`, root: '知识库', siblings: '同主题的其他知识点', next: '下一级', wait: '加载中…',
+    pending: '讲解还在生成中，先看原文摘录', childrenIntro: (top, k) => `${top ? '本层' : '这一组'}共 ${k} 个知识点，分为：`, colon: '：',
+    questions: '面试题入口', source: '原文', noHit: '没有匹配的知识点', legendTip: '点击隐藏 / 显示这一层',
+    hint: '点图例隐藏某层；拖动节点可以固定它的位置；Esc 取消选中', layerName: n => n.f || n.n,
+    lang: '<span class="on">中</span> / <span class="off">EN</span>', langAria: 'Switch to English' },
+  en: { title: 'LLM & Agent Atlas', subtitle: 'Drag to rotate · scroll to zoom · click a concept to see its links', loading: 'Laying out the concepts…',
+    search: 'Search concepts, e.g. KV cache, GRPO, MCP', levels: 'Level', z1: 'Layers', z2: 'Areas', z3: 'Topics', z4: 'Concepts',
+    tAll: 'Show all links', tTree: 'Hierarchy', tSpin: 'Auto-rotate', details: 'Details', focus: 'Focus',
+    level: ['Root', 'Layer', 'Area', 'Topic', 'Concept'], kind: { h: 'Same topic', ref: 'Cites the same section', x: 'Cross-chapter thread', sim: 'Semantically similar' },
+    count: k => `${k} concept${k === 1 ? '' : 's'}`, root: 'Atlas', siblings: 'Other concepts in this topic', next: 'Contains', wait: 'Loading…',
+    pending: 'The explanation is not written yet. Source excerpts below.', childrenIntro: (top, k) => `${k} concepts in ${top ? 'this layer' : 'this group'}:`, colon: ': ',
+    questions: 'Interview questions', source: 'Source excerpt (Chinese)', noHit: 'No matching concepts', legendTip: 'Click to hide or show this layer',
+    hint: 'Click a legend entry to hide its layer. Dragged nodes stay where you drop them. Esc clears the selection.',
+    layerName: n => n.ne ? (n.layer === 'LS' ? 'Special: ' : `Layer ${n.layer.slice(1)}: `) + n.ne : (n.f || n.n),
+    lang: '<span class="off">中</span> / <span class="on">EN</span>', langAria: '切换到中文' },
+};
+let lang = (() => { try { const v = localStorage.getItem('kb3d-lang'); if (v === 'zh' || v === 'en') return v; } catch (e) {} return /^zh/i.test(navigator.language || '') ? 'zh' : 'en'; })();
+const T = k => STR[lang][k];
+const nm = n => (lang === 'en' && n.ne) || n.n;
+const ds = n => (lang === 'en' && n.de) || n.d || '';
+const ttl = n => (n.c && n.l < 4 ? n.c + ' ' : '') + nm(n);
 const KIND_COLOR = { h: '#8d99b4', ref: '#6fb3ff', x: '#f2c46d', sim: '#b493ff' };
 const VAL = [30, 46, 12, 4.5, 1.4];
 
@@ -235,7 +268,7 @@ const graph = ForceGraph3D({ controlType: 'orbit' })(el)
     if (selected) return hiNodes.has(n) ? c : dim(c, .22);
     return n.l === 4 ? dim(c, .78) : c;
   })
-  .nodeLabel(n => `<div style="font:13px var(--font-body);padding:4px 8px;background:#121a2e;border:1px solid #2a3654;border-radius:6px">${esc(n.n)}<div style="color:#8d99b4;font-size:11px">${LEVEL_NAME[n.l]}${n.l === 4 ? '' : ' · ' + leafCount(n) + ' 个知识点'}</div></div>`)
+  .nodeLabel(n => `<div style="font:13px var(--font-body);padding:4px 8px;background:#121a2e;border:1px solid #2a3654;border-radius:6px">${esc(nm(n))}<div style="color:#8d99b4;font-size:11px">${T('level')[n.l]}${n.l === 4 ? '' : ' · ' + T('count')(leafCount(n))}</div></div>`)
   .linkVisibility(e => {
     const s = e.source, t = e.target;
     if (isHiddenNode(s) || isHiddenNode(t)) return false;
@@ -319,7 +352,7 @@ function drawLabels() {
     const scale = Math.max(.75, Math.min(1.25, (SHOW_WITHIN[c.n.l] === Infinity ? 1800 : SHOW_WITHIN[c.n.l]) / (c.dist + 1) * .6));
     const off = 6 + Math.sqrt(VAL[c.n.l]) * 2;
     e.className = 'lbl l' + c.n.l + (c.n === selected || (selected && hiNodes.has(c.n)) ? ' hi' : '');
-    const html = (c.n.c && c.n.l >= 2 ? `<span class="c">${esc(c.n.c)}</span>` : '') + esc(c.n.n);
+    const html = (c.n.c && c.n.l >= 2 ? `<span class="c">${esc(c.n.c)}</span>` : '') + esc(nm(c.n));
     if (e._h !== html) { e.innerHTML = html; e._h = html; }
     e.style.transform = `translate(${s.x + off}px, ${s.y}px) translateY(-50%) scale(${scale.toFixed(2)})`;
     e.style.opacity = c.forced ? 1 : Math.max(.35, Math.min(1, 1.6 - c.dist / SHOW_WITHIN[c.n.l] * (c.n.l === 1 ? 0 : 1)));
@@ -355,7 +388,7 @@ function flyTo(n, dist) {
 
 const card = document.getElementById('card');
 function crumbsHtml(n) {
-  return ancestors(n).map(a => `<button data-go="${a.id}">${esc(a.c ? a.c + ' ' : '')}${esc(a.n)}</button>`).join(' › ') || '知识库';
+  return ancestors(n).map(a => `<button data-go="${a.id}">${esc(ttl(a))}</button>`).join(' › ') || T('root');
 }
 function relatedGroups(n) {
   const groups = { h: [], ref: [], x: [], sim: [] };
@@ -368,18 +401,19 @@ function relatedGroups(n) {
   return groups;
 }
 function relButton(o, w) {
-  return `<button data-go="${o.id}"><i style="background:${LAYER_COLORS[o.layer]}"></i><span>${esc(o.n)}</span>${w ? `<span class="w">${w.toFixed(2)}</span>` : ''}</button>`;
+  return `<button data-go="${o.id}"><i style="background:${LAYER_COLORS[o.layer]}"></i><span>${esc(nm(o))}</span>${w ? `<span class="w">${w.toFixed(2)}</span>` : ''}</button>`;
 }
 function renderCard(n) {
   card.hidden = false;
   document.getElementById('c-crumbs').innerHTML = crumbsHtml(n);
-  document.getElementById('c-name').textContent = (n.c && n.l < 4 ? n.c + ' ' : '') + n.n;
-  document.getElementById('c-kind').innerHTML = `<i style="background:${LAYER_COLORS[n.layer]}"></i>${LEVEL_NAME[n.l]}${n.l < 4 ? ' · ' + leafCount(n) + ' 个知识点' : ''}`;
+  document.getElementById('c-name').textContent = ttl(n);
+  document.getElementById('c-kind').innerHTML = `<i style="background:${LAYER_COLORS[n.layer]}"></i>${T('level')[n.l]}${n.l < 4 ? ' · ' + T('count')(leafCount(n)) : ''}`;
   const g = relatedGroups(n);
-  let html = n.d ? `<p class="desc">${esc(n.d)}</p>` : '';
+  let html = ds(n) ? `<p class="desc">${esc(ds(n))}</p>` : '';
+  const KIND = T('kind');
   const sections = n.l === 4
-    ? [['ref', KIND.ref], ['x', KIND.x], ['sim', KIND.sim], ['h', '同主题的其他知识点']]
-    : [['h', '下一级'], ['x', KIND.x]];
+    ? [['ref', KIND.ref], ['x', KIND.x], ['sim', KIND.sim], ['h', T('siblings')]]
+    : [['h', T('next')], ['x', KIND.x]];
   for (const [k, title] of sections) {
     const items = g[k]; if (!items.length) continue;
     const shown = items.slice(0, k === 'h' && n.l < 4 ? 40 : 12);
@@ -397,6 +431,8 @@ document.getElementById('c-details').onclick = () => selected && openDetails(sel
 const details = document.getElementById('details');
 window.KB_EXPLAIN = window.KB_EXPLAIN || {};
 window.KB_EXPLAIN_ADD = obj => Object.assign(window.KB_EXPLAIN, obj);
+window.KB_EXPLAIN_EN = window.KB_EXPLAIN_EN || {};
+window.KB_EXPLAIN_EN_ADD = obj => Object.assign(window.KB_EXPLAIN_EN, obj);
 const loaded = {};
 function loadScript(src) {
   if (!loaded[src]) loaded[src] = new Promise(res => { const s = document.createElement('script'); s.src = src; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); });
@@ -411,24 +447,25 @@ function srcLink(l) { return LOCAL ? `<a href="../${l.href}" target="_blank" rel
 async function openDetails(n) {
   details.hidden = false;
   document.getElementById('d-crumbs').innerHTML = crumbsHtml(n);
-  document.getElementById('d-title').textContent = (n.c && n.l < 4 ? n.c + ' ' : '') + n.n;
-  document.getElementById('d-lead').textContent = n.d || '';
+  document.getElementById('d-title').textContent = ttl(n);
+  document.getElementById('d-lead').textContent = ds(n);
   const body = document.getElementById('d-body');
-  body.innerHTML = '<p class="status">加载中…</p>';
-  await Promise.all([loadScript(`explain/${n.layer}.js`), n.l === 4 ? loadScript('data/sections.js') : null]);
-  if (selected !== n || details.hidden) return;
+  body.innerHTML = `<p class="status">${T('wait')}</p>`;
+  const want = lang;
+  await Promise.all([loadScript(`explain/${n.layer}.js`), want === 'en' ? loadScript(`explain_en/${n.layer}.js`) : null, n.l === 4 ? loadScript('data/sections.js') : null]);
+  if (selected !== n || details.hidden || lang !== want) return;
   let html = '';
-  const ex = window.KB_EXPLAIN[n.id];
+  const ex = (lang === 'en' && window.KB_EXPLAIN_EN[n.id]) || window.KB_EXPLAIN[n.id];
   if (ex) html += `<div class="md">${mdToHtml(ex)}</div>`;
-  else if (n.l === 4) html += `<p class="status">讲解还在生成中，先看原文摘录</p>`;
+  else if (n.l === 4) html += `<p class="status">${T('pending')}</p>`;
   if (n.l < 4) {
-    html += `<div class="md"><p>${n.l === 1 ? '本层' : '这一组'}共 ${leafCount(n)} 个知识点，分为：</p><ul>${n.children.map(c => `<li><a href="#" data-go="${c.id}">${esc((c.c ? c.c + ' ' : '') + c.n)}</a>${c.l === 4 ? '：' + esc(c.d) : ''}</li>`).join('')}</ul></div>`;
+    html += `<div class="md"><p>${T('childrenIntro')(n.l === 1, leafCount(n))}</p><ul>${n.children.map(c => `<li><a href="#" data-go="${c.id}">${esc(ttl(c))}</a>${c.l === 4 ? T('colon') + esc(ds(c)) : ''}</li>`).join('')}</ul></div>`;
   }
-  if (n.q && n.q.length) html += `<div class="src"><div class="sec-t">面试题入口</div><div class="qs">${n.q.map(srcLink).map(x => LOCAL ? x : `<span>${x}</span>`).join('')}</div></div>`;
+  if (n.q && n.q.length) html += `<div class="src"><div class="sec-t">${T('questions')}</div><div class="qs">${n.q.map(srcLink).map(x => LOCAL ? x : `<span>${x}</span>`).join('')}</div></div>`;
   const secs = window.KB_SECTIONS || {};
   (n.links || []).forEach(l => {
     const s = secs[l.href]; if (!s) return;
-    html += `<section class="src"><div class="src-t">原文 ${srcLink(l)} · ${esc(s.title)}</div><div class="md">${mdToHtml(s.text)}</div></section>`;
+    html += `<section class="src"><div class="src-t">${T('source')} ${srcLink(l)} · ${esc(s.title)}</div><div class="md">${mdToHtml(s.text)}</div></section>`;
   });
   body.innerHTML = html;
 }
@@ -446,11 +483,13 @@ let hits = [], hitIdx = 0;
 q.addEventListener('input', () => {
   const s = q.value.trim().toLowerCase();
   if (!s) { results.hidden = true; return; }
-  hits = G.nodes.filter(n => n.l > 0 && !isHiddenNode(n) && (n.n.toLowerCase().includes(s) || (n.l === 4 && n.d.toLowerCase().includes(s))))
-    .sort((a, b) => (b.n.toLowerCase().includes(s) - a.n.toLowerCase().includes(s)) || (a.l - b.l) || a.n.length - b.n.length).slice(0, 30);
+  const inName = n => n.n.toLowerCase().includes(s) || (n.ne || '').toLowerCase().includes(s);
+  const inDesc = n => n.l === 4 && ((n.d || '').toLowerCase().includes(s) || (n.de || '').toLowerCase().includes(s));
+  hits = G.nodes.filter(n => n.l > 0 && !isHiddenNode(n) && (inName(n) || inDesc(n)))
+    .sort((a, b) => (inName(b) - inName(a)) || (a.l - b.l) || nm(a).length - nm(b).length).slice(0, 30);
   hitIdx = 0;
-  results.innerHTML = hits.length ? hits.map((n, i) => `<button data-i="${i}" class="${i ? '' : 'on'}">${esc(n.n)}<span class="path">${LEVEL_NAME[n.l]} · ${esc(ancestors(n).map(a => a.n).join(' › '))}</span></button>`).join('')
-    : '<button disabled>没有匹配的知识点</button>';
+  results.innerHTML = hits.length ? hits.map((n, i) => `<button data-i="${i}" class="${i ? '' : 'on'}">${esc(nm(n))}<span class="path">${T('level')[n.l]} · ${esc(ancestors(n).map(nm).join(' › '))}</span></button>`).join('')
+    : `<button disabled>${T('noHit')}</button>`;
   results.hidden = false;
 });
 q.addEventListener('keydown', ev => {
@@ -465,8 +504,10 @@ document.addEventListener('click', ev => { if (!ev.target.closest('.search')) re
 
 // ---------- 图例与开关 ----------
 const legend = document.getElementById('legend');
-legend.innerHTML = layers.map(n => `<button data-layer="${n.layer}" title="点击隐藏 / 显示这一层"><i style="background:${LAYER_COLORS[n.layer]}"></i>${esc(n.f || n.n)} <span class="n">${leafCount(n)}</span></button>`).join('')
-  + '<div class="hint">点图例隐藏某层；拖动节点可以固定它的位置；Esc 取消选中</div>';
+function renderLegend() {
+  legend.innerHTML = layers.map(n => `<button data-layer="${n.layer}" title="${T('legendTip')}" class="${hiddenLayers.has(n.layer) ? 'off' : ''}"><i style="background:${LAYER_COLORS[n.layer]}"></i>${esc(T('layerName')(n))} <span class="n">${leafCount(n)}</span></button>`).join('')
+    + `<div class="hint">${T('hint')}</div>`;
+}
 legend.addEventListener('click', ev => {
   const b = ev.target.closest('[data-layer]'); if (!b) return;
   const L = b.dataset.layer;
@@ -479,6 +520,22 @@ function toggle(id, fn) { const b = document.getElementById(id); b.onclick = () 
 toggle('t-all', v => { showAll = v; refresh(); });
 toggle('t-tree', v => { showTree = v; refresh(); });
 toggle('t-spin', v => { controls.autoRotate = v; controls.autoRotateSpeed = .6; });
+
+// ---------- 语言切换 ----------
+const langBtn = document.getElementById('lang');
+function applyLang() {
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+  document.title = T('title');
+  document.querySelectorAll('[data-t]').forEach(e => { e.textContent = T(e.dataset.t); });
+  document.querySelectorAll('[data-t-ph]').forEach(e => { e.placeholder = T(e.dataset.tPh); });
+  langBtn.innerHTML = T('lang'); langBtn.setAttribute('aria-label', T('langAria'));
+  renderLegend();
+  results.hidden = true;
+  if (selected) renderCard(selected);
+  if (selected && !details.hidden) openDetails(selected);
+}
+langBtn.onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; try { localStorage.setItem('kb3d-lang', lang); } catch (e) {} applyLang(); };
+applyLang();
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
