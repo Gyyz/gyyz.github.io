@@ -181,7 +181,7 @@ body { background: var(--ink); color: var(--fg); font-family: var(--font-body); 
 
 <script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.80.0/dist/3d-force-graph.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
-<script src="data/graph.js"></script>
+<script src="data/graph.js?v=803ba9e31f"></script>
 <script>
 (() => {
 const G = window.KB_GRAPH;
@@ -435,7 +435,7 @@ window.KB_EXPLAIN_EN = window.KB_EXPLAIN_EN || {};
 window.KB_EXPLAIN_EN_ADD = obj => Object.assign(window.KB_EXPLAIN_EN, obj);
 const loaded = {};
 function loadScript(src) {
-  if (!loaded[src]) loaded[src] = new Promise(res => { const s = document.createElement('script'); s.src = src; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); });
+  if (!loaded[src]) loaded[src] = new Promise(res => { const s = document.createElement('script'); s.src = src + '?v=803ba9e31f'; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); });
   return loaded[src];
 }
 function mdToHtml(text) {
