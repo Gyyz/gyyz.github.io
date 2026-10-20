@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+<title>LLM 与 Agent 知识星图</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 布局：全屏 3D 星图做底，左上搜索与层级尺，左下图例，右侧知识卡（手机上变底部抽屉），详情为覆盖式阅读面板 */
+:root {
+  --ink: #0a0f1d;          /* 星图底色：偏蓝的墨色 */
+  --panel: #121a2e;        /* 浮层底色 */
+  --panel-2: #18223a;
+  --line: #2a3654;
+  --fg: #e6ebf5;
+  --muted: #8d99b4;
+  --accent: #f2c46d;       /* 选中与高亮：琥珀 */
+  --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+  --radius: 10px;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--ink); color: var(--fg); font-family: var(--font-body); overflow: hidden; }
+#graph { position: fixed; inset: 0; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; transform-origin: 0 50%; color: var(--fg);
+  text-shadow: 0 0 4px var(--ink), 0 0 8px var(--ink); font-size: 11px; will-change: transform; }
+.lbl.l1 { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: .04em; }
+.lbl.l2 { font-size: 13px; font-weight: 500; }
+.lbl.l3 { font-size: 12px; color: #c7d0e3; }
+.lbl.l4 { font-size: 11px; color: #aeb8cf; }
+.lbl.hi { color: var(--accent); }
+.lbl .c { font-family: var(--font-mono); font-size: .82em; opacity: .7; margin-right: .35em; }
+
+.hud { position: fixed; z-index: 5; display: flex; flex-direction: column; gap: 10px; }
+#tl { top: calc(14px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); width: min(340px, calc(100vw - 32px)); }
+.brand { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: .03em; }
+.brand small { display: block; font-family: var(--font-body); font-weight: 400; font-size: 12px; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+.search { position: relative; }
+.search input { width: 100%; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); color: var(--fg);
+  border-radius: var(--radius); padding: 9px 12px; font: inherit; font-size: 14px; }
+.search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); max-height: 50vh; overflow-y: auto; }
+#results button { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--fg); padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+#results button:hover, #results button:focus-visible, #results button.on { background: var(--panel-2); outline: none; }
+#results .path { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.zoomer { display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; }
+.zoomer span.t { font-size: 11px; color: var(--muted); padding: 0 6px; letter-spacing: .08em; }
+.zoomer button { flex: 1; background: none; border: 0; color: var(--muted); border-radius: 7px; padding: 6px 4px; font: inherit; font-size: 12px; cursor: pointer; }
+.zoomer button.on { background: var(--panel-2); color: var(--accent); }
+.zoomer button:focus-visible { outline: 2px solid var(--accent); }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--panel); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
+.chip:focus-visible { outline: 2px solid var(--accent); }
+
+#legend { left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
+#legend button { display: flex; align-items: center; gap: 8px; background: none; border: 0; color: var(--fg); font: inherit; font-size: 12px; padding: 2px 4px; cursor: pointer; text-align: left; border-radius: 6px; }
+#legend button.off { opacity: .35; }
+#legend button:focus-visible { outline: 2px solid var(--accent); }
+#legend i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+#legend .n { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.hint { font-size: 11px; color: var(--muted); max-width: 260px; line-height: 1.5; margin-top: 4px; }
+
+#card { position: fixed; z-index: 6; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  width: 360px; max-height: calc(100% - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+#card .head { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.crumbs { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.crumbs button { background: none; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; }
+.crumbs button:hover { color: var(--fg); text-decoration: underline; }
+#card h2 { font-family: var(--font-display); font-size: 21px; line-height: 1.35; margin: 6px 0 0; text-wrap: balance; }
+.kind { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-top: 8px; }
+.kind i { width: 8px; height: 8px; border-radius: 50%; }
+#card .body { padding: 14px 18px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+#card .desc { font-size: 14px; line-height: 1.75; margin: 0; }
+.sec-t { font-size: 11px; color: var(--muted); letter-spacing: .1em; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.rel { display: flex; flex-direction: column; gap: 2px; }
+.rel button { display: flex; gap: 8px; align-items: baseline; text-align: left; background: none; border: 0; color: var(--fg); font: inherit; font-size: 13px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.rel button:hover, .rel button:focus-visible { background: var(--panel-2); outline: none; }
+.rel i { width: 7px; height: 7px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.rel .w { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+#card .foot { padding: 12px 18px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+.btn { background: var(--accent); color: #1b1607; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn.ghost { background: none; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
+.btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.x { position: absolute; top: 10px; right: 10px; background: none; border: 0; color: var(--muted); font-size: 20px; cursor: pointer; width: 32px; height: 32px; border-radius: 8px; }
+.x:hover { color: var(--fg); background: var(--panel-2); }
+
+#details { position: fixed; inset: 0; z-index: 10; background: rgba(5,8,16,.72); display: flex; justify-content: center; align-items: flex-start;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+#details article { position: relative; width: min(760px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px 32px 32px; box-sizing: border-box; }
+#details h1 { font-family: var(--font-display); font-size: 28px; line-height: 1.3; margin: 8px 0 6px; text-wrap: balance; }
+#details .lead { color: var(--muted); font-size: 15px; line-height: 1.7; margin: 0 0 18px; }
+.md { font-size: 15px; line-height: 1.85; max-width: 68ch; }
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--font-display); line-height: 1.4; margin: 1.4em 0 .5em; }
+.md h2 { font-size: 20px; } .md h3 { font-size: 17px; } .md h4 { font-size: 15px; }
+.md code { font-family: var(--font-mono); font-size: .86em; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.md pre { background: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+.md pre code { background: none; padding: 0; }
+.md table { border-collapse: collapse; font-size: 13px; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 8px; vertical-align: top; }
+.md blockquote { margin: 0; padding-left: 14px; border-left: 3px solid var(--line); color: var(--muted); }
+.md a { color: var(--accent); }
+.src { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 16px; }
+.src-t { font-family: var(--font-mono); font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+.src-t a { color: inherit; }
+.status { display: inline-block; font-size: 11px; letter-spacing: .06em; border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; color: var(--muted); }
+.qs { display: flex; flex-wrap: wrap; gap: 6px; }
+.qs a, .qs span { font-family: var(--font-mono); font-size: 12px; color: var(--accent); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; text-decoration: none; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; letter-spacing: .1em; z-index: 4; pointer-events: none; }
+
+@media (max-width: 720px) {
+  #card { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 58%; border-radius: 16px 16px 0 0;
+    padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #legend { display: none; }
+  .brand small { display: none; }
+  #details article { padding: 22px 18px 26px; }
+  #details h1 { font-size: 23px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div id="graph"></div>
+<div id="labels"></div>
+<div id="loading">正在铺开知识点……</div>
+
+<div class="hud" id="tl">
+  <div class="brand">LLM 与 Agent 知识星图<small>拖动旋转 · 滚轮缩放 · 点击知识点查看关联</small></div>
+  <div class="search">
+    <input id="q" type="search" placeholder="搜索概念，例如 KV cache、GRPO、MCP" autocomplete="off" aria-label="搜索知识点">
+    <div id="results" hidden></div>
+  </div>
+  <div class="zoomer" role="group" aria-label="视图层级">
+    <span class="t">层级</span>
+    <button data-z="1">层</button><button data-z="2">子层</button><button data-z="3">主题</button><button data-z="4">知识点</button>
+  </div>
+  <div class="toggles">
+    <button class="chip" id="t-all" aria-pressed="false">显示全部关联线</button>
+    <button class="chip" id="t-tree" aria-pressed="true">层级骨架</button>
+    <button class="chip" id="t-spin" aria-pressed="false">自动旋转</button>
+  </div>
+</div>
+
+<div class="hud" id="legend"></div>
+
+<aside id="card" hidden aria-live="polite">
+  <button class="x" id="card-x" aria-label="关闭卡片">×</button>
+  <div class="head"><div class="crumbs" id="c-crumbs"></div><h2 id="c-name"></h2><div class="kind" id="c-kind"></div></div>
+  <div class="body" id="c-body"></div>
+  <div class="foot"><button class="btn" id="c-details">Details 详细讲解</button><button class="btn ghost" id="c-focus">聚焦</button></div>
+</aside>
+
+<div id="details" hidden role="dialog" aria-modal="true" aria-labelledby="d-title">
+  <article>
+    <button class="x" id="d-x" aria-label="关闭详情">×</button>
+    <div class="crumbs" id="d-crumbs"></div>
+    <h1 id="d-title"></h1>
+    <p class="lead" id="d-lead"></p>
+    <div id="d-body"></div>
+  </article>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.80.0/dist/3d-force-graph.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="data/graph.js"></script>
+<script>
+(() => {
+const G = window.KB_GRAPH;
+const LOCAL = location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+const LAYER_COLORS = { L0: '#94a7bd', L1: '#6fb3ff', L2: '#b493ff', L3: '#4fd1c5', L4: '#f2c46d', L5: '#ff7f8a',
+  L6: '#7fd99a', L7: '#ff9d5c', L8: '#e48fd6', LS: '#cbbd8e', root: '#ffffff' };
+const LEVEL_NAME = ['根', '层', '子层', '主题', '知识点'];
+const KIND = { h: '同一主题', ref: '引用同一小节', x: '跨章节串联', sim: '语义相近' };
+const KIND_COLOR = { h: '#8d99b4', ref: '#6fb3ff', x: '#f2c46d', sim: '#b493ff' };
+const VAL = [30, 46, 12, 4.5, 1.4];
+
+// ---------- 数据 ----------
+const byId = new Map(G.nodes.map(n => [n.id, n]));
+G.nodes.forEach(n => { n.children = []; n.adj = []; n.layer = n.l === 0 ? 'root' : n.id.split(/[-.]/)[0]; });
+G.nodes.forEach(n => n.p && byId.get(n.p).children.push(n));
+const links = G.links.map(e => ({ source: e.s, target: e.t, k: e.k, w: e.w }));
+links.forEach(e => { byId.get(e.source).adj.push(e); byId.get(e.target).adj.push(e); });
+const layers = G.nodes.filter(n => n.l === 1);
+const ancestors = n => { const a = []; let p = n.p && byId.get(n.p); while (p && p.l > 0) { a.unshift(p); p = p.p && byId.get(p.p); } return a; };
+const other = (e, n) => { const s = typeof e.source === 'object' ? e.source : byId.get(e.source); const t = typeof e.target === 'object' ? e.target : byId.get(e.target); return s === n ? t : s; };
+const leafCount = n => n.l === 4 ? 1 : n.children.reduce((s, c) => s + leafCount(c), 0);
+
+// 初始位置：层在斐波那契球面上，子节点围绕父节点散开，力导向只需要轻微松弛
+function fib(i, n) { const y = 1 - 2 * (i + .5) / n, r = Math.sqrt(1 - y * y), th = i * 2.39996; return [Math.cos(th) * r, y, Math.sin(th) * r]; }
+const SPREAD = [0, 560, 170, 60, 22];
+(function seed(n, depth) {
+  const kids = n.children; const R = SPREAD[depth + 1] || 18;
+  kids.forEach((c, i) => {
+    const [x, y, z] = fib(i, Math.max(kids.length, 2));
+    const j = depth >= 2 ? .5 + Math.random() * .7 : 1;
+    c.x = (n.x || 0) + x * R * j; c.y = (n.y || 0) + y * R * j; c.z = (n.z || 0) + z * R * j;
+    seed(c, depth + 1);
+  });
+})(byId.get('root'), 0);
+byId.get('root').fx = 0; byId.get('root').fy = 0; byId.get('root').fz = 0;
+
+// ---------- 状态 ----------
+let selected = null, hiNodes = new Set(), hiLinks = new Set(), showAll = false, showTree = true;
+const hiddenLayers = new Set();
+const isHiddenNode = n => hiddenLayers.has(n.layer);
+
+function dim(hex, f) { const v = parseInt(hex.slice(1), 16); const r = v >> 16, g = v >> 8 & 255, b = v & 255;
+  const m = c => Math.round(c * f + 14 * (1 - f)); return `rgb(${m(r)},${m(g)},${m(b)})`; }
+
+// ---------- 图 ----------
+const el = document.getElementById('graph');
+const graph = ForceGraph3D({ controlType: 'orbit' })(el)
+  .backgroundColor('#0a0f1d')
+  .showNavInfo(false)
+  .graphData({ nodes: G.nodes, links })
+  .nodeId('id')
+  .nodeVal(n => VAL[n.l] * (n === selected ? 3 : 1))
+  .nodeRelSize(2.6)
+  .nodeResolution(10)
+  .nodeOpacity(.95)
+  .nodeVisibility(n => !isHiddenNode(n))
+  .nodeColor(n => {
+    const c = LAYER_COLORS[n.layer];
+    if (n === selected) return '#ffffff';
+    if (selected) return hiNodes.has(n) ? c : dim(c, .22);
+    return n.l === 4 ? dim(c, .78) : c;
+  })
+  .nodeLabel(n => `<div style="font:13px var(--font-body);padding:4px 8px;background:#121a2e;border:1px solid #2a3654;border-radius:6px">${esc(n.n)}<div style="color:#8d99b4;font-size:11px">${LEVEL_NAME[n.l]}${n.l === 4 ? '' : ' · ' + leafCount(n) + ' 个知识点'}</div></div>`)
+  .linkVisibility(e => {
+    const s = e.source, t = e.target;
+    if (isHiddenNode(s) || isHiddenNode(t)) return false;
+    if (hiLinks.has(e)) return true;
+    if (e.k === 'h') return showTree;
+    return showAll;
+  })
+  .linkColor(e => hiLinks.has(e) ? KIND_COLOR[e.k] : (e.k === 'h' ? '#3a4868' : '#4a3f6b'))
+  .linkOpacity(.32)
+  .linkWidth(e => hiLinks.has(e) ? (e.k === 'h' ? .6 : 1.1) : 0)
+  .linkDirectionalParticles(e => hiLinks.has(e) && e.k !== 'h' ? 2 : 0)
+  .linkDirectionalParticleWidth(1.6)
+  .linkDirectionalParticleSpeed(.006)
+  .linkDirectionalParticleColor(e => KIND_COLOR[e.k])
+  .onNodeClick(n => select(n, true))
+  .onBackgroundClick(() => select(null))
+  .onNodeDragEnd(n => { n.fx = n.x; n.fy = n.y; n.fz = n.z; })
+  .warmupTicks(40)
+  .cooldownTime(6000)
+  .d3VelocityDecay(.5);
+
+graph.d3Force('link')
+  .distance(e => e.k === 'h' ? [0, 400, 100, 36, 14][e.target.l] : 60)
+  .strength(e => e.k === 'h' ? .9 : (e.k === 'x' ? .02 : .006));
+graph.d3Force('charge').strength(n => [-400, -260, -50, -14, -4][n.l]).distanceMax(400);
+
+const controls = graph.controls();
+controls.enableDamping = true; controls.dampingFactor = .12; controls.rotateSpeed = .6; controls.zoomSpeed = .9;
+controls.minDistance = 20; controls.maxDistance = 4000;
+graph.cameraPosition({ x: 0, y: 300, z: 2000 }, { x: 0, y: 0, z: 0 });
+function onResize() { graph.width(innerWidth).height(innerHeight); }
+addEventListener('resize', onResize);
+setTimeout(() => document.getElementById('loading').remove(), 600);
+
+// ---------- 缩放层级与标签 ----------
+const ZOOM_DIST = { 1: 2000, 2: 900, 3: 380, 4: 150 };
+function camDist() { const c = graph.camera().position, t = controls.target; return Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z); }
+function zoomLevel(d) { return d > 1300 ? 1 : d > 600 ? 2 : d > 230 ? 3 : 4; }
+const zbtns = [...document.querySelectorAll('.zoomer button')];
+zbtns.forEach(b => b.addEventListener('click', () => zoomTo(+b.dataset.z)));
+function zoomTo(z) {
+  const c = graph.camera().position, t = controls.target, d = camDist(), f = ZOOM_DIST[z] / d;
+  graph.cameraPosition({ x: t.x + (c.x - t.x) * f, y: t.y + (c.y - t.y) * f, z: t.z + (c.z - t.z) * f }, { x: t.x, y: t.y, z: t.z }, 900);
+}
+
+const labelsEl = document.getElementById('labels');
+const pool = [];
+const LABEL_MAX = { 1: 99, 2: 99, 3: 140, 4: 110 };
+// 每个节点在相机距离小于该值时才显示标签：越细的层级要越近才出现
+const SHOW_WITHIN = [0, Infinity, 1400, 640, 300];
+function frame() {
+  try { drawLabels(); } catch (err) { if (!frame.warned) { frame.warned = true; console.error('label pass failed', err); } }
+  requestAnimationFrame(frame);
+}
+function drawLabels() {
+  const cam = graph.camera().position, t = controls.target;
+  const dx = t.x - cam.x, dy = t.y - cam.y, dz = t.z - cam.z, dl = Math.hypot(dx, dy, dz) || 1;
+  const zl = zoomLevel(dl);
+  zbtns.forEach(b => b.classList.toggle('on', +b.dataset.z === zl));
+  const cand = [];
+  for (const n of G.nodes) {
+    if (n.l === 0 || n.x === undefined || isHiddenNode(n)) continue;
+    const vx = n.x - cam.x, vy = n.y - cam.y, vz = n.z - cam.z;
+    const along = (vx * dx + vy * dy + vz * dz) / dl;
+    if (along <= 5) continue;
+    const dist = Math.hypot(vx, vy, vz);
+    const forced = n === selected || (selected && hiNodes.has(n) && n.l >= 3 && dist < 900);
+    if (!forced && dist > SHOW_WITHIN[n.l]) continue;
+    if (!forced && selected && n.l >= 3 && !hiNodes.has(n)) continue;
+    cand.push({ n, dist, forced });
+  }
+  cand.sort((a, b) => (b.forced - a.forced) || (a.n.l - b.n.l) || (a.dist - b.dist));
+  const used = { 1: 0, 2: 0, 3: 0, 4: 0 }; let k = 0;
+  const W = innerWidth, H = innerHeight;
+  for (const c of cand) {
+    if (!c.forced && used[c.n.l]++ >= LABEL_MAX[c.n.l]) continue;
+    const s = graph.graph2ScreenCoords(c.n.x, c.n.y, c.n.z);
+    if (s.x < -50 || s.y < -20 || s.x > W + 20 || s.y > H + 20) continue;
+    let e = pool[k];
+    if (!e) { e = document.createElement('div'); labelsEl.appendChild(e); pool.push(e); }
+    const scale = Math.max(.75, Math.min(1.25, (SHOW_WITHIN[c.n.l] === Infinity ? 1800 : SHOW_WITHIN[c.n.l]) / (c.dist + 1) * .6));
+    const off = 6 + Math.sqrt(VAL[c.n.l]) * 2;
+    e.className = 'lbl l' + c.n.l + (c.n === selected || (selected && hiNodes.has(c.n)) ? ' hi' : '');
+    const html = (c.n.c && c.n.l >= 2 ? `<span class="c">${esc(c.n.c)}</span>` : '') + esc(c.n.n);
+    if (e._h !== html) { e.innerHTML = html; e._h = html; }
+    e.style.transform = `translate(${s.x + off}px, ${s.y}px) translateY(-50%) scale(${scale.toFixed(2)})`;
+    e.style.opacity = c.forced ? 1 : Math.max(.35, Math.min(1, 1.6 - c.dist / SHOW_WITHIN[c.n.l] * (c.n.l === 1 ? 0 : 1)));
+    e.hidden = false; k++;
+  }
+  for (; k < pool.length; k++) pool[k].hidden = true;
+}
+requestAnimationFrame(frame);
+
+// ---------- 选中、高亮与卡片 ----------
+function refresh() {
+  graph.nodeColor(graph.nodeColor()).nodeVal(graph.nodeVal()).linkVisibility(graph.linkVisibility())
+    .linkColor(graph.linkColor()).linkWidth(graph.linkWidth()).linkDirectionalParticles(graph.linkDirectionalParticles());
+}
+function select(n, fly) {
+  selected = n; hiNodes = new Set(); hiLinks = new Set();
+  if (n) {
+    hiNodes.add(n);
+    n.adj.forEach(e => { if (isHiddenNode(other(e, n))) return; hiLinks.add(e); hiNodes.add(other(e, n)); });
+    if (n.l < 4) n.children.forEach(c => hiNodes.add(c));
+    if (fly) flyTo(n);
+    renderCard(n);
+  } else {
+    card.hidden = true;
+  }
+  refresh();
+}
+function flyTo(n, dist) {
+  const d = dist || [0, 700, 330, 170, 95][n.l];
+  const c = graph.camera().position, len = Math.hypot(c.x - n.x, c.y - n.y, c.z - n.z) || 1;
+  graph.cameraPosition({ x: n.x + (c.x - n.x) / len * d, y: n.y + (c.y - n.y) / len * d, z: n.z + (c.z - n.z) / len * d }, { x: n.x, y: n.y, z: n.z }, 1100);
+}
+
+const card = document.getElementById('card');
+function crumbsHtml(n) {
+  return ancestors(n).map(a => `<button data-go="${a.id}">${esc(a.c ? a.c + ' ' : '')}${esc(a.n)}</button>`).join(' › ') || '知识库';
+}
+function relatedGroups(n) {
+  const groups = { h: [], ref: [], x: [], sim: [] };
+  n.adj.forEach(e => { const o = other(e, n); if (isHiddenNode(o)) return; if (e.k === 'h' && o.l < n.l) return; groups[e.k].push({ o, w: e.w }); });
+  if (n.l === 4) { // 同主题的兄弟节点也算相关
+    const p = byId.get(n.p);
+    p.children.forEach(s => { if (s !== n && !groups.h.some(g => g.o === s)) groups.h.push({ o: s }); });
+  }
+  groups.sim.sort((a, b) => b.w - a.w);
+  return groups;
+}
+function relButton(o, w) {
+  return `<button data-go="${o.id}"><i style="background:${LAYER_COLORS[o.layer]}"></i><span>${esc(o.n)}</span>${w ? `<span class="w">${w.toFixed(2)}</span>` : ''}</button>`;
+}
+function renderCard(n) {
+  card.hidden = false;
+  document.getElementById('c-crumbs').innerHTML = crumbsHtml(n);
+  document.getElementById('c-name').textContent = (n.c && n.l < 4 ? n.c + ' ' : '') + n.n;
+  document.getElementById('c-kind').innerHTML = `<i style="background:${LAYER_COLORS[n.layer]}"></i>${LEVEL_NAME[n.l]}${n.l < 4 ? ' · ' + leafCount(n) + ' 个知识点' : ''}`;
+  const g = relatedGroups(n);
+  let html = n.d ? `<p class="desc">${esc(n.d)}</p>` : '';
+  const sections = n.l === 4
+    ? [['ref', KIND.ref], ['x', KIND.x], ['sim', KIND.sim], ['h', '同主题的其他知识点']]
+    : [['h', '下一级'], ['x', KIND.x]];
+  for (const [k, title] of sections) {
+    const items = g[k]; if (!items.length) continue;
+    const shown = items.slice(0, k === 'h' && n.l < 4 ? 40 : 12);
+    html += `<div><div class="sec-t"><span>${title}</span><span>${items.length}</span></div><div class="rel">${shown.map(x => relButton(x.o, k === 'sim' ? x.w : null)).join('')}</div></div>`;
+  }
+  document.getElementById('c-body').innerHTML = html;
+  document.getElementById('c-body').scrollTop = 0;
+}
+card.addEventListener('click', ev => { const b = ev.target.closest('[data-go]'); if (b) select(byId.get(b.dataset.go), true); });
+document.getElementById('card-x').onclick = () => select(null);
+document.getElementById('c-focus').onclick = () => selected && flyTo(selected);
+document.getElementById('c-details').onclick = () => selected && openDetails(selected);
+
+// ---------- 详情 ----------
+const details = document.getElementById('details');
+window.KB_EXPLAIN = window.KB_EXPLAIN || {};
+window.KB_EXPLAIN_ADD = obj => Object.assign(window.KB_EXPLAIN, obj);
+const loaded = {};
+function loadScript(src) {
+  if (!loaded[src]) loaded[src] = new Promise(res => { const s = document.createElement('script'); s.src = src; s.onload = () => res(true); s.onerror = () => res(false); document.head.appendChild(s); });
+  return loaded[src];
+}
+function mdToHtml(text) {
+  // 原文里指向其他 md 的相对链接：本地版改成 ../ 下可点击，在线版去掉链接只留文字
+  const t = text.replace(/\[([^\]]+)\]\(([^)\s]+\.md(?:#[^)\s]*)?)\)/g, (m, label, href) => LOCAL ? `[${label}](../${href})` : label);
+  return window.marked ? marked.parse(t) : `<pre>${esc(t)}</pre>`;
+}
+function srcLink(l) { return LOCAL ? `<a href="../${l.href}" target="_blank" rel="noopener">${esc(l.label)}</a>` : esc(l.label); }
+async function openDetails(n) {
+  details.hidden = false;
+  document.getElementById('d-crumbs').innerHTML = crumbsHtml(n);
+  document.getElementById('d-title').textContent = (n.c && n.l < 4 ? n.c + ' ' : '') + n.n;
+  document.getElementById('d-lead').textContent = n.d || '';
+  const body = document.getElementById('d-body');
+  body.innerHTML = '<p class="status">加载中…</p>';
+  await Promise.all([loadScript(`explain/${n.layer}.js`), n.l === 4 ? loadScript('data/sections.js') : null]);
+  if (selected !== n || details.hidden) return;
+  let html = '';
+  const ex = window.KB_EXPLAIN[n.id];
+  if (ex) html += `<div class="md">${mdToHtml(ex)}</div>`;
+  else if (n.l === 4) html += `<p class="status">讲解还在生成中，先看原文摘录</p>`;
+  if (n.l < 4) {
+    html += `<div class="md"><p>${n.l === 1 ? '本层' : '这一组'}共 ${leafCount(n)} 个知识点，分为：</p><ul>${n.children.map(c => `<li><a href="#" data-go="${c.id}">${esc((c.c ? c.c + ' ' : '') + c.n)}</a>${c.l === 4 ? '：' + esc(c.d) : ''}</li>`).join('')}</ul></div>`;
+  }
+  if (n.q && n.q.length) html += `<div class="src"><div class="sec-t">面试题入口</div><div class="qs">${n.q.map(srcLink).map(x => LOCAL ? x : `<span>${x}</span>`).join('')}</div></div>`;
+  const secs = window.KB_SECTIONS || {};
+  (n.links || []).forEach(l => {
+    const s = secs[l.href]; if (!s) return;
+    html += `<section class="src"><div class="src-t">原文 ${srcLink(l)} · ${esc(s.title)}</div><div class="md">${mdToHtml(s.text)}</div></section>`;
+  });
+  body.innerHTML = html;
+}
+details.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-go]');
+  if (b) { ev.preventDefault(); const n = byId.get(b.dataset.go); select(n, true); openDetails(n); return; }
+  if (ev.target === details) details.hidden = true;
+});
+document.getElementById('d-x').onclick = () => { details.hidden = true; };
+addEventListener('keydown', ev => { if (ev.key === 'Escape') { if (!details.hidden) details.hidden = true; else select(null); } });
+
+// ---------- 搜索 ----------
+const q = document.getElementById('q'), results = document.getElementById('results');
+let hits = [], hitIdx = 0;
+q.addEventListener('input', () => {
+  const s = q.value.trim().toLowerCase();
+  if (!s) { results.hidden = true; return; }
+  hits = G.nodes.filter(n => n.l > 0 && !isHiddenNode(n) && (n.n.toLowerCase().includes(s) || (n.l === 4 && n.d.toLowerCase().includes(s))))
+    .sort((a, b) => (b.n.toLowerCase().includes(s) - a.n.toLowerCase().includes(s)) || (a.l - b.l) || a.n.length - b.n.length).slice(0, 30);
+  hitIdx = 0;
+  results.innerHTML = hits.length ? hits.map((n, i) => `<button data-i="${i}" class="${i ? '' : 'on'}">${esc(n.n)}<span class="path">${LEVEL_NAME[n.l]} · ${esc(ancestors(n).map(a => a.n).join(' › '))}</span></button>`).join('')
+    : '<button disabled>没有匹配的知识点</button>';
+  results.hidden = false;
+});
+q.addEventListener('keydown', ev => {
+  if (results.hidden || !hits.length) return;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); hitIdx = (hitIdx + (ev.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length;
+    [...results.children].forEach((b, i) => b.classList.toggle('on', i === hitIdx)); results.children[hitIdx].scrollIntoView({ block: 'nearest' }); }
+  if (ev.key === 'Enter') { pick(hits[hitIdx]); }
+});
+results.addEventListener('click', ev => { const b = ev.target.closest('[data-i]'); if (b) pick(hits[+b.dataset.i]); });
+function pick(n) { results.hidden = true; q.blur(); select(n, true); }
+document.addEventListener('click', ev => { if (!ev.target.closest('.search')) results.hidden = true; });
+
+// ---------- 图例与开关 ----------
+const legend = document.getElementById('legend');
+legend.innerHTML = layers.map(n => `<button data-layer="${n.layer}" title="点击隐藏 / 显示这一层"><i style="background:${LAYER_COLORS[n.layer]}"></i>${esc(n.f || n.n)} <span class="n">${leafCount(n)}</span></button>`).join('')
+  + '<div class="hint">点图例隐藏某层；拖动节点可以固定它的位置；Esc 取消选中</div>';
+legend.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-layer]'); if (!b) return;
+  const L = b.dataset.layer;
+  hiddenLayers.has(L) ? hiddenLayers.delete(L) : hiddenLayers.add(L);
+  b.classList.toggle('off', hiddenLayers.has(L));
+  if (selected && isHiddenNode(selected)) select(null);
+  graph.nodeVisibility(graph.nodeVisibility()); select(selected);
+});
+function toggle(id, fn) { const b = document.getElementById(id); b.onclick = () => { const v = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', v); fn(v); }; }
+toggle('t-all', v => { showAll = v; refresh(); });
+toggle('t-tree', v => { showTree = v; refresh(); });
+toggle('t-spin', v => { controls.autoRotate = v; controls.autoRotateSpeed = .6; });
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// 链接里的 #节点id 可以直接定位
+const startId = decodeURIComponent(location.hash.slice(1));
+if (byId.has(startId)) setTimeout(() => select(byId.get(startId), true), 1200);
+})();
+</script>
+
+</body>
+</html>
